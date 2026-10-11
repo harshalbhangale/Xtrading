@@ -86,6 +86,10 @@ Local Postgres is bound to loopback port **5433**. The checked-in development cr
 
 `pnpm db:generate` generates a migration after schema changes. No API persists records yet. Store only verified stable X IDs and wallet bindings. Raw token amounts use decimal integer strings / SQL `numeric(78,0)`; actual fills remain distinct from intents and hypothetical call outcomes.
 
+The local database has now been started and the initial migration applied. To verify your own environment, set `DATABASE_URL` explicitly and run `pnpm db:check`. Remote URLs must specify `sslmode=verify-full`; certificate verification remains enabled for runtime connections and migrations. Use the AWS RDS certificate trust bundle if required by the chosen deployment. Do not commit connection credentials.
+
+`/api/ready` performs a live database check and returns `ready`, `migration_required`, `unconfigured` or `unavailable`; non-ready states return HTTP 503. It checks the five foundation tables, not provider access or full application readiness. `/api/health` remains the lightweight configuration/liveness endpoint. No account records or fixtures are seeded by these checks.
+
 ## Checks
 
 ```sh

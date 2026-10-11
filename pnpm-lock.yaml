@@ -36,6 +36,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@call-my-bluff/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@call-my-bluff/domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -83,6 +86,9 @@ importers:
       drizzle-kit:
         specifier: 0.31.11
         version: 0.31.11
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
 
   packages/domain:
     dependencies:
@@ -8280,7 +8286,7 @@ snapshots:
 
   extension-port-stream@3.0.0:
     dependencies:
-      readable-stream: 3.6.2
+      readable-stream: 4.8.0
       webextension-polyfill: 0.10.0
 
   fast-copy@3.1.0: {}

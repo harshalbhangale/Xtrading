@@ -18,7 +18,7 @@ Required MVP sponsors: **Kuru, Privy, Envio and Nansen**. The Chrome extension i
 - [x] GitHub CI workflow definition and developer documentation.
 - [x] Genuine incremental local commits: foundation, then frontend workspaces.
 
-Database migration execution, contract deployment, running indexer, hosted CI and pushing commits are still pending.
+Local database migration execution and repository push are now verified. Contract deployment, running indexer and hosted CI verification remain pending.
 
 ### Phase 1 — Frontend foundation: complete
 
@@ -48,7 +48,8 @@ The extension has not yet been installed and verified against real X in Chrome. 
 - [ ] Confirm the chosen Kuru testnet market, token decimals, ABI and usable liquidity.
 - [ ] Confirm Nansen API access and actual mainnet coverage for demo assets/wallets.
 - [ ] Confirm Envio runtime/hosting access and an RPC suitable for the demo.
-- [ ] Start Postgres and apply the migration; verify persistence across restarts.
+- [x] Start local Postgres and apply the migration; verify foundation tables after a restart. AWS database provisioning remains pending credential refresh.
+- [x] Add a server-only database runtime, TLS enforcement for remote connections and live readiness checks.
 - [ ] Verify Privy sessions server-side; bind stable X user IDs to owned wallets using expiring, single-use nonces.
 - [ ] Add runtime-validated API responses, authorization and account isolation.
 - [ ] Connect profile/onboarding pages to persisted account state.

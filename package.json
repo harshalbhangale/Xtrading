@@ -21,7 +21,8 @@
     "indexer:codegen": "pnpm --filter @call-my-bluff/indexer codegen",
     "db:generate": "pnpm --filter @call-my-bluff/database generate",
     "db:migrate": "pnpm --filter @call-my-bluff/database migrate",
-    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm contracts:test && pnpm build"
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm contracts:test && pnpm build",
+    "db:check": "pnpm --filter @call-my-bluff/database check"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

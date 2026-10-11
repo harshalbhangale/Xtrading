@@ -4,18 +4,21 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/schema.ts"
+    ".": "./src/schema.ts",
+    "./client": "./src/client.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "generate": "drizzle-kit generate",
-    "migrate": "drizzle-kit migrate"
+    "migrate": "drizzle-kit migrate",
+    "check": "tsx src/check.ts"
   },
   "dependencies": {
     "drizzle-orm": "0.45.4",
     "postgres": "3.4.9"
   },
   "devDependencies": {
-    "drizzle-kit": "0.31.11"
+    "drizzle-kit": "0.31.11",
+    "tsx": "^4.23.15"
   }
 }
