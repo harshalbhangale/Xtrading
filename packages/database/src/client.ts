@@ -42,7 +42,8 @@ export async function databaseReadiness(sql: ReturnType<typeof postgres>) {
       and to_regclass('public.calls') is not null
       and to_regclass('public.trade_intents') is not null
       and to_regclass('public.fills') is not null
-      and to_regclass('public.stake_snapshots') is not null as ready
+      and to_regclass('public.stake_snapshots') is not null
+      and to_regclass('public.wallet_challenges') is not null as ready
   `;
   return rows[0]?.ready === true;
 }

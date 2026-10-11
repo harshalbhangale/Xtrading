@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { ProfileDraft } from "../../../components/dashboard/profile-draft";
 import { PageHeading, Panel } from "../../../components/dashboard/ui";
+import { IdentityControl } from "../../../components/identity-control";
 
 export const metadata: Metadata = { title: "Identity and profile" };
 export default function ProfilePage() {
@@ -21,29 +21,9 @@ export default function ProfilePage() {
         </Panel>
         <div className="identity-stack">
           <Panel title="Identity receipts">
-            <div className="identity-row">
-              <span aria-hidden="true">𝕏</span>
-              <div>
-                <strong>X account ownership</strong>
-                <p>Server-verified session and stable user ID required.</p>
-              </div>
-              <span className="status-badge">Unlinked</span>
-            </div>
-            <div className="identity-row">
-              <span aria-hidden="true">◇</span>
-              <div>
-                <strong>Wallet ownership</strong>
-                <p>Signed challenge with nonce and expiration required.</p>
-              </div>
-              <span className="status-badge">Unbound</span>
-            </div>
-            <Link className="button secondary-button" href="/setup">
-              Set up authentication ↗
-            </Link>
-            <p className="small-note">
-              Login configuration is available. Identity binding and publishing
-              are not connected yet.
-            </p>
+            <IdentityControl
+              serverConfigured={Boolean(process.env.PRIVY_APP_SECRET)}
+            />
           </Panel>
           <div className="editorial-note">
             <h3>

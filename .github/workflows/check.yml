@@ -7,6 +7,20 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: call_my_bluff
+          POSTGRES_USER: cmb
+          POSTGRES_PASSWORD: cmb_local
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U cmb -d call_my_bluff"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      IDENTITY_TEST_DATABASE_URL: postgresql://cmb:cmb_local@localhost:5433/call_my_bluff
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -21,4 +35,5 @@ jobs:
           version: v1.7.1
       - run: pnpm install --frozen-lockfile
       - run: pnpm indexer:codegen
+      - run: pnpm db:migrate
       - run: pnpm check

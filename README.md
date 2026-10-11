@@ -2,7 +2,7 @@
 
 A creator reputation and trading terminal for X, built on Monad. Link identity, inspect a refundable stake, review sourced financial calls, then execute a wallet-approved spot trade. Identity, stake and performance are independent signals.
 
-**Phase: foundation.** The app and extension run locally without credentials. Sponsor integration boundaries are present; live account binding, Kuru orders/fills, hosted indexing and Nansen insights are the next implementation phase. No example balances, fake reputations or simulated fills are shown as live data.
+**Phase: verified identity implementation.** The public app and extension run locally without credentials. Server-verified Privy/X sessions, signed wallet-binding APIs and persisted identity state are implemented. Kuru orders/fills, stake deployment, hosted indexing and Nansen insights remain pending. No example balances, fake reputations or simulated fills are shown as live data.
 
 ## Start
 
@@ -36,7 +36,7 @@ Monad testnet **10143** is the default. Mainnet **143** requires explicit config
 
 ## Privy and provider configuration
 
-Set `NEXT_PUBLIC_PRIVY_APP_ID` in `apps/web/.env.local`. Enable Twitter login, embedded Ethereum wallets and `http://localhost:3000` as an allowed origin in the Privy dashboard. The login button only loads Privy when configured. Signing, server-side session verification and stable X user ID → wallet binding still need implementation; login alone does not qualify for the bounty.
+Set `NEXT_PUBLIC_PRIVY_APP_ID` in `apps/web/.env.local`. Enable Twitter login, embedded Ethereum wallets and `http://localhost:3000` as an allowed origin in the Privy dashboard. The login button only loads Privy when configured. Set server-only `PRIVY_APP_SECRET`, `NEXT_PUBLIC_APP_URL` and the database connection to enable identity binding on `/creator/profile`. The server verifies Privy access tokens and fetches linked accounts; an explicit off-chain wallet signature proves ownership with an expiring, single-use nonce. The real project X login has been verified; the final real wallet signature and persisted binding are awaiting user approval. See [identity binding](docs/identity-binding.md). Login alone does not qualify for the bounty.
 
 Server credentials (`PRIVY_APP_SECRET`, `NANSEN_API_KEY`, `DATABASE_URL`) must never use the `NEXT_PUBLIC_` prefix. No credentials are required to view the foundation. Nansen requests are not automatically issued; the fixed-host client currently allows only the documented TGM holders endpoint. Use the server-only web wrapper when adding evidence services. Nansen mainnet coverage must be checked for the selected assets; testnet is not a supported substitute.
 
@@ -84,13 +84,13 @@ pnpm db:migrate
 
 Local Postgres is bound to loopback port **5433**. The checked-in development credentials are for this local container only. Drizzle commands run from `packages/database`; they use its process `DATABASE_URL` or the local fallback, and do not load the web `.env.local`. Supply `DATABASE_URL` explicitly for another database. Do not point development migration commands at production by accident.
 
-`pnpm db:generate` generates a migration after schema changes. No API persists records yet. Store only verified stable X IDs and wallet bindings. Raw token amounts use decimal integer strings / SQL `numeric(78,0)`; actual fills remain distinct from intents and hypothetical call outcomes.
+`pnpm db:generate` generates a migration after schema changes. The identity APIs persist verified creator bindings and expiring ownership challenges. Store only verified stable X IDs and wallet bindings. Raw token amounts use decimal integer strings / SQL `numeric(78,0)`; actual fills remain distinct from intents and hypothetical call outcomes.
 
 The local database has now been started and the initial migration applied. To verify your own environment, set `DATABASE_URL` explicitly and run `pnpm db:check`. Remote URLs must specify `sslmode=verify-full`; certificate verification remains enabled for runtime connections and migrations. Use the AWS RDS certificate trust bundle if required by the chosen deployment. Do not commit connection credentials.
 
 Mumbai cloud database template, bootstrap and access boundaries: [AWS database setup](infrastructure/aws/README.md). Set server-only `DATABASE_CA_FILE` to the local trusted CA bundle path when using RDS.
 
-`/api/ready` performs a live database check and returns `ready`, `migration_required`, `unconfigured` or `unavailable`; non-ready states return HTTP 503. It checks the five foundation tables, not provider access or full application readiness. `/api/health` remains the lightweight configuration/liveness endpoint. No account records or fixtures are seeded by these checks.
+`/api/ready` performs a live database check and returns `ready`, `migration_required`, `unconfigured` or `unavailable`; non-ready states return HTTP 503. It checks the six required tables, including wallet challenges, not provider access or full application readiness. `/api/health` remains the lightweight configuration/liveness endpoint. No account records or fixtures are seeded by these checks.
 
 ## Checks
 
@@ -99,11 +99,11 @@ pnpm indexer:codegen
 pnpm check
 ```
 
-Checks include Biome, TypeScript, domain/provider boundary tests, Foundry stake tests and web/extension production builds. Indexer codegen is required before its TypeScript check on a fresh checkout. CI runs it automatically. No credentials, blockchain transactions or paid provider requests are needed.
+Checks include Biome, TypeScript, domain/provider boundary tests, Foundry stake tests and web/extension production builds. Indexer codegen is required before its TypeScript check on a fresh checkout. CI runs it automatically and migrates a local Postgres service for the identity integration tests. Run `IDENTITY_TEST_DATABASE_URL=postgresql://cmb:cmb_local@localhost:5433/call_my_bluff pnpm check` to include those tests locally. No credentials, blockchain transactions or paid provider requests are needed.
 
 ## Next milestone
 
-1. Verify Privy sessions and X ownership on the server; bind a signed wallet with nonce/replay protection.
+1. Complete the user-approved real wallet-binding signature and verify persistence after refresh; confirm remaining provider access and market feasibility.
 2. Deploy and prove Privy-signed stake deposit, request/cancel and withdrawal on testnet.
 3. Read Kuru market parameters, simulate approval/order transactions, obtain explicit wallet approval, and reconcile actual fills.
 4. Deploy Envio and drive badges and portfolio from indexed events with finality/freshness indicators.

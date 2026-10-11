@@ -43,7 +43,7 @@ The extension has not yet been installed and verified against real X in Chrome. 
 
 **Owners:** backend developer, with frontend support. **Dependency:** existing foundation.
 
-- [ ] Confirm Privy Twitter login and embedded-wallet configuration with a real session.
+- [x] Confirm Privy Twitter login and embedded-wallet configuration with a real session.
 - [ ] Confirm an authorized X account/post ingestion path; record access limits and supported collection scope.
 - [ ] Confirm the chosen Kuru testnet market, token decimals, ABI and usable liquidity.
 - [ ] Confirm Nansen API access and actual mainnet coverage for demo assets/wallets.
@@ -51,10 +51,12 @@ The extension has not yet been installed and verified against real X in Chrome. 
 - [x] Start local Postgres and apply the migration; verify foundation tables after a restart.
 - [x] Provision dedicated AWS RDS Postgres in Mumbai, apply cloud migrations and activate a TLS-verified restricted application connection.
 - [x] Add a server-only database runtime, TLS enforcement for remote connections and live readiness checks.
-- [ ] Verify Privy sessions server-side; bind stable X user IDs to owned wallets using expiring, single-use nonces.
-- [ ] Add runtime-validated API responses, authorization and account isolation.
-- [ ] Connect profile/onboarding pages to persisted account state.
+- [x] Verify Privy sessions server-side; bind stable X user IDs to owned wallets using expiring, single-use nonces.
+- [x] Add runtime-validated API responses, authorization and account isolation.
+- [x] Connect profile/onboarding pages to persisted account state.
 - [ ] Configure the Git remote, push existing commits and verify hosted CI.
+
+- [ ] Complete the user-approved real wallet signature and verify the resulting binding after refresh. The real X session and challenge issuance are verified; local Postgres tests cover persistence and rejected proofs.
 
 **Completion test:** a real user establishes a persistent X-ID/wallet binding; forged, expired and replayed proofs fail. Provider coverage and market feasibility are recorded before building dependent flows.
 
@@ -162,4 +164,4 @@ Phase 6 evidence work can proceed alongside Phases 3–5 after access is confirm
 3. Update this checklist and the frontend handoff as APIs replace placeholder states. Run checks appropriate to each code change.
 4. Keep Kimi optional and Aurora/CRE or other sponsor expansions after the core MVP. They are not prerequisites for the phases above.
 
-**Immediate next work:** Phase 2 provider feasibility and persistent identity. The frontend developer can prepare API wiring while the extension developer verifies installation/DOM behavior; live badges depend on Phase 3 evidence.
+**Immediate next work:** complete the real wallet-binding signature, confirm Phase 2 provider feasibility, then begin stake deployment and indexing. The frontend developer can prepare API wiring while the extension developer verifies installation/DOM behavior; live badges depend on Phase 3 evidence.

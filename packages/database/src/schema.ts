@@ -24,6 +24,23 @@ export const creators = pgTable("creators", {
   createdAt: time("created_at").defaultNow().notNull(),
 });
 
+// One current challenge per session owner; row locks serialize issuance and consumption.
+export const walletChallenges = pgTable("wallet_challenges", {
+  privyUserId: text("privy_user_id").primaryKey(),
+  id: uuid("id").notNull().unique(),
+  xUserId: text("x_user_id").notNull(),
+  handle: text("handle").notNull(),
+  wallet: text("wallet").notNull(),
+  chainId: integer("chain_id").notNull(),
+  origin: text("origin").notNull(),
+  message: text("message").notNull(),
+  issuedAt: time("issued_at").notNull(),
+  expiresAt: time("expires_at").notNull(),
+  consumedAt: time("consumed_at"),
+  windowStartedAt: time("window_started_at").notNull(),
+  windowCount: integer("window_count").notNull(),
+});
+
 export const calls = pgTable("calls", {
   id: uuid("id").defaultRandom().primaryKey(),
   creatorId: uuid("creator_id")

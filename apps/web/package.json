@@ -12,11 +12,14 @@
     "@call-my-bluff/database": "workspace:*",
     "@call-my-bluff/domain": "workspace:*",
     "@call-my-bluff/integrations": "workspace:*",
+    "@privy-io/node": "^0.35.0",
     "@privy-io/react-auth": "3.48.1",
+    "drizzle-orm": "0.45.4",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "server-only": "0.0.1"
+    "server-only": "0.0.1",
+    "viem": "2.57.4"
   },
   "devDependencies": {
     "@types/react": "^19",

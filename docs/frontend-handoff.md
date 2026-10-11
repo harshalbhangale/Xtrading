@@ -1,6 +1,6 @@
 # Frontend handoff
 
-This milestone provides original reusable frontend components. Live identity, stake reads, trades, data indexing and MCP tools are not connected. Keep subsequent working features in separate commits.
+This milestone provides original reusable frontend components. Privy/X session verification and persisted wallet-binding APIs are connected on the creator profile. The real X login and challenge issuance are verified; final real wallet signing is awaiting approval. Stake reads, trades, data indexing and MCP tools remain pending. Keep subsequent working features in separate commits.
 
 ## Run
 
@@ -19,7 +19,7 @@ Run `pnpm install --frozen-lockfile`, `pnpm indexer:codegen`, and `pnpm dev`. Co
 | `/dashboard/trade` | Trade review | Interactive buy/sell draft, venue reference and unavailable quote/approval fields |
 | `/dashboard/activity` | User activity | Event ledger slot |
 | `/creator` | Creator overview | Setup journey and independent identity/stake/reputation slots |
-| `/creator/profile` | Creator onboarding | Validated profile draft, local persistence and clear draft action |
+| `/creator/profile` | Creator onboarding | Verified session, explicit wallet ownership proof, persisted binding status; separate local profile draft |
 | `/creator/stake` | Creator funds | Deposit/withdrawal layout; transaction controls disabled |
 | `/creator/calls` | Creator calls | Interactive evaluation-status filter; ingestion pending |
 | `/creator/reputation` | Creator performance | Methodology and coverage slots; unavailable metrics |
@@ -42,6 +42,10 @@ The dashboards are publicly accessible shells. Add server authorization before r
 
 Use an em dash for unavailable metrics. Do not fabricate balances, scores or chart history. Verified identity, stake, hypothetical call outcomes and actual wallet returns must remain independent.
 
+## Implemented identity APIs
+
+`GET /api/identity`, `POST /api/identity/challenge` and `POST /api/identity/bind` require a server-verified Privy bearer token. POST requests also require the configured app origin. Responses use runtime schemas from `packages/domain`; no client-supplied X ID or signing message is trusted. See [identity binding](identity-binding.md) for request contracts, limits and verification. Public creator lookup is still pending.
+
 ## Planned backend contracts
 
 These are proposed APIs, **not existing routes**. Serializable view models are exported from `packages/domain/src/view-models.ts`. Add runtime response validation when implementing them. Monetary fields are integer token-unit strings.
@@ -49,7 +53,6 @@ These are proposed APIs, **not existing routes**. Serializable view models are e
 | Proposed endpoint | Authorization | Consumer |
 |---|---|---|
 | `GET /api/me/creator` | Verified Privy session | Creator overview/profile |
-| `POST /api/identity/challenge` and `/verify` | Verified session, single-use wallet nonce | Identity binding |
 | `GET /api/creators/:xUserId/stake` | Public bounded query | Profile, stake and extension |
 | `GET /api/creators/:xUserId/calls` | Public pagination/filtering | Call ledger and public record |
 | `GET /api/creators/:xUserId/reputation` | Public, source coverage | Reputation panels |
@@ -73,7 +76,7 @@ Proposed tools: `get_creator`, `list_calls`, `get_stake_status`, authorized `get
 
 ## Next feature commits
 
-1. Verified Privy sessions and identity challenges.
+1. Finish real wallet-binding verification and provider feasibility checks.
 2. Chain-specific stake deployment, reads and wallet-reviewed transactions.
 3. Live Envio projections and extension evidence/badges.
 4. Kuru quote preparation, wallet review and confirmed fills.
@@ -84,3 +87,5 @@ Proposed tools: `get_creator`, `list_calls`, `get_stake_status`, authorized `get
 ## Verification
 
 The frontend milestone passed workspace lint/typechecking, seven unit tests, nine Foundry tests (including 256 fuzz cases), and production web/extension builds. Browser checks covered watchlist save/reload/duplicate/remove, profile validation/save/reload/clear, call-status filtering, extension stale-state selection and trade buy/sell controls without transaction execution. Landing, dashboard, profile, extension and trade pages were checked at a 390px viewport with no page-level horizontal overflow. QA drafts and saved handles were removed after checking.
+
+The identity milestone passed `pnpm check` with 17 tests (including six local Postgres integration tests), nine Foundry tests and production web/extension builds. API smoke checks rejected missing/forged sessions and incorrect origins. The real X session and ownership challenge were verified against the configured Privy app and Mumbai database; a real signed binding is not yet claimed.

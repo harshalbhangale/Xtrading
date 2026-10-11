@@ -2,8 +2,9 @@
 
 import { getMonadChain } from "@call-my-bluff/integrations";
 import { PrivyProvider, usePrivy } from "@privy-io/react-auth";
+import type { ReactNode } from "react";
 
-function AuthButton() {
+export function AuthButton() {
   const { ready, authenticated, login, logout } = usePrivy();
   return (
     <button
@@ -18,7 +19,13 @@ function AuthButton() {
   );
 }
 
-export default function ConfiguredWallet({ appId }: { appId: string }) {
+export default function ConfiguredWallet({
+  appId,
+  children,
+}: {
+  appId: string;
+  children: ReactNode;
+}) {
   const chain = getMonadChain(process.env.NEXT_PUBLIC_MONAD_CHAIN_ID);
   return (
     <PrivyProvider
@@ -33,7 +40,7 @@ export default function ConfiguredWallet({ appId }: { appId: string }) {
         },
       }}
     >
-      <AuthButton />
+      {children}
     </PrivyProvider>
   );
 }

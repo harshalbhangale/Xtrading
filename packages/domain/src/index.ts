@@ -12,6 +12,34 @@ export const chainIdSchema = z.union([z.literal(10143), z.literal(143)]);
 export type MonadChainId = z.infer<typeof chainIdSchema>;
 export const addressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
 export const amountSchema = z.string().regex(/^(0|[1-9][0-9]*)$/);
+export const bindingChallengeRequestSchema = z
+  .object({ wallet: addressSchema })
+  .strict();
+export const bindingProofSchema = z
+  .object({
+    challengeId: z.uuid(),
+    signature: z.string().regex(/^0x[0-9a-fA-F]{130}$/),
+  })
+  .strict();
+export const identityBindingSchema = z.object({
+  xUserId: z.string().regex(/^[0-9]+$/),
+  handle: z.string().regex(/^[a-z0-9_]{1,15}$/),
+  wallet: addressSchema,
+  linkedAt: z.iso.datetime(),
+});
+export const bindingChallengeSchema = z.object({
+  challengeId: z.uuid(),
+  message: z.string().min(1).max(2048),
+  wallet: addressSchema,
+  expiresAt: z.iso.datetime(),
+});
+export const identityStatusSchema = z.object({
+  xAccount: z
+    .object({ xUserId: z.string().regex(/^[0-9]+$/), handle: z.string() })
+    .nullable(),
+  binding: identityBindingSchema.nullable(),
+  bindingCurrent: z.boolean(),
+});
 export const xHandleSchema = z.string().regex(/^[A-Za-z0-9_]{1,15}$/);
 
 export const creatorSchema = z.object({
