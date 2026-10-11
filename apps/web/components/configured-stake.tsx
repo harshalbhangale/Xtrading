@@ -8,7 +8,8 @@ import { monadTestnet } from "viem/chains";
 type State = ReturnType<typeof stakeStateSchema.parse>;
 type Prepared = ReturnType<typeof preparedStakeSchema.parse>;
 export default function ConfiguredStake() {
-  const { ready, authenticated, getAccessToken, user, login } = usePrivy();
+  const { ready, authenticated, getAccessToken, user, login, logout } =
+    usePrivy();
   const { wallets } = useWallets();
   const { sendTransaction } = useSendTransaction();
   const [state, setState] = useState<State | null>(null);
@@ -16,13 +17,19 @@ export default function ConfiguredStake() {
   const [amount, setAmount] = useState("500");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [hash, setHash] = useState<string | null>(null);
   const activeUser = useRef(user?.id);
   activeUser.current = user?.id;
   const request = useCallback(
     async (path: string, body?: unknown) => {
       const token = await getAccessToken();
-      if (!token) throw new Error("Sign in first.");
+      if (!token) {
+        setSessionExpired(true);
+        throw new Error(
+          "Your session expired. Sign in again before preparing a transaction.",
+        );
+      }
       const response = await fetch(path, {
         method: body ? "POST" : "GET",
         headers: {
@@ -32,12 +39,19 @@ export default function ConfiguredStake() {
         ...(body ? { body: JSON.stringify(body) } : {}),
       });
       const value = await response.json();
+      if (response.status === 401) {
+        setSessionExpired(true);
+        throw new Error(
+          "Your session expired. Sign in again before preparing a transaction.",
+        );
+      }
       if (!response.ok)
         throw new Error(
           typeof value.error === "string"
             ? value.error.replaceAll("_", " ")
             : "Stake service unavailable.",
         );
+      setSessionExpired(false);
       return value;
     },
     [getAccessToken],
@@ -108,6 +122,16 @@ export default function ConfiguredStake() {
     setPrepared(null);
     setHash(null);
     try {
+      // Refresh and verify authentication immediately before opening wallet approval.
+      // Never retry a signing/submission call automatically after a token error.
+      const current = stakeStateSchema.parse(await request("/api/stake"));
+      if (
+        current.wallet.toLowerCase() !== transaction.wallet.toLowerCase() ||
+        current.contract !== transaction.state.contract
+      )
+        throw new Error(
+          "Wallet or deployment changed. Refresh and prepare again.",
+        );
       await wallet.switchChain(10143);
       if (activeUser.current !== owner)
         throw new Error("Account changed. Prepare again.");
@@ -149,12 +173,23 @@ export default function ConfiguredStake() {
           : `${transaction.action} confirmed in block ${receipt.blockNumber}. Latest state is unfinalized; indexing is pending. Prepare the next action separately.`,
       );
     } catch (error) {
-      if (activeUser.current === owner)
-        setNotice(
-          error instanceof Error
-            ? error.message
-            : "Transaction rejected or unavailable. Refresh before retrying.",
-        );
+      if (activeUser.current === owner) {
+        const message = error instanceof Error ? error.message : "";
+        if (
+          /invalid.?auth.?token|expired.?token|token.?expired|exp.*claim.*timestamp/i.test(
+            message,
+          )
+        ) {
+          setSessionExpired(true);
+          setNotice(
+            "Wallet authentication expired. Sign in again, refresh chain state and prepare a new review. No transaction is retried automatically.",
+          );
+        } else
+          setNotice(
+            message ||
+              "Transaction rejected or unavailable. Refresh before retrying.",
+          );
+      }
     } finally {
       setBusy(false);
     }
@@ -180,6 +215,23 @@ export default function ConfiguredStake() {
       >
         Refresh contract state
       </button>
+      {sessionExpired && (
+        <button
+          className="button secondary-button"
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            setState(null);
+            setPrepared(null);
+            setHash(null);
+            setNotice("");
+            await logout();
+            login();
+          }}
+        >
+          Sign in again
+        </button>
+      )}
       {state && (
         <>
           <dl>

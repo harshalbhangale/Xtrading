@@ -18,7 +18,7 @@ Required MVP sponsors: **Kuru, Privy, Envio and Nansen**. The Chrome extension i
 - [x] GitHub CI workflow definition and developer documentation.
 - [x] Genuine incremental local commits: foundation, then frontend workspaces.
 
-Local database migration execution and repository push are now verified. Contract deployment, running indexer and hosted CI verification remain pending.
+Local database migration execution and repository push are now verified. The stake deployment and earlier hosted CI are verified; a running indexer and live deposit remain pending.
 
 ### Phase 1 — Frontend foundation: complete
 
@@ -65,7 +65,7 @@ The extension has not yet been installed and verified against real X in Chrome. 
 **Owners:** contracts/backend/indexer developer. **Dependency:** Phase 2 identity, token and network configuration.
 
 - [x] Confirm Circle test USDC address and six decimals via live Monad testnet RPC; use 500000000 units and a seven-day cooldown.
-- [ ] Deploy the stake contract to Monad testnet and record address, deployment block and immutable settings.
+- [x] Deploy the stake contract to Monad testnet and record address, deployment block and immutable settings. Receipt and matching runtime bytecode verified in `contracts/deployments/monad-testnet.json`.
 - [x] Implement separate Privy wallet reviews for bounded allowance/reset, deposit, request, cancel and withdrawal; live transaction verification is still pending.
 - [x] Simulate unsigned transactions with gas estimation and implement submitted/reverted/confirmed receipt states. The real deployment simulation passed; live receipt-state verification remains pending.
 - [ ] Configure Envio with the deployed address/start block and run live indexing.
@@ -164,4 +164,4 @@ Phase 6 evidence work can proceed alongside Phases 3–5 after access is confirm
 3. Update this checklist and the frontend handoff as APIs replace placeholder states. Run checks appropriate to each code change.
 4. Keep Kimi optional and Aurora/CRE or other sponsor expansions after the core MVP. They are not prerequisites for the phases above.
 
-**Immediate next work:** complete the prepared testnet deployment through the project wallet, configure its confirmed address/block, obtain test USDC, verify deposit/withdrawal flows and start Envio. Confirm remaining Kuru/Nansen provider feasibility in parallel. The frontend developer can prepare API wiring while the extension developer verifies installation/DOM behavior; live badges depend on Phase 3 evidence.
+**Immediate next work:** obtain test USDC, verify deposit/withdrawal flows and start Envio against the recorded deployment. Confirm remaining Kuru/Nansen provider feasibility in parallel. The frontend developer can prepare API wiring while the extension developer verifies installation/DOM behavior; live badges depend on Phase 3 evidence.

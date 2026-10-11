@@ -1,4 +1,4 @@
-# Deploy CreatorStake first, then set the address and deployment block below.
+# Verified deployment: contracts/deployments/monad-testnet.json.
 name: call-my-bluff-stakes
 description: Refundable creator stake projections on Monad testnet
 contracts:
@@ -8,7 +8,8 @@ contracts:
       - event: StakeUpdated(address indexed wallet, uint256 balance, uint256 withdrawableAt)
 chains:
   - id: 10143
-    start_block: 0
+    start_block: 70144598
     contracts:
       - name: CreatorStake
-        address: []
+        address:
+          - "0x4B1a8c4E158E4E3EEa22A62205F1e0CD82d0D5B6"

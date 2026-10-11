@@ -1,6 +1,6 @@
 # Stake transaction handoff
 
-The creator stake page now reads live Monad testnet state and prepares unsigned, simulated transactions. A real deployment and deposit are not yet claimed. The bound project wallet has 5 test MON for gas and zero of the selected test USDC at the last browser verification.
+The creator stake page now reads live Monad testnet state and prepares unsigned, simulated transactions. The deployment is confirmed at `0x4B1a8c4E158E4E3EEa22A62205F1e0CD82d0D5B6`, block `70144598`, transaction `0x4879d523495b9a1c1fb59bd4f862d5686b3ca392e3b38f26827558a4b4f7ccf8`. Its runtime bytecode matches the Foundry artifact after masking immutable slots, and the token/minimum/cooldown match the fixed configuration. See `contracts/deployments/monad-testnet.json`. The bound wallet has 4.924126484 test MON and zero selected test USDC; no deposit is claimed.
 
 ## Fixed testnet configuration
 
@@ -27,11 +27,15 @@ The UI requests Privy wallet approval using the bound address and explicit chain
 1. On `/creator/stake`, prepare deployment, inspect the token/minimum/cooldown and approve in the wallet. The deployment bytecode is exported from this repository's Foundry artifact by `pnpm contracts:abi`.
 2. Record the successful creation receipt, contract address and deployment block. Configure server-only `CREATOR_STAKE_ADDRESS` in the ignored web environment, then reload the app. Do not configure an unconfirmed address.
 3. Verify deployed token/minimum/cooldown against the fixed values. Obtain at least 500 test USDC in the bound wallet using the matching token address, then review approval and deposit separately.
-4. Configure the exact address and start block in `services/indexer/config.yaml`; run codegen/typecheck and start the indexer. No addresses or invented events have been added yet.
+4. Configure the exact address and start block in `services/indexer/config.yaml`; run codegen/typecheck and start the indexer. The verified address and start block are already configured and codegen/typecheck pass. The runtime has not started; no indexed activity is claimed.
 5. Verify request/cancel behavior and withdrawal after cooldown. A short-cooldown demonstration needs a separate, clearly labeled deployment and explicit configuration support; this flow enforces seven days.
 
 The contract has no administrator or slashing. Wallet recovery/migration, ERC-1271 identity proofs, transaction history persistence, indexer finality/freshness and real stake-to-extension evidence remain separate work.
 
 ## Verification
 
-`pnpm check` passed with 19 tests, nine Foundry tests (256 fuzz cases) and web/extension builds. Tests cover exact amount conversion, invalid precision/overflow, bounded approval/reset encoding and the existing contract conservation/withdrawal/account-isolation cases. A real authenticated browser session read live balances and successfully estimated deployment gas. Live deployment, approval/deposit and withdrawal receipts remain pending user wallet approval and funding.
+`pnpm check` passed with 19 tests, nine Foundry tests (256 fuzz cases) and web/extension builds. Tests cover exact amount conversion, invalid precision/overflow, bounded approval/reset encoding and the existing contract conservation/withdrawal/account-isolation cases. A real authenticated browser session read live balances and successfully estimated deployment gas. The real deployment receipt is verified. Approval/deposit and withdrawal receipts remain pending funding and user wallet approval.
+
+## Session and modal recovery
+
+Before wallet approval, the app obtains a fresh Privy access token and revalidates the current server binding and deployment. Authentication errors clear the unsigned review and offer explicit sign-in recovery; transaction submission is never automatically retried. After reauthentication, refresh chain state before preparing another review so a successful earlier deployment is not repeated. The Privy styling prop `isActive` is filtered only when targeting native DOM elements, preserving styled-component behavior without leaking the prop into HTML.

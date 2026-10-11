@@ -2,7 +2,7 @@
 
 A creator reputation and trading terminal for X, built on Monad. Link identity, inspect a refundable stake, review sourced financial calls, then execute a wallet-approved spot trade. Identity, stake and performance are independent signals.
 
-**Phase: testnet stake transaction implementation.** The public app and extension run locally without credentials. Server-verified Privy/X sessions, signed wallet-binding APIs and persisted identity state are implemented. Live testnet wallet/token reads and simulated stake transaction reviews are implemented. The first deployment and deposit, Kuru orders/fills, hosted indexing and Nansen insights remain pending. No example balances, fake reputations or simulated fills are shown as live data.
+**Phase: testnet stake transaction implementation.** The public app and extension run locally without credentials. Server-verified Privy/X sessions, signed wallet-binding APIs and persisted identity state are implemented. Live testnet wallet/token reads and simulated stake transaction reviews are implemented. The first stake contract deployment is confirmed and recorded in `contracts/deployments/monad-testnet.json`. Deposits, Kuru orders/fills, hosted indexing and Nansen insights remain pending. No example balances, fake reputations or simulated fills are shown as live data.
 
 ## Start
 
@@ -73,7 +73,7 @@ pnpm indexer:codegen
 pnpm --filter @call-my-bluff/indexer typecheck
 ```
 
-The initial config uses **no contract addresses**, so it cannot index deployed stake events yet. After deploying on testnet, set that exact address and deployment `start_block` in `services/indexer/config.yaml`, then regenerate and run `pnpm --filter @call-my-bluff/indexer dev` with Docker available. Add the GraphQL endpoint to the web environment after verifying indexed events.
+The indexer config now includes the verified testnet contract address and deployment block **70144598**. Codegen/typecheck pass; the runtime is not yet running. Run `pnpm --filter @call-my-bluff/indexer dev` with Docker available. Add the GraphQL endpoint to the web environment after verifying indexed events.
 
 Position IDs include chain, contract and wallet. Event IDs include chain, block and log index. Handlers replace full balances rather than accumulating deltas, making repeated event handling idempotent. Kuru order/fill contracts and finality/freshness handling will be added after validating the chosen market's event ABI.
 
