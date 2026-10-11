@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AuthProvider } from "../components/auth-provider";
@@ -9,8 +10,8 @@ import "./frontend.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Call My Bluff — conviction has a record",
-    template: "%s · Call My Bluff",
+    default: "No More Bluff — conviction has a record",
+    template: "%s · No More Bluff",
   },
   description:
     "Creator reputation, locked stakes, and trading from X on Monad.",
@@ -26,12 +27,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             Skip to content
           </a>
           <header className="topbar">
-            <Link href="/" className="wordmark" aria-label="Call My Bluff home">
-              <span className="brand-mark" aria-hidden="true">
-                ↗
-              </span>{" "}
-              CALL MY <strong>BLUFF</strong>
-              <span className="brand-dot">.</span>
+            <Link href="/" className="wordmark" aria-label="No More Bluff home">
+              <Image
+                src="/brand/no-more-bluff.png"
+                alt="No More Bluff"
+                width={1774}
+                height={887}
+                className="brand-logo"
+                priority
+              />
             </Link>
             <Navigation />
             <div className="header-actions">
@@ -45,7 +49,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <main id="main">{children}</main>
           <footer>
             <span>
-              CALL MY BLUFF <span className="muted">/</span> Put your money
+              NO MORE BLUFF <span className="muted">/</span> Put your money
               where your mouth is.
             </span>
             <Link href="/setup">

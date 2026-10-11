@@ -70,19 +70,12 @@ input:focus-visible {
   letter-spacing: -0.04em;
   white-space: nowrap;
 }
-.brand-mark {
-  background: var(--ink);
-  color: var(--lime);
-  font-size: 27px;
-  height: 33px;
-  width: 33px;
-  display: grid;
-  place-items: center;
-  margin-right: 8px;
-}
-.brand-dot {
-  font-size: 28px;
-  color: #66812b;
+.brand-logo {
+  display: block;
+  width: 140px;
+  height: auto;
+  max-height: 72px;
+  object-fit: contain;
 }
 .topbar nav {
   display: flex;

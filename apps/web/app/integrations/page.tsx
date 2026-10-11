@@ -37,7 +37,7 @@ export default function IntegrationsPage() {
       <PageHeading
         eyebrow="Agent connections / MCP"
         title="Give agents the receipts."
-        description="The planned Call My Bluff MCP will expose creator evidence and prepare trades for human approval."
+        description="The planned No More Bluff MCP will expose creator evidence and prepare trades for human approval."
         action={
           <Link className="button secondary-button" href="/dashboard">
             Back to your workspace ↗
@@ -46,7 +46,7 @@ export default function IntegrationsPage() {
       />
       <div className="dashboard-two-column">
         <Panel
-          title="Call My Bluff MCP"
+          title="No More Bluff MCP"
           description="Planned interface. There is no deployed endpoint or connectable server yet."
         >
           <EmptyState

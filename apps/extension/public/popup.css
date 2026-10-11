@@ -31,3 +31,10 @@ a {
   font-size: 11px;
   color: #62685b;
 }
+
+.brand-logo {
+  display: block;
+  width: 150px;
+  height: auto;
+  margin-bottom: 18px;
+}

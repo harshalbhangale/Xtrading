@@ -71,7 +71,7 @@ export function ExtensionPreview() {
         </p>
         <div className="evidence-popover" aria-live="polite">
           <div className="popover-heading">
-            <span>↗ CALL MY BLUFF</span>
+            <span>↗ NO MORE BLUFF</span>
             <span className="status-badge">Preview</span>
           </div>
           <h3>{active.title}</h3>

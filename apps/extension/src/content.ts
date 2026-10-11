@@ -21,7 +21,7 @@ function addEvidenceLinks() {
     link.className = "cmb-evidence-link";
     link.href = `${appOrigin}/creators/${encodeURIComponent(handle)}`;
     link.textContent = "↗ View creator evidence";
-    link.title = "Open Call My Bluff. This link is not a verification badge.";
+    link.title = "Open No More Bluff. This link is not a verification badge.";
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     article.append(link);
