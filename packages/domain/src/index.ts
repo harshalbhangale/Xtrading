@@ -100,3 +100,55 @@ export type IntegrationStatus = {
   implementation: "foundation";
   detail: string;
 };
+
+export const stakeStateSchema = z.object({
+  chainId: z.literal(10143),
+  wallet: addressSchema,
+  token: addressSchema,
+  decimals: z.literal(6),
+  symbol: z.literal("USDC"),
+  contract: addressSchema.nullable(),
+  minimum: amountSchema,
+  cooldown: amountSchema,
+  balance: amountSchema,
+  allowance: amountSchema,
+  tokenBalance: amountSchema,
+  nativeBalance: amountSchema,
+  withdrawableAt: amountSchema,
+  blockNumber: amountSchema,
+  blockHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+  blockTimestamp: amountSchema,
+  observedAt: z.iso.datetime(),
+  finality: z.literal("latest-unfinalized"),
+});
+export const stakeActionSchema = z
+  .object({
+    action: z.enum([
+      "deploy",
+      "deposit",
+      "requestWithdrawal",
+      "cancelWithdrawal",
+      "withdraw",
+    ]),
+    amount: z.string().max(100).optional(),
+  })
+  .strict();
+export const preparedStakeSchema = z.object({
+  action: z.enum([
+    "deploy",
+    "deposit",
+    "approve",
+    "resetAllowance",
+    "requestWithdrawal",
+    "cancelWithdrawal",
+    "withdraw",
+  ]),
+  chainId: z.literal(10143),
+  wallet: addressSchema,
+  to: addressSchema.nullable(),
+  data: z.string().regex(/^0x[0-9a-fA-F]+$/),
+  value: z.literal("0"),
+  gas: amountSchema,
+  expiresAt: z.iso.datetime(),
+  state: stakeStateSchema,
+});

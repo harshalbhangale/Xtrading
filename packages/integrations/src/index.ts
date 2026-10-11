@@ -50,7 +50,7 @@ export function integrationStatus(
       configured: Boolean(env.NEXT_PUBLIC_PRIVY_APP_ID),
       implementation: "foundation",
       detail:
-        "Conditional login provider. Account binding and transaction flows are next.",
+        "Server-verified X/wallet binding implemented. Stake transaction review is available; live deposit and trading verification remain pending.",
     },
     {
       name: "Envio",

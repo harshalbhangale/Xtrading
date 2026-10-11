@@ -16,3 +16,8 @@ await writeFile(
   `${JSON.stringify(artifact.abi, null, 2)}\n`,
 );
 console.log("Exported CreatorStake ABI from the Foundry build.");
+
+await writeFile(
+  new URL("CreatorStake-deployment.json", directory),
+  `${JSON.stringify({ bytecode: artifact.bytecode.object }, null, 2)}\n`,
+);

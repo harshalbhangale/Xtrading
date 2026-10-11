@@ -17,7 +17,7 @@ export function DashboardShell({
           <span>
             {audience === "creator" ? "Creator studio" : "User workspace"}
           </span>
-          <span className="status-badge">Live data not connected</span>
+          <span className="status-badge">Trading and indexing pending</span>
         </div>
         {children}
       </div>

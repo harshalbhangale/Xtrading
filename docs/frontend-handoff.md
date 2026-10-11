@@ -1,6 +1,6 @@
 # Frontend handoff
 
-This milestone provides original reusable frontend components. Privy/X session verification and persisted wallet-binding APIs are connected on the creator profile. The real X login, user-approved wallet signature and binding persistence after refresh are verified. Stake reads, trades, data indexing and MCP tools remain pending. Keep subsequent working features in separate commits.
+This milestone provides original reusable frontend components. Privy/X session verification and persisted wallet-binding APIs are connected on the creator profile. The real X login, user-approved wallet signature and binding persistence after refresh are verified. Stake RPC reads and transaction reviews are implemented; live deployment/deposit verification, trades, indexing and MCP tools remain pending. Keep subsequent working features in separate commits.
 
 ## Run
 
@@ -20,7 +20,7 @@ Run `pnpm install --frozen-lockfile`, `pnpm indexer:codegen`, and `pnpm dev`. Co
 | `/dashboard/activity` | User activity | Event ledger slot |
 | `/creator` | Creator overview | Setup journey and independent identity/stake/reputation slots |
 | `/creator/profile` | Creator onboarding | Verified session, explicit wallet ownership proof, persisted binding status; separate local profile draft |
-| `/creator/stake` | Creator funds | Deposit/withdrawal layout; transaction controls disabled |
+| `/creator/stake` | Creator funds | Authenticated live testnet reads, simulated deployment/deposit/withdrawal reviews and explicit wallet approval |
 | `/creator/calls` | Creator calls | Interactive evaluation-status filter; ingestion pending |
 | `/creator/reputation` | Creator performance | Methodology and coverage slots; unavailable metrics |
 | `/extension` | Extension hub | Installation and explicitly illustrative unknown/linked/stale previews |

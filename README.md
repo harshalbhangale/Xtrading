@@ -2,7 +2,7 @@
 
 A creator reputation and trading terminal for X, built on Monad. Link identity, inspect a refundable stake, review sourced financial calls, then execute a wallet-approved spot trade. Identity, stake and performance are independent signals.
 
-**Phase: verified identity implementation.** The public app and extension run locally without credentials. Server-verified Privy/X sessions, signed wallet-binding APIs and persisted identity state are implemented. Kuru orders/fills, stake deployment, hosted indexing and Nansen insights remain pending. No example balances, fake reputations or simulated fills are shown as live data.
+**Phase: testnet stake transaction implementation.** The public app and extension run locally without credentials. Server-verified Privy/X sessions, signed wallet-binding APIs and persisted identity state are implemented. Live testnet wallet/token reads and simulated stake transaction reviews are implemented. The first deployment and deposit, Kuru orders/fills, hosted indexing and Nansen insights remain pending. No example balances, fake reputations or simulated fills are shown as live data.
 
 ## Start
 
@@ -62,7 +62,9 @@ pnpm contracts:abi
 
 `CreatorStake` accepts a conventional non-rebasing ERC20 and has immutable token, minimum and cooldown settings. Deposits are refundable. `requestWithdrawal()` immediately disables `isActive`; `withdraw()` returns the full balance once the cooldown expires. Cancelling restores stake eligibility and a later request starts a new cooldown. No admin withdrawal or slashing exists. Full `StakeUpdated` snapshots support idempotent indexing.
 
-The proposed deployment uses a seven-day cooldown (`604800` seconds). A nominal $500 stake means `500 * 10^tokenDecimals` for a chosen stablecoin; the contract does not assert a USD exchange rate. Verify the actual token address and decimals before deployment. Fee-on-transfer deposits are rejected. Deployment is intentionally not performed by setup. This is development code, not a production audit.
+The proposed deployment uses a seven-day cooldown (`604800` seconds). A nominal $500 stake means `500 * 10^tokenDecimals` for a chosen stablecoin; the contract does not assert a USD exchange rate. Verify the actual token address and decimals before deployment. Fee-on-transfer deposits are rejected. Deployment is prepared on `/creator/stake` and requires explicit wallet approval; setup does not deploy automatically. This is development code, not a production audit.
+
+See [stake transaction handoff](docs/stake-transactions.md) for the verified test token, deployment review and configuration steps.
 
 ## Envio
 
