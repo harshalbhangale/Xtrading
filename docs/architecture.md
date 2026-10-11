@@ -2,7 +2,7 @@
 
 X extension → public evidence API → creator identity, stake and call evidence.
 
-Trading: X post → app review → Privy wallet approval → Kuru → Envio order/fill projection → dashboard.
+Trading: X post → app review → Privy wallet approval → Kuru (spot) / Perpl (perps) → Envio order/fill projection → dashboard.
 
 ## Services
 
@@ -32,3 +32,5 @@ A linked-wallet sale is an observation with transaction evidence, not proof of d
 Submitted orders are separate from fills. Public evidence includes observation time, source, freshness and finality; RPC reads are not indexer projections.
 
 Provider secrets stay on the server. Wallet approval stays explicit. Prepare bounded transactions rather than arbitrary provider or wallet RPC requests.
+
+Routing requires an explicit reviewed instrument: spot buy/sell uses Kuru; perp long/short uses Perpl. Bearish language never automatically selects a leveraged short. Unconfigured markets remain unavailable. Perpl leverage, collateral, exposure limits and order preparation must be validated before execution.

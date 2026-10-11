@@ -1,6 +1,6 @@
 # Delivery checklist
 
-Updated 11 October 2026. Required sponsors: Kuru, Privy, Envio and Nansen. The Chrome extension is the priority product surface.
+Updated 11 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added targets: Perpl API and Chainlink CRE. The Chrome extension is the priority product surface.
 
 ## Done
 
@@ -15,7 +15,7 @@ Updated 11 October 2026. Required sponsors: Kuru, Privy, Envio and Nansen. The C
 - [x] Live stake RPC reads and separate wallet reviews for approval, deposit and withdrawal actions.
 - [x] Original six-decimal mUSDC contract and faucet; deployed with 10,000 mUSDC in the project wallet.
 - [x] Envio schema, event handlers, contract configuration and generated bindings.
-- [x] Latest local checks: 19 application tests, 12 Foundry tests, web/extension builds.
+- [x] Latest local checks: 18 application tests, 12 Foundry tests, web/extension builds; six database integration tests skipped in this run.
 
 ## Phase 1: Finish stake and indexing
 
@@ -39,9 +39,14 @@ Exit: a deposit updates current stake evidence; requesting withdrawal removes ac
 
 Exit: a bound creator's profile/post shows current evidence from the backend.
 
-## Phase 3: Kuru trading and user dashboard
+## Phase 3: Kuru spot, Perpl perps and user dashboard
 
+- [x] Add explicit spot/perp routing policy with no chain or venue fallback.
+- [ ] Connect routing to reviewed call intent and trading UI.
 - [ ] Verify a supported market, token decimals, ABI and usable liquidity.
+- [ ] Verify Perpl network, market IDs, collateral units and unsigned order interface.
+- [ ] Add user-confirmed leverage, collateral/exposure caps, slippage, reduce-only exits and duplicate-order prevention.
+- [ ] Demonstrate Perpl social trading with actual onchain activity; record its ≤2-minute API-bounty demo.
 - [ ] Fetch quotes and prepare unsigned orders with fees, expiry and execution limits.
 - [ ] Add X buy/sell entry points with source-post attribution.
 - [ ] Execute only after Privy wallet approval.
@@ -65,6 +70,7 @@ Exit: each scored call is traceable to its source and inputs; Nansen adds a usef
 ## Phase 4B: Hourly CRE settlement
 
 - [ ] Confirm CRE write support and forwarder for Monad testnet 10143; verify CLI/account access.
+- [x] Add integer expiry-price evaluator with missing-data and timestamp checks; price adapter and onchain commitment checks remain pending.
 - [ ] Register opt-in calls with immutable expiry, price source, evaluation rules and bounded bond/reward amounts.
 - [ ] Implement a separate call-bond/reward contract; leave refundable CreatorStake deposits separate.
 - [ ] Fund rewards and reserve them at registration; lock each call's bond until settlement or its defined timeout refund.

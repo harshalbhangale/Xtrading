@@ -92,7 +92,14 @@ export function normalizeHandle(input: string): string | null {
   return result.success ? result.data.toLowerCase() : null;
 }
 
-export const sponsorNames = ["Kuru", "Privy", "Envio", "Nansen"] as const;
+export const sponsorNames = [
+  "Kuru",
+  "Privy",
+  "Envio",
+  "Nansen",
+  "Perpl",
+  "Chainlink CRE",
+] as const;
 export type SponsorName = (typeof sponsorNames)[number];
 export type IntegrationStatus = {
   name: SponsorName;

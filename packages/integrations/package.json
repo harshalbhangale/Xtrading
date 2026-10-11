@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./nansen": "./src/nansen.ts",
-    "./stake": "./src/stake.ts"
+    "./stake": "./src/stake.ts",
+    "./routing": "./src/routing.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

@@ -5,6 +5,7 @@ Primary track: **Onchain Finance & Trading**.
 | Sponsor | Core feature | Required demo evidence |
 |---|---|---|
 | Kuru | Spot trading from X on Monad | Approved order, confirmed fill and source-post attribution in the dashboard |
+| Perpl | Explicit perp calls and social trading | Risk-bounded, wallet-approved Perpl execution with real onchain activity; ≤2-minute demo |
 | Privy | X login, embedded wallet and signing | Verified X/wallet binding, stake deposit and Kuru transaction through Privy |
 | Envio | Stake and trading projections | Onchain events update extension indicators and dashboard history |
 | Nansen | Wallet/token context | Actual sourced insight with timestamp, network and coverage |
@@ -12,7 +13,7 @@ Primary track: **Onchain Finance & Trading**.
 
 Current status: Privy identity binding works; the Circle-token stake contract is deployed; mUSDC is deployed with 10,000 tokens in the project wallet. Deposits, live indexing, Kuru execution and Nansen data remain pending.
 
-CRE settlement is planned alongside call evaluation. Kimi is optional; Aurora and other sponsor branches come after the core demo.
+Perpl API is in scope; its separate analytics/risk dashboard bounty is excluded. CRE settlement is planned alongside call evaluation. Kimi is optional; Aurora and other sponsor branches come after the core demo.
 
 ## Resources
 

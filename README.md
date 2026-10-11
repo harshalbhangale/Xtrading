@@ -1,8 +1,8 @@
 # Call My Bluff
 
-Creator evidence and spot trading from X, built on Monad. The product includes a landing page, creator studio, user dashboard, Chrome extension and planned MCP server.
+Creator evidence and spot/perp trading from X, built on Monad. The product includes a landing page, creator studio, user dashboard, Chrome extension and planned MCP server.
 
-Identity binding works. The Circle-token stake contract and mock USDC are deployed on testnet. Deposits, live indexing, Kuru trading, Nansen insights and MCP remain pending.
+Identity binding works. The Circle-token stake contract and mock USDC are deployed on testnet. Deposits, live indexing, Kuru/Perpl execution, Nansen insights, CRE workflow and MCP remain pending.
 
 ## Run locally
 
@@ -77,7 +77,7 @@ Envio is configured for the recorded Circle-token stake deployment, but its runt
 IDENTITY_TEST_DATABASE_URL=postgresql://cmb:cmb_local@localhost:5433/call_my_bluff pnpm check
 ```
 
-Checks include formatting, TypeScript, application tests, local identity integration tests, Foundry and web/extension builds. Latest local results: 19 application tests and 12 Foundry tests passed. CI provisions its own Postgres service.
+Checks include formatting, TypeScript, application tests, local identity integration tests, Foundry and web/extension builds. Latest local results: 18 application tests and 12 Foundry tests passed; six database integration tests were skipped without a test database URL. CI provisions its own Postgres service.
 
 ## Developer documents
 

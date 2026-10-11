@@ -66,5 +66,19 @@ export function integrationStatus(
       detail:
         "Server-only API client boundary. Authorized endpoint coverage must be verified.",
     },
+    {
+      name: "Perpl",
+      configured: false,
+      implementation: "foundation",
+      detail:
+        "Explicit perp routing policy. Market, risk checks, unsigned order preparation and confirmed execution are pending.",
+    },
+    {
+      name: "Chainlink CRE",
+      configured: false,
+      implementation: "foundation",
+      detail:
+        "Hourly call settlement planned. Workflow, network support and authenticated receiver are not yet implemented.",
+    },
   ];
 }
