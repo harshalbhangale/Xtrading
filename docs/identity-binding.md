@@ -32,6 +32,6 @@ Public error codes distinguish invalid sessions (401), rejected origins or walle
 
 Run local migrations, then `IDENTITY_TEST_DATABASE_URL=postgresql://cmb:cmb_local@localhost:5433/call_my_bluff pnpm check`. Integration tests refuse remote databases and clean up their synthetic fixtures. Tests cover valid persistence, replay, concurrent replay, wrong account/network, changed identity, forged signatures, expiry, unlinked wallets, conflicting bindings and nonce replacement.
 
-The configured project's real X login and embedded-wallet creation succeeded. A real challenge was issued using the Mumbai database. The final real wallet signature and persistence-after-refresh check are awaiting user approval; local integration tests establish those code paths without claiming a completed live binding.
+The configured project's real X login and embedded-wallet creation succeeded. A real challenge was issued using the Mumbai database. The user-approved real embedded-wallet signature saved the binding for `@nomorebluffonx`; a full page refresh retained the server-verified binding. This live check completed on 11 October 2026 at 19:35 IST. Local integration tests separately cover rejected and replayed proofs.
 
 Official references: [Privy access tokens](https://docs.privy.io/authentication/user-authentication/access-tokens), [Privy Node setup](https://docs.privy.io/basics/nodeJS/setup).

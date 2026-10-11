@@ -54,9 +54,9 @@ The extension has not yet been installed and verified against real X in Chrome. 
 - [x] Verify Privy sessions server-side; bind stable X user IDs to owned wallets using expiring, single-use nonces.
 - [x] Add runtime-validated API responses, authorization and account isolation.
 - [x] Connect profile/onboarding pages to persisted account state.
-- [ ] Configure the Git remote, push existing commits and verify hosted CI.
+- [x] Configure the Git remote, push existing commits and verify hosted CI. Identity milestone run 38145611740 passed.
 
-- [ ] Complete the user-approved real wallet signature and verify the resulting binding after refresh. The real X session and challenge issuance are verified; local Postgres tests cover persistence and rejected proofs.
+- [x] Complete the user-approved real wallet signature and verify the resulting binding after refresh. The real session, challenge, signature and persisted binding are verified against Privy and Mumbai RDS; local Postgres tests cover rejected proofs.
 
 **Completion test:** a real user establishes a persistent X-ID/wallet binding; forged, expired and replayed proofs fail. Provider coverage and market feasibility are recorded before building dependent flows.
 
@@ -164,4 +164,4 @@ Phase 6 evidence work can proceed alongside Phases 3–5 after access is confirm
 3. Update this checklist and the frontend handoff as APIs replace placeholder states. Run checks appropriate to each code change.
 4. Keep Kimi optional and Aurora/CRE or other sponsor expansions after the core MVP. They are not prerequisites for the phases above.
 
-**Immediate next work:** complete the real wallet-binding signature, confirm Phase 2 provider feasibility, then begin stake deployment and indexing. The frontend developer can prepare API wiring while the extension developer verifies installation/DOM behavior; live badges depend on Phase 3 evidence.
+**Immediate next work:** confirm remaining Phase 2 provider feasibility, then begin stake deployment and indexing. The frontend developer can prepare API wiring while the extension developer verifies installation/DOM behavior; live badges depend on Phase 3 evidence.

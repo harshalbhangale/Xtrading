@@ -36,7 +36,7 @@ Monad testnet **10143** is the default. Mainnet **143** requires explicit config
 
 ## Privy and provider configuration
 
-Set `NEXT_PUBLIC_PRIVY_APP_ID` in `apps/web/.env.local`. Enable Twitter login, embedded Ethereum wallets and `http://localhost:3000` as an allowed origin in the Privy dashboard. The login button only loads Privy when configured. Set server-only `PRIVY_APP_SECRET`, `NEXT_PUBLIC_APP_URL` and the database connection to enable identity binding on `/creator/profile`. The server verifies Privy access tokens and fetches linked accounts; an explicit off-chain wallet signature proves ownership with an expiring, single-use nonce. The real project X login has been verified; the final real wallet signature and persisted binding are awaiting user approval. See [identity binding](docs/identity-binding.md). Login alone does not qualify for the bounty.
+Set `NEXT_PUBLIC_PRIVY_APP_ID` in `apps/web/.env.local`. Enable Twitter login, embedded Ethereum wallets and `http://localhost:3000` as an allowed origin in the Privy dashboard. The login button only loads Privy when configured. Set server-only `PRIVY_APP_SECRET`, `NEXT_PUBLIC_APP_URL` and the database connection to enable identity binding on `/creator/profile`. The server verifies Privy access tokens and fetches linked accounts; an explicit off-chain wallet signature proves ownership with an expiring, single-use nonce. The real project X login, user-approved embedded-wallet ownership signature and persisted binding after page refresh have been verified. See [identity binding](docs/identity-binding.md). Login alone does not qualify for the bounty.
 
 Server credentials (`PRIVY_APP_SECRET`, `NANSEN_API_KEY`, `DATABASE_URL`) must never use the `NEXT_PUBLIC_` prefix. No credentials are required to view the foundation. Nansen requests are not automatically issued; the fixed-host client currently allows only the documented TGM holders endpoint. Use the server-only web wrapper when adding evidence services. Nansen mainnet coverage must be checked for the selected assets; testnet is not a supported substitute.
 
@@ -103,7 +103,7 @@ Checks include Biome, TypeScript, domain/provider boundary tests, Foundry stake 
 
 ## Next milestone
 
-1. Complete the user-approved real wallet-binding signature and verify persistence after refresh; confirm remaining provider access and market feasibility.
+1. Confirm remaining provider access and market feasibility; the real X/wallet binding and persistence-after-refresh check are complete.
 2. Deploy and prove Privy-signed stake deposit, request/cancel and withdrawal on testnet.
 3. Read Kuru market parameters, simulate approval/order transactions, obtain explicit wallet approval, and reconcile actual fills.
 4. Deploy Envio and drive badges and portfolio from indexed events with finality/freshness indicators.
