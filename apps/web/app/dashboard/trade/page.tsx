@@ -6,13 +6,12 @@ export default function TradePage() {
   return (
     <>
       <PageHeading
-        eyebrow="Trade review / Kuru spot"
-        title="Your decision. Your signature."
-        description="Inspect live simulation, exact amounts and approval limits before opening your wallet."
+        title="Trade"
+        description="Kuru spot on Monad testnet. Every order is simulated, with exact amounts and approval limits shown before your wallet opens."
       />
       <Panel
         title="Trade MON / USDC"
-        description="Monad testnet only. Each approval and order requires a separate wallet review."
+        description="Each approval and order is a separate wallet confirmation."
       >
         <TradeControl />
       </Panel>

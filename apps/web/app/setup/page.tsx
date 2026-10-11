@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import { getSetupStatus } from "../../lib/server-config";
+
+export const metadata: Metadata = { title: "System status" };
 
 export const dynamic = "force-dynamic";
 
@@ -6,13 +9,10 @@ export default function SetupPage() {
   const status = getSetupStatus();
   return (
     <div className="page subpage">
-      <p className="eyebrow">Development workspace</p>
-      <h1>
-        The <span className="highlight">foundation.</span>
-      </h1>
+      <h1>System status</h1>
       <p className="hero-copy">
-        Configuration is the first step. Live integration is verified
-        separately.
+        Which integrations this deployment has configured. Configured is not the
+        same as verified live.
       </p>
       <div className="setup-banner">
         <span className="signal-dot" />
@@ -23,9 +23,8 @@ export default function SetupPage() {
         </span>
       </div>
       <div className="integration-grid">
-        {status.integrations.map((item, index) => (
+        {status.integrations.map((item) => (
           <article key={item.name} className="integration-card">
-            <p className="eyebrow">0{index + 1} / Integration</p>
             <div className="section-heading">
               <h2>{item.name}</h2>
               <span className="tag">

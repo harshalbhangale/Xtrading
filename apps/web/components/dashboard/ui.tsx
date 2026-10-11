@@ -12,15 +12,7 @@ export function DashboardShell({
   return (
     <div className="dashboard-shell">
       <Sidebar audience={audience} />
-      <div className="dashboard-content">
-        <div className="workspace-topline">
-          <span>
-            {audience === "creator" ? "Creator studio" : "User workspace"}
-          </span>
-          <span className="status-badge">Trading and indexing pending</span>
-        </div>
-        {children}
-      </div>
+      <div className="dashboard-content">{children}</div>
     </div>
   );
 }
@@ -31,7 +23,7 @@ export function PageHeading({
   description,
   action,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description: string;
   action?: ReactNode;
@@ -39,35 +31,12 @@ export function PageHeading({
   return (
     <div className="dashboard-heading">
       <div>
-        <p className="eyebrow">{eyebrow}</p>
+        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
         <h1>{title}</h1>
         <p>{description}</p>
       </div>
       {action}
     </div>
-  );
-}
-
-export function MetricCard({
-  label,
-  detail,
-  value = "—",
-  icon = "↗",
-}: {
-  label: string;
-  detail: string;
-  value?: string;
-  icon?: string;
-}) {
-  return (
-    <article className="metric-card">
-      <div>
-        <span>{label}</span>
-        <span aria-hidden="true">{icon}</span>
-      </div>
-      <strong>{value}</strong>
-      <p>{detail}</p>
-    </article>
   );
 }
 
@@ -101,21 +70,16 @@ export function Panel({
 export function EmptyState({
   title,
   description,
-  icon = "⌁",
   href,
   action,
 }: {
   title: string;
   description: string;
-  icon?: string;
   href?: string;
   action?: string;
 }) {
   return (
     <div className="dashboard-empty">
-      <span className="empty-symbol" aria-hidden="true">
-        {icon}
-      </span>
       <h3>{title}</h3>
       <p>{description}</p>
       {href && action && (
@@ -163,9 +127,7 @@ export function RecordTable({
 export function ConnectionNote({ children }: { children: ReactNode }) {
   return (
     <div className="connection-note">
-      <span aria-hidden="true">◎</span>
       <p>{children}</p>
-      <Link href="/setup">Connection status ↗</Link>
     </div>
   );
 }

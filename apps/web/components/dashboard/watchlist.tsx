@@ -92,9 +92,8 @@ export function Watchlist() {
         <p className="muted">Reading local watchlist…</p>
       ) : handles.length === 0 ? (
         <EmptyState
-          title="Keep interesting creators close."
-          description="Save a handle here, then open its public record. Adding a handle does not verify the account or subscribe to trades."
-          icon="☆"
+          title="No saved handles."
+          description="Saving a handle does not verify the account or copy its trades."
         />
       ) : (
         <div className="table-scroll">

@@ -205,12 +205,6 @@ textarea:focus-visible {
   border: 1px solid var(--line);
   background: var(--surface);
 }
-.feature-icon {
-  display: block;
-  font-size: 40px;
-  margin-bottom: 42px;
-  color: #7b913e;
-}
 .landing-features h3 {
   font-size: 23px;
 }
@@ -337,32 +331,6 @@ textarea:focus-visible {
   flex-direction: column;
   background: #ecefe5;
 }
-.workspace-label {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 38px;
-}
-.workspace-symbol {
-  width: 32px;
-  height: 32px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  display: grid;
-  place-items: center;
-  font-size: 20px;
-}
-.workspace-label strong {
-  display: block;
-  font-size: 13px;
-  letter-spacing: -0.02em;
-}
-.workspace-label div > span {
-  display: block;
-  font-size: 10px;
-  color: var(--muted);
-  margin-top: 5px;
-}
 .dashboard-sidebar .eyebrow {
   font-size: 9px;
   margin-bottom: 12px;
@@ -417,16 +385,6 @@ textarea:focus-visible {
   padding: 24px 36px 60px;
   min-width: 0;
 }
-.workspace-topline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 15px;
-  padding-bottom: 22px;
-  border-bottom: 1px solid var(--line);
-  font: 10px var(--mono);
-  color: var(--muted);
-}
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -463,42 +421,6 @@ textarea:focus-visible {
   color: var(--muted);
   max-width: 650px;
   margin: 0;
-}
-.metric-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 24px;
-}
-.metric-card {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  padding: 19px;
-  min-width: 0;
-}
-.metric-card > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 9px;
-  font: 9px var(--mono);
-  color: var(--muted);
-}
-.metric-card > div > span:last-child {
-  font-size: 17px;
-}
-.metric-card > strong {
-  display: block;
-  font-size: 30px;
-  letter-spacing: -0.06em;
-  line-height: 1.2;
-  margin: 24px 0 13px;
-  overflow-wrap: anywhere;
-}
-.metric-card > p {
-  margin: 0;
-  font-size: 10px;
-  line-height: 1.7;
-  color: var(--muted);
 }
 .dashboard-panel {
   background: var(--surface);
@@ -542,16 +464,6 @@ textarea:focus-visible {
   min-height: 210px;
   padding: 30px 16px;
 }
-.empty-symbol {
-  width: 45px;
-  height: 45px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--line);
-  background: var(--paper);
-  font-size: 27px;
-  color: #7e8b6a;
-}
 .dashboard-empty h3 {
   font-size: 17px;
   margin: 22px 0 8px;
@@ -565,63 +477,6 @@ textarea:focus-visible {
 }
 .dashboard-empty .text-link {
   font-size: 10px;
-}
-.chart-placeholder {
-  position: relative;
-  min-height: 242px;
-  overflow: hidden;
-}
-.chart-grid {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: linear-gradient(
-    to bottom,
-    var(--line) 1px,
-    transparent 1px
-  );
-  background-size: 100% 52px;
-  opacity: 0.5;
-}
-.chart-placeholder .dashboard-empty {
-  position: relative;
-  padding: 30px;
-  background: linear-gradient(90deg, transparent, #fbfcf7b3, transparent);
-}
-.dashboard-callout {
-  padding: 26px;
-  background: var(--ink);
-  color: var(--paper);
-  margin-bottom: 24px;
-  position: relative;
-  overflow: hidden;
-}
-.dashboard-callout .eyebrow {
-  color: var(--lime);
-  font-size: 9px;
-  max-width: 140px;
-  line-height: 1.8;
-}
-.callout-symbol {
-  position: absolute;
-  right: 25px;
-  top: 14px;
-  font-size: 75px;
-  color: var(--lime);
-}
-.dashboard-callout h2 {
-  font-size: 29px;
-  line-height: 1.07;
-  margin: 38px 0 18px;
-}
-.dashboard-callout > p:not(.eyebrow) {
-  font-size: 12px;
-  line-height: 1.8;
-  color: #b7c2a4;
-}
-.dashboard-callout .button {
-  margin-top: 12px;
-  gap: 10px;
 }
 .connection-note {
   border-top: 1px solid var(--line);
@@ -767,50 +622,6 @@ textarea:focus-visible {
   font-size: 9px;
   margin-top: 8px;
 }
-.editorial-note {
-  padding: 28px;
-  border: 1px solid var(--line);
-  background: #e9edde;
-  margin-bottom: 24px;
-}
-.editorial-note h3 {
-  margin-top: 0;
-  font-size: 23px;
-  line-height: 1.2;
-}
-.editorial-note p {
-  font-size: 12px;
-  line-height: 1.9;
-  color: var(--muted);
-}
-.editorial-note h2 {
-  font-size: 29px;
-  line-height: 1.2;
-}
-.evidence-principles {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin: 25px 0;
-}
-.evidence-principles article {
-  padding: 24px;
-  border-top: 1px solid var(--line);
-}
-.evidence-principles article > span {
-  font: 9px var(--mono);
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.evidence-principles h3 {
-  font-size: 20px;
-  margin: 20px 0 12px;
-}
-.evidence-principles p {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.9;
-}
 .profile-form label,
 .stake-form label,
 .watchlist-form label {
@@ -867,37 +678,6 @@ textarea:focus-visible {
 .input-action input {
   flex: 1;
 }
-.identity-row {
-  display: flex;
-  align-items: start;
-  gap: 13px;
-  padding: 20px 0;
-  border-top: 1px solid var(--line);
-}
-.identity-row > span:first-child {
-  font-size: 25px;
-  min-width: 22px;
-}
-.identity-row > div {
-  flex: 1;
-}
-.identity-row strong {
-  font-size: 12px;
-}
-.identity-row p {
-  font-size: 10px;
-  color: var(--muted);
-  line-height: 1.9;
-}
-.identity-row .status-badge {
-  font-size: 7px;
-}
-.identity-stack > .dashboard-panel > .button {
-  margin-top: 15px;
-}
-.identity-stack .editorial-note h3 {
-  font-size: 24px;
-}
 .stake-form label:not(:first-child) {
   margin-top: 25px;
 }
@@ -915,38 +695,6 @@ textarea:focus-visible {
 .stake-form .text-link {
   display: inline-block;
   font-size: 10px;
-}
-.withdrawal-steps > div {
-  display: flex;
-  gap: 15px;
-  padding: 18px 0;
-  border-top: 1px solid var(--line);
-}
-.withdrawal-steps > div > span {
-  font: 10px var(--mono);
-  color: var(--muted);
-  padding-top: 4px;
-}
-.withdrawal-steps p {
-  font-size: 11px;
-  color: var(--muted);
-  line-height: 1.9;
-  margin: 0;
-}
-.withdrawal-steps strong {
-  display: block;
-  font-size: 13px;
-  color: var(--ink);
-  margin-bottom: 6px;
-}
-.withdrawal-steps + .button-row {
-  gap: 10px;
-  margin-top: 16px;
-}
-.withdrawal-steps + .button-row .button {
-  padding: 11px;
-  font-size: 9px;
-  white-space: normal;
 }
 .extension-hero {
   display: grid;
@@ -1248,9 +996,6 @@ textarea:focus-visible {
   .dashboard-content {
     padding: 24px;
   }
-  .metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .dashboard-two-column {
     grid-template-columns: 1fr;
   }
@@ -1260,19 +1005,6 @@ textarea:focus-visible {
   .dashboard-heading {
     align-items: start;
     flex-direction: column;
-  }
-  .dashboard-callout h2 {
-    margin-top: 25px;
-  }
-  .dashboard-callout .eyebrow {
-    max-width: none;
-  }
-  .callout-symbol {
-    right: 40px;
-    top: 45px;
-  }
-  .dashboard-callout .button {
-    width: auto;
   }
   .extension-hero {
     gap: 30px;
@@ -1289,11 +1021,6 @@ textarea:focus-visible {
   }
   .receipt-arrow {
     font-size: 110px;
-  }
-  .identity-stack {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
   }
 }
 @media (max-width: 760px) {
@@ -1338,9 +1065,6 @@ textarea:focus-visible {
   .landing-features article {
     padding: 24px;
   }
-  .feature-icon {
-    margin-bottom: 25px;
-  }
   .landing-strip {
     padding: 25px 5%;
   }
@@ -1380,9 +1104,6 @@ textarea:focus-visible {
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
-  .workspace-label {
-    margin-bottom: 18px;
-  }
   .dashboard-sidebar > .eyebrow,
   .sidebar-divider,
   .sidebar-bottom,
@@ -1407,12 +1128,6 @@ textarea:focus-visible {
   .dashboard-content {
     padding: 20px 5% 40px;
   }
-  .workspace-topline {
-    font-size: 8px;
-  }
-  .workspace-topline .status-badge {
-    font-size: 7px;
-  }
   .dashboard-heading {
     margin-top: 28px;
     gap: 20px;
@@ -1422,19 +1137,6 @@ textarea:focus-visible {
   }
   .dashboard-heading p:not(.eyebrow) {
     font-size: 12px;
-  }
-  .metric-grid {
-    gap: 10px;
-  }
-  .metric-card {
-    padding: 16px;
-  }
-  .metric-card > div {
-    font-size: 8px;
-  }
-  .metric-card > strong {
-    font-size: 26px;
-    margin: 20px 0 12px;
   }
   .dashboard-panel {
     padding: 20px;
@@ -1461,16 +1163,6 @@ textarea:focus-visible {
   }
   .connection-note > a {
     margin-left: 33px;
-  }
-  .evidence-principles {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-  .evidence-principles article {
-    padding: 24px 0;
-  }
-  .identity-stack {
-    display: block;
   }
   .input-action {
     flex-direction: column;
@@ -1561,4 +1253,33 @@ textarea:focus-visible {
   padding: 16px;
   border: 1px solid var(--line);
   max-width: 100%;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 18px;
+}
+.evidence-list {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 10px 20px;
+  margin: 0;
+  font-size: 13px;
+}
+.evidence-list dt {
+  font: 10px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  padding-top: 2px;
+}
+.evidence-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.evidence-list a {
+  border-bottom: 1px solid var(--line);
+}
+.record-table td a {
+  border-bottom: 1px solid var(--ink);
 }

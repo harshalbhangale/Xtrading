@@ -7,14 +7,10 @@ export default function WatchlistPage() {
   return (
     <>
       <PageHeading
-        eyebrow="02 / Watchlist"
-        title="Follow with intention."
-        description="Keep a local list of creator handles, then inspect the record behind their calls."
+        title="Watchlist"
+        description="Creator handles saved in this browser."
       />
-      <Panel
-        title="Your saved handles"
-        description="Saved in this browser. Account sync is not connected."
-      >
+      <Panel title="Saved handles">
         <Watchlist />
       </Panel>
     </>

@@ -24,8 +24,8 @@ export default function LandingPage() {
             Give conviction a record people can inspect.
           </p>
           <div className="button-row">
-            <Link className="button lime-button" href="/dashboard">
-              Explore the user platform ↗
+            <Link className="button lime-button" href="/creators">
+              Browse creators ↗
             </Link>
             <Link className="text-link" href="/creator">
               I’m a creator ↗
@@ -82,49 +82,36 @@ export default function LandingPage() {
       </section>
       <section className="landing-section" id="how-it-works">
         <div className="landing-section-heading">
-          <p className="eyebrow">01 / Conviction needs context</p>
-          <h2>
-            Three signals.
-            <br />
-            No shortcuts.
-          </h2>
+          <p className="eyebrow">How it works</p>
+          <h2>Three separate signals.</h2>
           <p>
-            Identity, stake and performance answer different questions. We put
-            them together without pretending they mean the same thing.
+            Identity, stake and performance answer different questions, so we
+            never merge them into one score.
           </p>
         </div>
         <div className="landing-features">
           <article>
-            <span className="feature-icon" aria-hidden="true">
-              ◎
-            </span>
-            <p className="eyebrow">01 / Identity</p>
-            <h3>A person behind the post.</h3>
+            <p className="eyebrow">Identity</p>
+            <h3>Who made the call.</h3>
             <p>
-              Prove control of your X account and wallet. Make ownership a
-              receipt, not a profile claim.
+              Sign in with X through Privy, then sign a one-time message that
+              binds your stable X ID to your wallet.
             </p>
           </article>
           <article>
-            <span className="feature-icon" aria-hidden="true">
-              ◇
-            </span>
-            <p className="eyebrow">02 / Stake</p>
-            <h3>Put participation onchain.</h3>
+            <p className="eyebrow">Stake</p>
+            <h3>What backs it.</h3>
             <p>
-              A refundable stake is a visible commitment. It stays separate from
-              the quality of your predictions.
+              A refundable deposit in a Monad contract with a seven-day
+              withdrawal cooldown. It shows commitment, not accuracy.
             </p>
           </article>
           <article>
-            <span className="feature-icon" aria-hidden="true">
-              ↗
-            </span>
-            <p className="eyebrow">03 / Evidence</p>
-            <h3>Show the whole record.</h3>
+            <p className="eyebrow">Record</p>
+            <h3>How it played out.</h3>
             <p>
-              Sourced calls, evaluation windows and coverage make performance
-              something you can inspect.
+              Calls are tied to their source post and scored under published
+              rules. Unscored calls stay visible as unscored.
             </p>
           </article>
         </div>
@@ -143,29 +130,24 @@ export default function LandingPage() {
           <span className="poster-bottom">NO MORE BLUFF / X EXTENSION</span>
         </div>
         <div>
-          <p className="eyebrow">02 / Meet them where they post</p>
+          <p className="eyebrow">Chrome extension</p>
           <h2>
-            The conversation
+            The record,
             <br />
-            has a new layer.
+            under the post.
           </h2>
           <p>
-            Look up a creator without leaving the feed. The extension will bring
-            identity, stake, and call evidence next to the claim, with
-            wallet-approved trading as the next step.
+            The extension shows a creator's identity binding and stake status
+            under their posts on X, with Buy and Sell links that open a
+            wallet-reviewed Kuru trade.
           </p>
           <Link className="button" href="/extension">
-            Explore the X extension ↗
+            Install the extension ↗
           </Link>
-          <p className="small-note">
-            The development build currently adds evidence links. Live badges and
-            trading are in development.
-          </p>
         </div>
       </section>
       <section className="landing-section">
         <div className="landing-section-heading">
-          <p className="eyebrow">03 / Choose your side of the record</p>
           <h2>
             For the ones who call.
             <br />
@@ -181,8 +163,8 @@ export default function LandingPage() {
               do the talking.
             </h3>
             <p>
-              Prepare your profile, verify ownership, lock a refundable stake
-              and make your call history inspectable.
+              Bind your X account to a wallet, lock a refundable stake and let
+              people inspect your calls.
             </p>
             <Link className="text-link" href="/creator">
               Enter the creator studio ↗
@@ -196,8 +178,8 @@ export default function LandingPage() {
               into an informed decision.
             </h3>
             <p>
-              Find creators, save handles, review evidence and keep confirmed
-              trades in your own portfolio.
+              Look up a creator's record, then trade on Kuru with every amount
+              shown before you sign.
             </p>
             <Link className="text-link" href="/dashboard">
               Open your workspace ↗
@@ -206,24 +188,16 @@ export default function LandingPage() {
         </div>
       </section>
       <section className="landing-end">
-        <p className="eyebrow">The next call deserves a closer look.</p>
         <h2>
           Follow the evidence.
           <br />
           Keep your own conviction.
         </h2>
         <div className="button-row">
-          <Link className="button lime-button" href="/terminal">
-            Open the terminal ↗
-          </Link>
-          <Link className="text-link" href="/integrations">
-            Explore agent connections ↗
+          <Link className="button lime-button" href="/creators">
+            Browse creators ↗
           </Link>
         </div>
-        <p className="small-note">
-          Frontend foundation · Monad testnet by default · Live data
-          integrations in development
-        </p>
       </section>
     </div>
   );

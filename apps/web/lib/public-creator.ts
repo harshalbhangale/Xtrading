@@ -5,11 +5,27 @@ import {
   publicCreatorEvidenceSchema,
 } from "@call-my-bluff/domain";
 import { stakeAbi, testnetStake } from "@call-my-bluff/integrations/stake";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { createPublicClient, erc20Abi, getAddress, http } from "viem";
 import { monadTestnet } from "viem/chains";
 import { getDatabase } from "./database";
 import { indexedStake } from "./stake-indexing";
+
+/** Most recently bound handles. `null` means the registry itself is unavailable. */
+export async function recentBoundHandles(limit = 12) {
+  const database = getDatabase();
+  if (!database) return null;
+  try {
+    const rows = await database.db
+      .select({ handle: creators.handle })
+      .from(creators)
+      .orderBy(desc(creators.linkedAt))
+      .limit(limit);
+    return [...new Set(rows.map((row) => row.handle))];
+  } catch {
+    return null;
+  }
+}
 
 export async function publicCreatorEvidence(input: string) {
   const handle = normalizeHandle(input);

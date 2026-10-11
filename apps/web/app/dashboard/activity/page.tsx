@@ -11,18 +11,14 @@ export default function ActivityPage() {
   return (
     <>
       <PageHeading
-        eyebrow="04 / Activity"
-        title="Every action. A receipt."
-        description="A timeline for account changes, stake events, orders and confirmed fills."
+        title="Activity"
+        description="Account changes, stake events, orders and confirmed fills."
       />
-      <Panel
-        title="Activity ledger"
-        description="Events will retain their chain, timestamp and transaction reference."
-      >
+      <Panel title="Events">
         <RecordTable
           columns={["Event", "Status", "Source", "Time", "Receipt"]}
-          emptyTitle="Nothing indexed yet."
-          emptyDescription="Your timeline will populate from verified account changes and confirmed onchain activity."
+          emptyTitle="No events yet."
+          emptyDescription="Your stake history is on the Stake page; trade events appear once fill indexing is live."
         />
       </Panel>
     </>

@@ -43,28 +43,28 @@ export function integrationStatus(
       configured: Boolean(env.MONAD_RPC_URL && env.KURU_MARKET_ADDRESS),
       implementation: "foundation",
       detail:
-        "Live testnet market discovery and unsigned Kuru step preparation implemented. Price quoting, wallet UI and confirmed fills remain pending.",
+        "MON/USDC testnet market reads, eth_call quote simulation and wallet-reviewed approval/order steps. Testnet liquidity is thin; no confirmed fill yet.",
     },
     {
       name: "Privy",
       configured: Boolean(env.NEXT_PUBLIC_PRIVY_APP_ID),
       implementation: "foundation",
       detail:
-        "Server-verified X/wallet binding implemented. Stake transaction review is available; live deposit and trading verification remain pending.",
+        "X login, embedded wallet and server-verified X/wallet binding. Stake approve/deposit/withdraw signed and confirmed on testnet.",
     },
     {
       name: "Envio",
       configured: Boolean(env.ENVIO_GRAPHQL_URL),
       implementation: "foundation",
       detail:
-        "Stake event schema and handlers. Deployment and fill indexing are next.",
+        "Stake events indexed (local runtime) with reorg rollback; history and freshness shown on stake and creator pages. Fill indexing not started.",
     },
     {
       name: "Nansen",
       configured: Boolean(env.NANSEN_API_KEY),
       implementation: "foundation",
       detail:
-        "Server-only API client boundary. Authorized endpoint coverage must be verified.",
+        "Server-only client exists; no insight is shown yet. Needs an API key.",
     },
     {
       name: "Perpl",

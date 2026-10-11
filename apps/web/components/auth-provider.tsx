@@ -1,14 +1,13 @@
 "use client";
-import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
+import ConfiguredWallet from "./configured-wallet";
 
-const ConfiguredProvider = dynamic(() => import("./configured-wallet"), {
-  ssr: false,
-});
+// Imported statically so page content still renders on the server; Privy itself
+// only initialises in the browser.
 export function AuthProvider({ children }: { children: ReactNode }) {
   const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
   return appId ? (
-    <ConfiguredProvider appId={appId}>{children}</ConfiguredProvider>
+    <ConfiguredWallet appId={appId}>{children}</ConfiguredWallet>
   ) : (
     children
   );

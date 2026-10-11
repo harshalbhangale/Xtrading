@@ -8,8 +8,8 @@ export function Navigation() {
   return (
     <nav aria-label="Main navigation">
       {[
-        ["/terminal", "Terminal"],
-        ["/dashboard", "User app"],
+        ["/creators", "Creators"],
+        ["/dashboard", "Dashboard"],
         ["/creator", "Creator studio"],
         ["/extension", "Extension"],
       ].map(([href, label]) => (

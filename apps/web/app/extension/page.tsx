@@ -8,45 +8,31 @@ export default function ExtensionPage() {
     <div className="page extension-page">
       <div className="extension-hero">
         <div>
-          <p className="eyebrow">The feed is where it starts</p>
           <h1>
-            Context.
+            The record,
             <br />
-            Right next to
-            <br />
-            <span className="highlight">the claim.</span>
+            <span className="highlight">under the post.</span>
           </h1>
           <p className="hero-copy">
-            Meet the X extension that brings creator identity, refundable stake
-            and call evidence into your feed.
+            A Chrome extension for X. Under each post it shows whether the
+            author has bound their account and whether their stake is active,
+            with Buy and Sell links that open a Kuru trade review here.
           </p>
           <div className="button-row">
             <a className="button" href="#install">
-              Set up the development build ↗
+              Install ↗
             </a>
-            <Link className="text-link" href="/dashboard">
-              Open your workspace ↗
+            <Link className="text-link" href="/creators">
+              Browse creators ↗
             </Link>
           </div>
-          <p className="small-note">
-            Current build: binding and stake indicators, evidence details and
-            Kuru review links. Real-X installation testing is pending.
-          </p>
         </div>
         <ExtensionPreview />
       </div>
       <section className="extension-install" id="install">
         <div>
-          <p className="eyebrow">01 / Development installation</p>
-          <h2>
-            From this workspace
-            <br />
-            to your feed.
-          </h2>
-          <p>
-            The extension is not published in the Chrome Web Store. Use the
-            local development build to start integrating.
-          </p>
+          <h2>Install the developer build</h2>
+          <p>Not yet on the Chrome Web Store.</p>
         </div>
         <ol className="install-steps">
           <li>
@@ -80,31 +66,6 @@ export default function ExtensionPage() {
           </li>
         </ol>
       </section>
-      <div className="evidence-principles">
-        <article>
-          <span>01 / Identity</span>
-          <h3>Know who is speaking.</h3>
-          <p>
-            Verified X ownership and wallet binding will be shown independently.
-          </p>
-        </article>
-        <article>
-          <span>02 / Record</span>
-          <h3>Inspect the evidence.</h3>
-          <p>
-            Reputation needs sourced calls, transparent coverage and a published
-            method.
-          </p>
-        </article>
-        <article>
-          <span>03 / Execution</span>
-          <h3>Act with your approval.</h3>
-          <p>
-            Kuru trading will prepare a quote and transaction for explicit
-            wallet approval.
-          </p>
-        </article>
-      </div>
     </div>
   );
 }

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     template: "%s · No More Bluff",
   },
   description:
-    "Creator reputation, locked stakes, and trading from X on Monad.",
+    "Verified X identity, refundable stake and wallet-approved trading from X, on Monad.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -34,6 +34,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 width={1774}
                 height={887}
                 className="brand-logo"
+                sizes="160px"
                 priority
               />
             </Link>
@@ -48,13 +49,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </header>
           <main id="main">{children}</main>
           <footer>
-            <span>
-              NO MORE BLUFF <span className="muted">/</span> Put your money
-              where your mouth is.
-            </span>
-            <Link href="/setup">
-              Workspace setup <span aria-hidden="true">↗</span>
-            </Link>
+            <span>No More Bluff · Monad {testnet ? "testnet" : "mainnet"}</span>
+            <Link href="/setup">System status</Link>
           </footer>
         </AuthProvider>
       </body>

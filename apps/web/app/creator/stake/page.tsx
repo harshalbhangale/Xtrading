@@ -12,19 +12,15 @@ export default function StakePage() {
   return (
     <>
       <PageHeading
-        eyebrow="03 / Your stake"
-        title="A commitment you can see."
-        description="A refundable deposit signals participation. Your trade performance remains a separate record."
+        title="Stake"
+        description="A refundable deposit with a seven-day withdrawal cooldown. It shows commitment, not accuracy."
       />
-      <Panel
-        title="Wallet and contract evidence"
-        description="Live testnet reads and explicit, separate transaction reviews."
-      >
+      <Panel title="Your stake">
         <StakeControl />
       </Panel>
       <ConnectionNote>
-        There is no automatic slashing for a wrong financial call. Staking does
-        not verify identity or imply profitability.
+        Nothing is slashed for a wrong call. Staking does not verify identity or
+        imply profitability.
       </ConnectionNote>
     </>
   );

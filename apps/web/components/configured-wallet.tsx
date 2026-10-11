@@ -18,8 +18,7 @@ export function AuthButton() {
       disabled={!ready}
       onClick={() => (authenticated ? void logout() : login())}
     >
-      {authenticated ? "Disconnect" : "Connect wallet"}
-      <span aria-hidden="true">↗</span>
+      {authenticated ? "Sign out" : "Sign in"}
     </button>
   );
 }

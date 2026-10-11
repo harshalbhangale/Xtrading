@@ -152,6 +152,7 @@ export const publicCreatorEvidenceSchema = z.object({
   }),
   observedAt: z.iso.datetime(),
 });
+export type PublicCreatorEvidence = z.infer<typeof publicCreatorEvidenceSchema>;
 export const stakeStateSchema = z.object({
   chainId: z.literal(10143),
   wallet: addressSchema,

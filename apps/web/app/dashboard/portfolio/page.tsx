@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import {
   ConnectionNote,
-  MetricCard,
   PageHeading,
   Panel,
   RecordTable,
@@ -13,33 +12,17 @@ export default function PortfolioPage() {
   return (
     <>
       <PageHeading
-        eyebrow="03 / Portfolio"
-        title="Your trades. Their story."
-        description="Holdings and returns grounded in confirmed execution, with the posts that brought you here."
+        title="Portfolio"
+        description="Holdings and returns from confirmed fills only, each linked to the post that prompted it."
       />
-      <div className="metric-grid">
-        <MetricCard
-          label="Portfolio value"
-          detail="Price and holdings data unavailable"
-        />
-        <MetricCard
-          label="Realized P&L"
-          detail="Confirmed fills and cost basis required"
-        />
-        <MetricCard label="Trading fees" detail="No indexed fee records yet" />
-        <MetricCard
-          label="Open orders"
-          detail="Order status source not connected"
-        />
-      </div>
       <Panel
         title="Holdings"
         description="Token amounts and valuation are shown separately."
       >
         <RecordTable
           columns={["Asset", "Amount", "Value", "Cost basis", "Data as of"]}
-          emptyTitle="Your positions belong here."
-          emptyDescription="Confirmed holdings will appear when your wallet and indexer are connected."
+          emptyTitle="No holdings to show."
+          emptyDescription="Holdings appear once fill indexing is live."
         />
       </Panel>
       <Panel
@@ -55,7 +38,7 @@ export default function PortfolioPage() {
             "Transaction",
           ]}
           emptyTitle="No confirmed fills to display."
-          emptyDescription="Each fill will include its transaction, source post and settlement status."
+          emptyDescription="Each fill will show its transaction, source post and status."
         />
       </Panel>
       <ConnectionNote>

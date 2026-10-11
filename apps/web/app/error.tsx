@@ -9,17 +9,14 @@ export default function ErrorPage({
 }) {
   return (
     <section className="page subpage">
-      <p className="eyebrow">The record could not load</p>
-      <h1>Let’s try that again.</h1>
-      <p className="hero-copy">
-        Something interrupted this page. Please retry or return to the homepage.
-      </p>
+      <h1>This page could not load.</h1>
+      <p className="hero-copy">Retry, or go back to the homepage.</p>
       <div className="button-row">
         <button className="button" type="button" onClick={() => retry()}>
-          Retry page ↗
+          Retry
         </button>
         <Link className="text-link" href="/">
-          Back to home ↗
+          Home
         </Link>
       </div>
     </section>

@@ -3,11 +3,10 @@ import Link from "next/link";
 export default function NotFound() {
   return (
     <section className="page subpage">
-      <p className="eyebrow">404 / NOT FOUND</p>
-      <h1>No receipts here.</h1>
-      <p>That page or creator handle could not be found.</p>
-      <Link className="button" href="/">
-        Back to terminal ↗
+      <h1>Page not found.</h1>
+      <p className="hero-copy">That page or creator handle does not exist.</p>
+      <Link className="button" href="/creators">
+        Browse creators
       </Link>
     </section>
   );
