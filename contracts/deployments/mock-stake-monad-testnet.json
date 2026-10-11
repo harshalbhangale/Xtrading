@@ -1,0 +1,12 @@
+{
+  "chainId": 10143,
+  "address": "0x9e09b97dBaDc1D6f3A3C5bA9aF0E47923C34634e",
+  "transactionHash": "0x7490e4ff758eaa24b33ccd6a4e1868b947bbba7d64964ef706abf85f19db447f",
+  "deploymentBlock": "70170023",
+  "deployer": "0x51bDFC2a4D1C3B04A89f8CA928bd377B767Df424",
+  "token": "0x78928c53A623585317f9102B88C2d76Df66b6825",
+  "minimum": "500000000",
+  "cooldown": "604800",
+  "runtimeVerified": true,
+  "constructorVerified": true
+}

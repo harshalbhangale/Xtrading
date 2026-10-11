@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - "127.0.0.1:5434:5432"
+    environment:
+      POSTGRES_DB: envio-dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: testing
+    volumes:
+      - stake-indexer-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d envio-dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  hasura:
+    image: hasura/graphql-engine:v2.43.0
+    ports:
+      - "127.0.0.1:8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:testing@postgres:5432/envio-dev
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+      HASURA_GRAPHQL_ADMIN_SECRET: testing
+      HASURA_GRAPHQL_UNAUTHORIZED_ROLE: public
+volumes:
+  stake-indexer-postgres:

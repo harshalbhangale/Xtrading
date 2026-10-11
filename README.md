@@ -2,7 +2,7 @@
 
 Creator evidence and spot/perp trading from X, built on Monad. The product includes a landing page, creator studio, user dashboard, Chrome extension and planned MCP server.
 
-Identity binding works. The Circle-token stake contract and mock USDC are deployed on testnet. Deposits, live indexing, Kuru/Perpl execution, Nansen insights, CRE workflow and MCP remain pending.
+Identity binding works. The Circle-token stake contract, mock USDC and matching mUSDC stake contract are deployed and verified on testnet. Deposits, indexed stake evidence, Kuru/Perpl execution, Nansen insights, CRE workflow and MCP remain pending.
 
 ## Run locally
 
@@ -69,7 +69,9 @@ pnpm contracts:abi
 pnpm indexer:codegen
 ```
 
-Envio is configured for the recorded Circle-token stake deployment, but its runtime is not running. After selecting the matching mock deployment, update the exact address/start block and regenerate before starting it.
+Envio is running locally and backfilling both verified stake deployments, using contract-qualified position IDs, reorg rollback, a ten-block indexing lag and a 200-block reorg window. Its local database is isolated from the app database. Dashboard history and extension projections are not connected yet.
+
+To run locally, copy `services/indexer/.env.example` to `.env`, run `docker compose -p cmb-stake-indexer -f services/indexer/docker-compose.yml up -d`, then `pnpm --filter @call-my-bluff/indexer start`. Hasura is bound to localhost port 8081; its local development admin secret is `testing`. These settings are for local development only. Indexed history remains empty until stake events occur; a block lag is not a claim of chain finality.
 
 ## Checks
 

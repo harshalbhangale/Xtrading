@@ -11,7 +11,7 @@ Primary track: **Onchain Finance & Trading**.
 | Nansen | Wallet/token context | Actual sourced insight with timestamp, network and coverage |
 | Chainlink CRE | Hourly settlement of expired, bonded calls | Simulated workflow, authenticated settlement report, reward/slash event and Envio projection |
 
-Current status: Privy identity binding works; the Circle-token stake contract is deployed; mUSDC is deployed with 10,000 tokens in the project wallet. Deposits, live indexing, Kuru execution and Nansen data remain pending.
+Current status: Privy identity binding works; both Circle-token and matching mUSDC stake contracts are deployed and verified; mUSDC has 10,000 tokens in the project wallet. Envio is running locally and backfilling both deployments. Deposits, indexed stake evidence in the app, Kuru execution and Nansen data remain pending.
 
 Perpl API is in scope; its separate analytics/risk dashboard bounty is excluded. CRE settlement is planned alongside call evaluation. Kimi is optional; Aurora and other sponsor branches come after the core demo.
 

@@ -8,7 +8,7 @@ Deployment mints `10000000000` raw units (10,000 mUSDC) to the specified recipie
 
 Monad testnet token: `0x78928c53A623585317f9102B88C2d76Df66b6825`. Creation receipt, constructor recipient and runtime bytecode were verified against the Foundry artifact. Initial supply and wallet balance are 10,000 mUSDC. See [deployment record](../contracts/deployments/mock-usdc-monad-testnet.json).
 
-The local app now uses explicit mock-token mode. The earlier Circle-token stake record is preserved; a matching mUSDC stake contract is awaiting wallet-approved deployment. Envio still points at the earlier contract until the new deployment is confirmed.
+The local app uses explicit mock-token mode with matching stake contract `0x9e09b97dBaDc1D6f3A3C5bA9aF0E47923C34634e`. Its successful creation receipt, constructor and runtime were verified; minimum is 500 mUSDC and cooldown is seven days. See [stake deployment record](../contracts/deployments/mock-stake-monad-testnet.json). The earlier Circle-token deployment is preserved, and Envio indexes both contract namespaces. Approval and deposit remain separate user-approved transactions.
 
 ## Deployment handoff
 

@@ -1,6 +1,7 @@
-# Verified deployment: contracts/deployments/monad-testnet.json.
+# Verified deployments: contracts/deployments/{monad-testnet,mock-stake-monad-testnet}.json.
 name: call-my-bluff-stakes
 description: Refundable creator stake projections on Monad testnet
+rollback_on_reorg: true
 contracts:
   - name: CreatorStake
     handler: src/handlers.ts
@@ -9,7 +10,15 @@ contracts:
 chains:
   - id: 10143
     start_block: 70144598
+    max_reorg_depth: 200
+    block_lag: 10
+    rpc:
+      url: https://testnet-rpc.monad.xyz
+      for: sync
+      initial_block_interval: 99
+      interval_ceiling: 99
     contracts:
       - name: CreatorStake
         address:
           - "0x4B1a8c4E158E4E3EEa22A62205F1e0CD82d0D5B6"
+          - "0x9e09b97dBaDc1D6f3A3C5bA9aF0E47923C34634e"
