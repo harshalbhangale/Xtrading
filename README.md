@@ -77,7 +77,7 @@ Envio is configured for the recorded Circle-token stake deployment, but its runt
 IDENTITY_TEST_DATABASE_URL=postgresql://cmb:cmb_local@localhost:5433/call_my_bluff pnpm check
 ```
 
-Checks include formatting, TypeScript, application tests, local identity integration tests, Foundry and web/extension builds. Latest local results: 21 application tests and 12 Foundry tests passed; six database integration tests were skipped without a test database URL. CI provisions its own Postgres service.
+Checks include formatting, TypeScript, application tests, local identity integration tests, Foundry and web/extension builds. Latest local results: 22 application tests and 12 Foundry tests passed; six database integration tests were skipped without a test database URL. CI provisions its own Postgres service.
 
 ## Developer documents
 

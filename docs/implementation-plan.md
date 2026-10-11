@@ -15,7 +15,7 @@ Updated 11 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added tar
 - [x] Live stake RPC reads and separate wallet reviews for approval, deposit and withdrawal actions.
 - [x] Original six-decimal mUSDC contract and faucet; deployed with 10,000 mUSDC in the project wallet.
 - [x] Envio schema, event handlers, contract configuration and generated bindings.
-- [x] Latest local checks: 21 application tests, 12 Foundry tests, web/extension builds; six database integration tests skipped in this run.
+- [x] Latest local checks: 22 application tests, 12 Foundry tests, web/extension builds; six database integration tests skipped in this run.
 
 ## Phase 1: Finish stake and indexing
 
@@ -49,7 +49,8 @@ Exit: a bound creator's profile/post shows current evidence from the backend.
 - [ ] Verify Perpl network, market IDs, collateral units and unsigned order interface.
 - [ ] Add user-confirmed leverage, collateral/exposure caps, slippage, reduce-only exits and duplicate-order prevention.
 - [ ] Demonstrate Perpl social trading with actual onchain activity; record its ≤2-minute API-bounty demo.
-- [ ] Fetch quotes and prepare unsigned orders with fees, expiry and execution limits.
+- [x] Connect actual eth_call quote simulation, integer slippage and explicit Privy review UI.
+- [ ] Verify successful quotes and wallet approval in funded/liquid conditions; separate fee breakdown remains unavailable.
 - [ ] Add X buy/sell entry points with source-post attribution.
 - [ ] Execute only after Privy wallet approval.
 - [ ] Index order/fill events and distinguish open, partial, filled, cancelled and failed orders.

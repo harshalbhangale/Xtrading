@@ -16,7 +16,7 @@ Run `pnpm install --frozen-lockfile`, `pnpm indexer:codegen`, and `pnpm dev`. Co
 | `/dashboard` | User overview | Portfolio slots, creator lookup and extension entry |
 | `/dashboard/watchlist` | User watchlist | Browser-local add/remove, duplicate handling, reload persistence; max 50 handles |
 | `/dashboard/portfolio` | User portfolio | Holdings, confirmed fills and fee table slots |
-| `/dashboard/trade` | Trade review | Interactive buy/sell draft, venue reference and unavailable quote/approval fields |
+| `/dashboard/trade` | Trade review | Authenticated Kuru simulation quotes, bounded approval/order review, explicit Privy signing and receipt status; liquidity/funding may prevent quotes |
 | `/dashboard/activity` | User activity | Event ledger slot |
 | `/creator` | Creator overview | Setup journey and independent identity/stake/reputation slots |
 | `/creator/profile` | Creator onboarding | Verified session, explicit wallet ownership proof, persisted binding status; separate local profile draft |
@@ -50,9 +50,13 @@ Use an em dash for unavailable metrics. Do not fabricate balances, scores or cha
 
 `GET /api/markets` reads the fixed Kuru MON/USDC testnet market at one checked block and Perpl's fixed public testnet context. Each provider can independently be unavailable. Perpl metadata is API-reported; it is not onchain execution verification.
 
-`POST /api/trades/prepare` requires a verified Privy session, current X/wallet binding and app origin. Current scope: Kuru spot on testnet 10143 only. Body: `instrument: "spot"`, `chainId: 10143`, `side: "buy" | "sell"`, `amount`, `minimumOutput` and `sourcePostId`. Amounts are integer token-unit strings: buy spends Kuru USDC and receives native MON; sell spends native MON and receives Kuru USDC. Source-post attribution is user-supplied and unverified.
+`POST /api/trades/prepare` requires a verified Privy session, current X/wallet binding and app origin. Current scope: Kuru spot on testnet 10143 only. Body: `instrument: "spot"`, `chainId: 10143`, `side: "buy" | "sell"`, `amount`, `slippageBps` (1–500) and `sourcePostId`. Amounts are integer token-unit strings: buy spends Kuru USDC and receives native MON; sell spends native MON and receives Kuru USDC. Source-post attribution is user-supplied and unverified.
 
-The response prepares one step: allowance reset, exact approval or fill-or-kill order, with gas estimate, balances checked and a 90-second review expiry. Minimum output is user-specified; this is not a provider quote. The underlying ABI has no transaction deadline, so the frontend must refresh preparation before wallet review. An approval simulation does not verify the future order. Signing UI, price quoting, intent persistence and fill tracking remain pending.
+The response prepares one step: allowance reset, exact approval or fill-or-kill order. For orders, a pinned-block `eth_call` executes the actual unsigned order with a one-unit minimum to estimate output; integer slippage arithmetic derives its enforceable positive minimum. No balance/allowance overrides are used. Buy quotes require the input balance and confirmed allowance; an approval step has no expected output and does not promise liquidity. Gas is estimated for the final protected transaction.
+
+Reviews expire after 30 seconds. The frontend re-prepares before opening Privy; changed wallet, target, calldata, value or action requires a new review. The underlying market has no onchain deadline, so expiry is an app check. Each reset, approval and order is a separate wallet action. Submitted hashes and successful transaction receipts remain separate from confirmed fills; persistence and fill reconciliation are pending. Separate fee breakdown is unavailable, while fees are included in simulated output.
+
+Browser checks on 11 October: bound-wallet sell simulation returned `InsufficientLiquidity()`; buying returned insufficient Kuru token balance. No transaction was submitted.
 
 Kuru USDC is `0x3bA3d39AFcf8bb994f7964B3e0171Ea2Ba361570`, separate from Circle staking USDC and mUSDC. Perpl discovery currently reports AUSD at `0xa9012a055bd4e0edff8ce09f960291c09d5322dc`; validate this live context rather than the older README collateral address. Perpl execution remains unavailable until exchange/account permissions and wallet approval integration are implemented.
 

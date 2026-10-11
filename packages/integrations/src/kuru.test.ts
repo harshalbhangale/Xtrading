@@ -1,6 +1,11 @@
 import { decodeFunctionData, erc20Abi } from "viem";
 import { expect, it } from "vitest";
-import { encodeKuruStep, kuruAbi, kuruTestnet } from "./kuru";
+import {
+  encodeKuruStep,
+  kuruAbi,
+  kuruTestnet,
+  minimumQuotedOutput,
+} from "./kuru";
 
 const base = {
   side: "buy" as const,
@@ -10,6 +15,14 @@ const base = {
   sizePrecision: 10000000000n,
   allowance: 1000000n,
 };
+it("derives bounded slippage protection with integer arithmetic", () => {
+  expect(minimumQuotedOutput(100000000000000000001n, 100)).toBe(
+    99000000000000000000n,
+  );
+  expect(() => minimumQuotedOutput(1n, 100)).toThrow();
+  expect(() => minimumQuotedOutput(100n, 501)).toThrow();
+  expect(() => minimumQuotedOutput(100n, 1.5)).toThrow();
+});
 it("converts token units into Kuru precision and enforces FOK with bounded output", () => {
   const buy = encodeKuruStep(base);
   expect(decodeFunctionData({ abi: kuruAbi, data: buy.data })).toMatchObject({

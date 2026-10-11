@@ -31,7 +31,33 @@ export const prepareSpotSchema = z
     side: z.enum(["buy", "sell"]),
     // Integer input/output token units. No arbitrary market, target or calldata.
     amount: amountSchema.refine((value) => BigInt(value) > 0n),
-    minimumOutput: amountSchema.refine((value) => BigInt(value) > 0n),
+    slippageBps: z.number().int().min(1).max(500),
     sourcePostId: z.string().regex(/^[0-9]{1,30}$/),
   })
   .strict();
+
+export const spotReviewSchema = z.object({
+  status: z.literal("prepared"),
+  venue: z.literal("Kuru"),
+  instrument: z.literal("spot"),
+  chainId: z.literal(10143),
+  wallet: address,
+  action: z.enum(["approve", "resetAllowance", "order"]),
+  to: address,
+  data: z.string().regex(/^0x[0-9a-fA-F]+$/),
+  value: amountSchema,
+  gas: amountSchema,
+  gasPrice: amountSchema,
+  amount: amountSchema,
+  expectedOutput: amountSchema.nullable(),
+  minimumOutput: amountSchema.nullable(),
+  side: z.enum(["buy", "sell"]),
+  sourcePostId: z.string(),
+  slippageBps: z.number().int().min(1).max(500),
+  expiresAt: z.iso.datetime(),
+  tradingFee: z.string(),
+  tokenBalance: amountSchema,
+  nativeBalance: amountSchema,
+  observedAt: z.iso.datetime(),
+  blockNumber: amountSchema,
+});

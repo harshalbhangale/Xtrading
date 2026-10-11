@@ -20,6 +20,19 @@ export const kuruTestnet = {
   quote: "0x3bA3d39AFcf8bb994f7964B3e0171Ea2Ba361570" as Address,
 };
 
+export function minimumQuotedOutput(expected: bigint, slippageBps: number) {
+  if (
+    !Number.isInteger(slippageBps) ||
+    slippageBps < 1 ||
+    slippageBps > 500 ||
+    expected <= 0n
+  )
+    throw new Error("Invalid quote or slippage");
+  const minimum = (expected * BigInt(10000 - slippageBps)) / 10000n;
+  if (minimum === 0n) throw new Error("Quote output too small");
+  return minimum;
+}
+
 export function encodeKuruStep(input: {
   side: "buy" | "sell";
   amount: bigint;
