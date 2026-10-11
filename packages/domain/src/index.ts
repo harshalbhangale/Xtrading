@@ -207,3 +207,64 @@ export const preparedStakeSchema = z.object({
   expiresAt: z.iso.datetime(),
   state: stakeStateSchema,
 });
+
+const callAssets = ["BTC", "ETH", "SOL", "MON"] as const;
+const signedIntegerSchema = z.string().regex(/^-?(0|[1-9][0-9]*)$/);
+export const callRegistrationSchema = z
+  .object({
+    postUrl: z.string().max(200),
+    asset: z.enum(callAssets),
+    direction: z.enum(["up", "down"]),
+    horizon: z.enum(["24h", "7d", "30d"]),
+    // Minimum move in basis points; 1 means any move in the called direction.
+    targetBps: z.number().int().min(1).max(10000),
+  })
+  .strict();
+export const priceObservationSchema = z.object({
+  assetId: z.enum(callAssets),
+  sourceId: z.string(),
+  price: amountSchema,
+  priceDecimals: z.number().int().min(0).max(36),
+  timestamp: amountSchema,
+});
+export const callEvidenceSchema = z.object({
+  post: z.object({
+    authorHandle: xHandleSchema,
+    text: z.string().max(1000),
+    verifiedAt: z.iso.datetime(),
+  }),
+  horizon: z.enum(["24h", "7d", "30d"]),
+  terms: z.object({
+    methodology: z.literal("directional-return-v1"),
+    assetId: z.enum(callAssets),
+    sourceId: z.string(),
+    direction: z.enum(["up", "down"]),
+    entryPrice: amountSchema,
+    priceDecimals: z.number().int().min(0).max(36),
+    expiry: amountSchema,
+    toleranceSeconds: amountSchema,
+    targetBps: amountSchema,
+  }),
+  entry: priceObservationSchema,
+  exit: priceObservationSchema.nullable(),
+  outcome: z.enum(["success", "failure", "tie"]).nullable(),
+  returnBps: signedIntegerSchema.nullable(),
+  lastAttemptAt: z.iso.datetime().nullable(),
+});
+export type CallEvidence = z.infer<typeof callEvidenceSchema>;
+export const publicCallSchema = z.object({
+  id: z.uuid(),
+  postId: z.string().regex(/^[0-9]+$/),
+  sourceUrl: z.url(),
+  publishedAt: z.iso.datetime(),
+  registeredAt: z.iso.datetime(),
+  status: z.enum(["open", "resolved"]),
+  evidence: callEvidenceSchema,
+});
+export type PublicCall = z.infer<typeof publicCallSchema>;
+export const publicCallLedgerSchema = z.object({
+  handle: xHandleSchema,
+  methodology: z.literal("directional-return-v1"),
+  calls: z.array(publicCallSchema),
+  observedAt: z.iso.datetime(),
+});

@@ -2,7 +2,9 @@ import { normalizeHandle } from "@call-my-bluff/domain";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Panel, RecordTable } from "../../../components/dashboard/ui";
+import { CallLedger, CallSummary } from "../../../components/call-ledger";
+import { Panel } from "../../../components/dashboard/ui";
+import { publicCallLedger } from "../../../lib/calls";
 import { publicCreatorEvidence } from "../../../lib/public-creator";
 import { stakeLabel } from "../../../lib/stake-label";
 
@@ -25,7 +27,10 @@ export default async function CreatorPage({
 }) {
   const handle = normalizeHandle((await params).handle);
   if (!handle) notFound();
-  const evidence = await publicCreatorEvidence(handle);
+  const [evidence, ledger] = await Promise.all([
+    publicCreatorEvidence(handle),
+    publicCallLedger(handle).catch(() => null),
+  ]);
   const identity = evidence?.identity;
   const stake = evidence?.stake;
   const bound = identity?.status === "bound";
@@ -109,14 +114,26 @@ export default async function CreatorPage({
         </Panel>
       </div>
       <Panel
-        title="Call history"
-        description="Source posts and their outcomes under published rules. Hypothetical call outcomes are not wallet returns."
+        title="Calls"
+        description="Priced at the minute of posting and scored at expiry under directional-return-v1. These are hypothetical outcomes, not wallet returns."
       >
-        <RecordTable
-          columns={["Source post", "Asset / direction", "Window", "Status"]}
-          emptyTitle="No calls recorded yet."
-          emptyDescription="Calls appear once this creator registers them."
-        />
+        {ledger ? (
+          <>
+            <CallSummary calls={ledger.calls} />
+            <CallLedger calls={ledger.calls} />
+          </>
+        ) : (
+          <p className="small-note">
+            {bound ? "Calls are unavailable right now." : "No calls recorded."}
+          </p>
+        )}
+        <p className="small-note">
+          Prices: Binance spot (BTC, ETH, SOL) and Nansen (MON on Monad
+          mainnet), open of the first one-minute candle at or after each time.{" "}
+          <a className="text-link" href="/methodology">
+            Methodology
+          </a>
+        </p>
       </Panel>
     </div>
   );

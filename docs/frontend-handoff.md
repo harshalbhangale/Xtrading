@@ -11,8 +11,8 @@ Run `pnpm install --frozen-lockfile`, `pnpm indexer:codegen`, and `pnpm dev`. Co
 | Route | Surface | Current functionality |
 |---|---|---|
 | `/` | Landing | Product story, audience entry points and extension introduction |
-| `/terminal` | Public terminal | Validated handle lookup and empty call feed |
-| `/creators` / `/creators/[handle]` | Public records | Lookup and honest unindexed state |
+| `/creators` / `/creators/[handle]` | Public records | Bound-account registry; identity, stake and call ledger per creator (`/terminal` redirects here) |
+| `/methodology` | Public | Call scoring rules, price sources and limits |
 | `/dashboard` | User overview | Portfolio slots, creator lookup and extension entry |
 | `/dashboard/watchlist` | User watchlist | Browser-local add/remove, duplicate handling, reload persistence; max 50 handles |
 | `/dashboard/portfolio` | User portfolio | Holdings, confirmed fills and fee table slots |
@@ -21,7 +21,7 @@ Run `pnpm install --frozen-lockfile`, `pnpm indexer:codegen`, and `pnpm dev`. Co
 | `/creator` | Creator overview | Setup journey and independent identity/stake/reputation slots |
 | `/creator/profile` | Creator onboarding | Verified session, explicit wallet ownership proof, persisted binding status; separate local profile draft |
 | `/creator/stake` | Creator funds | Authenticated live testnet reads, simulated deployment/deposit/withdrawal reviews and explicit wallet approval |
-| `/creator/calls` | Creator calls | Interactive evaluation-status filter; ingestion pending |
+| `/creator/calls` | Creator calls | Authenticated call registration from the creator's own X post and their ledger |
 | `/creator/reputation` | Creator performance | Methodology and coverage slots; unavailable metrics |
 | `/extension` | Extension hub | Installation and explicitly illustrative unknown/linked/stale previews |
 | `/integrations` | Agent connections | Proposed MCP tools; connection disabled |

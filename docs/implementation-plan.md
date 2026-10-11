@@ -62,10 +62,11 @@ Exit: X → review → approval → Kuru fill → dashboard with actual amounts.
 
 ## Phase 4: Calls, reputation and Nansen
 
-- [ ] Confirm authorized X ingestion and Nansen access/coverage.
-- [ ] Store sourced calls with stable author ID, asset address, direction, horizon and edit handling.
-- [ ] Publish deterministic evaluation rules, price sources and methodology version.
-- [ ] Show sample size, coverage, unresolved calls and hypothetical outcomes separately from wallet returns.
+- [x] Creator-registered calls instead of X scraping: post authorship verified through X's public oEmbed (no API key), registration within 24h of posting, immutable terms. Nansen key configured (100-credit plan).
+- [x] Store sourced calls with stable creator binding, asset, direction, horizon, entry observation and post text (`POST /api/calls`).
+- [x] Publish deterministic evaluation rules, price sources and methodology version (`/methodology`, directional-return-v1). Binance 1m spot for BTC/ETH/SOL, Nansen 1m OHLCV for WMON on Monad mainnet; integer prices only.
+- [x] Show sample size, coverage, open calls and hypothetical outcomes separately from wallet returns (`GET /api/creators/:handle/calls`, creator record and studio). Expired calls resolve lazily on read, at most four per request.
+- [ ] Verify a live registration from the bound account and a resolved outcome.
 - [ ] Add an actual Nansen-backed wallet/token insight with source and timestamp.
 - [ ] Connect dossiers, call ledgers, reputation pages and extension popovers.
 

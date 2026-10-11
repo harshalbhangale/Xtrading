@@ -1283,3 +1283,72 @@ textarea:focus-visible {
 .record-table td a {
   border-bottom: 1px solid var(--ink);
 }
+.call-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+}
+.call-form label {
+  display: grid;
+  gap: 6px;
+  font: 10px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.call-form-wide {
+  grid-column: 1 / -1;
+}
+.call-form input,
+.call-form select {
+  font-family: inherit;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+.call-table td {
+  vertical-align: top;
+}
+.call-post p {
+  margin: 6px 0 0;
+  max-width: 360px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  white-space: pre-line;
+}
+.call-outcome {
+  font-weight: 600;
+}
+.call-success {
+  color: #2f7a2f;
+}
+.call-failure {
+  color: #b23b2e;
+}
+@media (max-width: 760px) {
+  .call-form {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.prose-page {
+  max-width: 760px;
+}
+.prose-page h2 {
+  font-size: 22px;
+  margin: 36px 0 12px;
+}
+.prose-page li,
+.prose-page p:not(.hero-copy) {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+.prose-page li + li {
+  margin-top: 8px;
+}

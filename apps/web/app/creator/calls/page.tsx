@@ -1,27 +1,19 @@
 import type { Metadata } from "next";
-import { CallFilters } from "../../../components/dashboard/call-filters";
-import {
-  ConnectionNote,
-  PageHeading,
-  Panel,
-} from "../../../components/dashboard/ui";
+import { CallsControl } from "../../../components/calls-control";
+import { PageHeading, Panel } from "../../../components/dashboard/ui";
 
-export const metadata: Metadata = { title: "Your calls" };
+export const metadata: Metadata = { title: "Calls" };
 
 export default function CallsPage() {
   return (
     <>
       <PageHeading
         title="Calls"
-        description="Your predictions, their source posts and how each was evaluated."
+        description="Register a prediction from one of your posts. It is priced at the moment you posted and scored automatically at expiry."
       />
-      <Panel title="Call ledger">
-        <CallFilters />
+      <Panel title="Register a call">
+        <CallsControl />
       </Panel>
-      <ConnectionNote>
-        A call needs a source post, an asset, a direction and an expiry.
-        Ambiguous posts stay unscored.
-      </ConnectionNote>
     </>
   );
 }
