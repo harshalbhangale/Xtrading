@@ -1,0 +1,13 @@
+{
+  "chainId": 10143,
+  "address": "0x78928c53A623585317f9102B88C2d76Df66b6825",
+  "transactionHash": "0x1e2f933ced24e1d53a64aaaa6225f7dd30ffee4c7fd15650fe249884d3bd44a8",
+  "deploymentBlock": "70152444",
+  "deployer": "0x51bDFC2a4D1C3B04A89f8CA928bd377B767Df424",
+  "initialRecipient": "0x51bDFC2a4D1C3B04A89f8CA928bd377B767Df424",
+  "initialSupply": "10000000000",
+  "decimals": 6,
+  "symbol": "mUSDC",
+  "runtimeVerified": true,
+  "constructorVerified": true
+}

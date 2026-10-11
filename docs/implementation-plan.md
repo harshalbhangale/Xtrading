@@ -19,7 +19,7 @@ Updated 11 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added tar
 
 ## Phase 1: Finish stake and indexing
 
-- [ ] Record the mock deployment receipt and configure mock-token mode.
+- [x] Record and verify the mock deployment receipt/runtime and configure local mock-token mode.
 - [ ] Deploy and verify a matching mUSDC stake contract; preserve the earlier Circle-token deployment record.
 - [ ] Verify separate bounded approval and deposit transactions.
 - [ ] Verify withdrawal request, cancellation and full refund after cooldown.
