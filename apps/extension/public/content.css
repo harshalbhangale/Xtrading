@@ -21,6 +21,9 @@
 .cmb-evidence {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
+  align-content: flex-start;
+  min-width: 0;
   gap: 8px;
   margin: 8px;
   padding: 10px;
@@ -31,6 +34,7 @@
   font: 12px / 1.5 system-ui;
 }
 .cmb-evidence > span {
+  display: inline-block;
   padding: 3px 7px;
   border: 1px solid #7960cc;
   border-radius: 5px;

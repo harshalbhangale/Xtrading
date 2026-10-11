@@ -26,6 +26,13 @@ function scan() {
     const handle = match?.[1] ? normalizeHandle(match[1]) : null,
       postId = match?.[2];
     if (!handle || !postId) continue;
+    // X renders the article as a row. Keep evidence in the post's content column.
+    const actions = article.querySelector<HTMLElement>('[role="group"]');
+    let content = actions?.parentElement;
+    while (content && content !== article && !content.contains(postLink)) {
+      content = content.parentElement;
+    }
+    if (!content || content === article) continue;
     const key = `${handle}:${postId}`;
     const existing = article.querySelector<HTMLElement>(".cmb-evidence");
     if (existing?.dataset.key === key) continue;
@@ -34,6 +41,7 @@ function scan() {
     box.className = "cmb-evidence";
     box.dataset.key = key;
     box.setAttribute("aria-label", "No More Bluff creator evidence");
+    box.addEventListener("click", (event) => event.stopPropagation());
     const identity = document.createElement("span"),
       stake = document.createElement("span");
     identity.textContent = "Identity: unavailable";
@@ -64,7 +72,7 @@ function scan() {
         ),
       );
     }
-    article.append(box);
+    content.append(box);
     void chrome.runtime
       .sendMessage({ type: "creator-evidence", handle })
       .then((raw) => {
