@@ -1,0 +1,26 @@
+{
+  "chainId": 10143,
+  "wallet": "0x51bDFC2a4D1C3B04A89f8CA928bd377B767Df424",
+  "contract": "0x9e09b97dBaDc1D6f3A3C5bA9aF0E47923C34634e",
+  "token": "0x78928c53A623585317f9102B88C2d76Df66b6825",
+  "transactions": [
+    {
+      "action": "approve",
+      "transactionHash": "0x3a0b312a96ba761a66f39d092d69015a1c3a042cc9bbcebaff69fd0d0eb84463",
+      "blockNumber": "70171711",
+      "blockHash": "0xd86b73e9616fa0c84ab09a81778e8fc357e4f2f33c4fca292aef9f6a8e478c12",
+      "receiptStatus": "success",
+      "amount": "500000000"
+    },
+    {
+      "action": "deposit",
+      "transactionHash": "0x7bef5d5e099a400590b24dfc1b43d0d217673068412b39176d4b08467b946427",
+      "blockNumber": "70172401",
+      "blockHash": "0x2ac1b404401720ebb1168a1bfd9df9878f3eaa8e8740c91471abd3126a2faf64",
+      "receiptStatus": "success",
+      "amount": "500000000"
+    }
+  ],
+  "indexedDepositEventId": "10143:70172401:5",
+  "finality": "confirmation evidence; not a finality assertion"
+}

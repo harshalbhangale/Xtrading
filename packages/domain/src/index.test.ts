@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   amountSchema,
   hasActiveStake,
+  indexedStakeSchema,
   normalizeHandle,
   tradeIntentSchema,
 } from "./index";
@@ -16,6 +17,37 @@ describe("stake badge eligibility", () => {
 });
 
 describe("external input", () => {
+  it("rejects imprecise indexed amounts and invalid event dates", () => {
+    const event = {
+      id: "10143:70172401:5",
+      balance: "9007199254740993000000",
+      withdrawableAt: "0",
+      blockNumber: "70172401",
+      timestamp: "1791740130",
+    };
+    const evidence = {
+      status: "current",
+      observedAt: "2026-10-11T17:35:00Z",
+      events: [event],
+    };
+    expect(indexedStakeSchema.parse(evidence).events[0]?.balance).toBe(
+      event.balance,
+    );
+    for (const change of [
+      { balance: 500000000 },
+      { balance: "1e9" },
+      { timestamp: "253402300800" },
+      { withdrawableAt: "99999999999999999999" },
+      { id: "1:70172401:5" },
+    ]) {
+      expect(
+        indexedStakeSchema.safeParse({
+          ...evidence,
+          events: [{ ...event, ...change }],
+        }).success,
+      ).toBe(false);
+    }
+  });
   it("keeps raw token amounts precise and rejects float notation", () => {
     expect(amountSchema.parse("9007199254740993000000")).toBe(
       "9007199254740993000000",

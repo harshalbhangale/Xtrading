@@ -15,16 +15,16 @@ Updated 11 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added tar
 - [x] Live stake RPC reads and separate wallet reviews for approval, deposit and withdrawal actions.
 - [x] Original six-decimal mUSDC contract and faucet; deployed with 10,000 mUSDC in the project wallet.
 - [x] Envio schema, event handlers, contract configuration and generated bindings.
-- [x] Latest local checks: 22 application tests, 12 Foundry tests, web/extension builds; six database integration tests skipped in this run.
+- [x] Latest local checks: 27 application tests, 12 Foundry tests, web/extension builds; six database integration tests skipped in this run.
 
 ## Phase 1: Finish stake and indexing
 
 - [x] Record and verify the mock deployment receipt/runtime and configure local mock-token mode.
 - [x] Deploy and verify a matching mUSDC stake contract; preserve the earlier Circle-token deployment record.
-- [ ] Verify separate bounded approval and deposit transactions.
+- [x] Verify separate exact 500 mUSDC approval and deposit transactions; active stake confirmed.
 - [ ] Verify withdrawal request, cancellation and full refund after cooldown.
-- [ ] Run Envio against the selected deployment; expose stake projections.
-- [ ] Track event idempotency, reorgs, finality and freshness.
+- [x] Run Envio against both verified deployments; expose authenticated stake history and indexing progress.
+- [x] Preserve event IDs, configure reorg rollback and display freshness with explicit unfinalized status. Live reorg recovery still needs validation.
 
 Exit: a deposit updates current stake evidence; requesting withdrawal removes active eligibility.
 

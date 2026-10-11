@@ -173,7 +173,7 @@ export default function ConfiguredStake() {
           ? `Mock USDC deployed at ${receipt.contractAddress}, block ${receipt.blockNumber}. 10,000 mUSDC minted to the bound wallet. Verify this receipt, configure mock-token mode and deploy a new matching stake contract before deposits.`
           : transaction.action === "deploy"
             ? `Deployment confirmed at ${receipt.contractAddress}. Configure this address and deployment block ${receipt.blockNumber} on the server and indexer before deposits.`
-            : `${transaction.action} confirmed in block ${receipt.blockNumber}. Latest state is unfinalized; indexing is pending. Prepare the next action separately.`,
+            : `${transaction.action} confirmed in block ${receipt.blockNumber}. Latest state is unfinalized; check indexed evidence below. Prepare the next action separately.`,
       );
     } catch (error) {
       if (activeUser.current === owner) {
@@ -273,8 +273,79 @@ export default function ConfiguredStake() {
           <p>
             Minimum: 500 {state.symbol} · Cooldown: 7 days · Block{" "}
             {state.blockNumber} · Observed {state.observedAt} · Latest,
-            unfinalized RPC snapshot; Envio indexing pending.
+            unfinalized RPC snapshot.
           </p>
+          <section aria-label="Indexed stake history">
+            <h3>Envio stake evidence</h3>
+            <p>
+              {state.indexing?.status === "current"
+                ? "Indexer caught up"
+                : state.indexing?.status === "lagging"
+                  ? "Indexer catching up — history may be incomplete"
+                  : "Indexer unavailable"}
+              {state.indexing?.progressBlock && (
+                <>
+                  {" "}
+                  · Block {state.indexing.progressBlock} · Chain time{" "}
+                  {state.indexing.progressBlockTime}
+                </>
+              )}
+              . Reorg rollback enabled; indexed events are not a claim of
+              finality.
+            </p>
+            {state.indexing?.events.length ? (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Event</th>
+                    <th>Locked balance ({state.symbol})</th>
+                    <th>Withdrawal unlock</th>
+                    <th>Chain time</th>
+                    <th>Block</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {state.indexing.events.map((event) => (
+                    <tr key={event.id}>
+                      <td>Stake updated</td>
+                      <td>{formatUnits(BigInt(event.balance), 6)}</td>
+                      <td>
+                        {event.withdrawableAt === "0"
+                          ? "No pending withdrawal"
+                          : new Date(
+                              Number(BigInt(event.withdrawableAt) * 1000n),
+                            ).toISOString()}
+                      </td>
+                      <td>
+                        {new Date(
+                          Number(BigInt(event.timestamp) * 1000n),
+                        ).toISOString()}
+                      </td>
+                      <td>
+                        <a
+                          href={`https://testnet.monadvision.com/block/${event.blockNumber}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {event.blockNumber}
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p>
+                {state.indexing?.status === "current"
+                  ? "No stake events indexed for this wallet and contract."
+                  : "Stake history unavailable until the indexer catches up."}
+              </p>
+            )}
+            <p>
+              Each event records the resulting locked balance, not a deposit
+              amount or trading return.
+            </p>
+          </section>
           {state.symbol === "USDC" && (
             <>
               <p>

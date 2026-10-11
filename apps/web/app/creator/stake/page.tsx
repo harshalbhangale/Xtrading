@@ -3,7 +3,6 @@ import {
   ConnectionNote,
   PageHeading,
   Panel,
-  RecordTable,
 } from "../../../components/dashboard/ui";
 import { StakeControl } from "../../../components/stake-control";
 
@@ -22,13 +21,6 @@ export default function StakePage() {
         description="Live testnet reads and explicit, separate transaction reviews."
       >
         <StakeControl />
-      </Panel>
-      <Panel title="Stake receipts">
-        <RecordTable
-          columns={["Action", "Token amount", "Status", "Time", "Transaction"]}
-          emptyTitle="Your stake history starts onchain."
-          emptyDescription="Deposits and withdrawals will appear once the deployed contract is indexed."
-        />
       </Panel>
       <ConnectionNote>
         There is no automatic slashing for a wrong financial call. Staking does

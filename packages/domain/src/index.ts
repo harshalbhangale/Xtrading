@@ -108,6 +108,27 @@ export type IntegrationStatus = {
   detail: string;
 };
 
+const indexedTimestampSchema = amountSchema.refine(
+  (value) => BigInt(value) <= 253402300799n,
+  "Timestamp outside supported date range",
+);
+export const indexedStakeSchema = z.object({
+  status: z.enum(["current", "lagging", "unavailable"]),
+  observedAt: z.iso.datetime(),
+  progressBlock: amountSchema.optional(),
+  progressBlockTime: z.string().optional(),
+  events: z
+    .array(
+      z.object({
+        id: z.string().regex(/^10143:[0-9]+:[0-9]+$/),
+        balance: amountSchema,
+        withdrawableAt: indexedTimestampSchema,
+        blockNumber: amountSchema,
+        timestamp: indexedTimestampSchema,
+      }),
+    )
+    .max(20),
+});
 export const stakeStateSchema = z.object({
   chainId: z.literal(10143),
   wallet: addressSchema,
@@ -127,6 +148,7 @@ export const stakeStateSchema = z.object({
   blockTimestamp: amountSchema,
   observedAt: z.iso.datetime(),
   finality: z.literal("latest-unfinalized"),
+  indexing: indexedStakeSchema.optional(),
 });
 export const stakeActionSchema = z
   .object({
