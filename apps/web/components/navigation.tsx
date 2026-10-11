@@ -8,17 +8,16 @@ export function Navigation() {
   return (
     <nav aria-label="Main navigation">
       {[
-        ["/", "Terminal"],
-        ["/creators", "Creators"],
-        ["/portfolio", "Portfolio"],
+        ["/terminal", "Terminal"],
+        ["/dashboard", "User app"],
+        ["/creator", "Creator studio"],
+        ["/extension", "Extension"],
       ].map(([href, label]) => (
         <Link
           key={href}
           href={href ?? "/"}
           aria-current={
-            path === href || (href !== "/" && path.startsWith(href ?? "/"))
-              ? "page"
-              : undefined
+            path === href || path.startsWith(`${href}/`) ? "page" : undefined
           }
         >
           {label}

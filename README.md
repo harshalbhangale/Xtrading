@@ -14,7 +14,9 @@ cp apps/web/.env.example apps/web/.env.local
 pnpm dev
 ```
 
-Open http://localhost:3000. The terminal, creator lookup, portfolio and `/setup` page work before secrets are added. `/api/health` reports configuration presence without returning secrets. `Configured` means a setting exists; it does not mean the provider has been tested.
+Open http://localhost:3000. The landing page, user dashboard (`/dashboard`), creator studio (`/creator`), extension hub (`/extension`), agent connection plan (`/integrations`), terminal (`/terminal`) and `/setup` page work before secrets are added. `/api/health` reports configuration presence without returning secrets. `Configured` means a setting exists; it does not mean the provider has been tested.
+
+Developer route map, reusable components, proposed API contracts and extension/MCP integration boundaries: [frontend handoff](docs/frontend-handoff.md). Local watchlists and profile drafts are implemented; they do not publish or verify an account.
 
 Monad testnet **10143** is the default. Mainnet **143** requires explicit configuration. Never use a mainnet market address on testnet. The sample Kuru address is a documented deployment reference, not a liquidity or execution guarantee.
 

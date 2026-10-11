@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Navigation } from "../components/navigation";
 import { WalletControl } from "../components/wallet-control";
 import "./globals.css";
+import "./frontend.css";
 
 export const metadata: Metadata = {
   title: {
