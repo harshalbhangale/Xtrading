@@ -1,6 +1,6 @@
 # Frontend handoff
 
-This milestone provides original reusable frontend components. Privy/X session verification and persisted wallet-binding APIs are connected on the creator profile. The real X login, user-approved wallet signature and binding persistence after refresh are verified. Stake RPC reads and transaction reviews are implemented; live deployment/deposit verification, trades, indexing and MCP tools remain pending. Keep subsequent working features in separate commits.
+Identity binding and stake RPC reads are connected. The stake contract and mUSDC are deployed; mock-mode configuration, matching stake deployment, deposits, live indexing, trading and MCP remain pending.
 
 ## Run
 
@@ -60,7 +60,7 @@ These are proposed APIs, **not existing routes**. Serializable view models are e
 | `GET /api/me/portfolio` and `/activity` | Verified session with wallet authorization | Portfolio/activity |
 | `POST /api/trades/prepare` | Verified session, allowlisted market, limits | Extension trade review |
 
-`DataState<T>` distinguishes disconnected, unavailable, loading, error and ready responses. Ready data carries provenance, observation time, coverage and finality. Signed transactions, submitted orders and confirmed fills are different states. Match market addresses and token decimals to the selected chain.
+`DataState<T>` distinguishes disconnected, unavailable, loading, error and ready responses. Ready data carries source, observation time, coverage and finality. Signed transactions, submitted orders and confirmed fills are different states. Match market addresses and token decimals to the selected chain.
 
 ## Extension
 
@@ -70,24 +70,10 @@ An active-stake badge requires verified identity and fresh matching chain/contra
 
 ## MCP
 
-There is no fake endpoint or connection snippet. Implement a real MCP server after shared backend services exist; reuse authorization, rate limits, provenance and response validation. Do not fetch provider keys or private database data from the client.
+Implement MCP against shared backend services with authorization, rate limits and response validation. Do not fetch provider keys or private database data from the client.
 
 Proposed tools: `get_creator`, `list_calls`, `get_stake_status`, authorized `get_portfolio`, and `prepare_trade`. Trade preparation returns unsigned, expiring transactions for review; it does not sign or submit. SDK, transport, authentication and deployment remain separate work.
 
-## Next feature commits
+## Next work
 
-1. Finish remaining provider feasibility checks.
-2. Chain-specific stake deployment, reads and wallet-reviewed transactions.
-3. Live Envio projections and extension evidence/badges.
-4. Kuru quote preparation, wallet review and confirmed fills.
-5. Portfolio, activity and watchlist APIs.
-6. Nansen evidence and published call methodology.
-7. MCP server against shared authorized services.
-
-## Verification
-
-The frontend milestone passed workspace lint/typechecking, seven unit tests, nine Foundry tests (including 256 fuzz cases), and production web/extension builds. Browser checks covered watchlist save/reload/duplicate/remove, profile validation/save/reload/clear, call-status filtering, extension stale-state selection and trade buy/sell controls without transaction execution. Landing, dashboard, profile, extension and trade pages were checked at a 390px viewport with no page-level horizontal overflow. QA drafts and saved handles were removed after checking.
-
-The identity milestone passed `pnpm check` with 17 tests (including six local Postgres integration tests), nine Foundry tests and production web/extension builds. API smoke checks rejected missing/forged sessions and incorrect origins. The real X session, ownership challenge and user-approved embedded-wallet signature were verified against the configured Privy app and Mumbai database. A full page refresh retained the verified binding. GitHub CI run 38145611740 passed.
-
-Core UI and service reference: [component and sponsor map](research/reference-component-map.md). Use KOLlateral for dossier/evidence structure and XSwap for inline interaction design; source reuse requires an explicit compatible license and documented provenance.
+Follow the [delivery checklist](implementation-plan.md). UI and service references are in [component references](references.md).

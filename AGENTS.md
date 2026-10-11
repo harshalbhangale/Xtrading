@@ -9,4 +9,3 @@
 - Show honest empty/unavailable states. Do not represent fixtures, configured settings or submitted orders as real evidence or confirmed fills.
 - Test fund-handling changes with Foundry. After indexer changes run codegen and typecheck. Run `pnpm check` for foundational changes.
 - Preserve event idempotency and track reorg/finality/freshness when adding live projections.
-- Do not import referenced project source without an explicit compatible license.

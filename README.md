@@ -1,116 +1,92 @@
 # Call My Bluff
 
-A creator reputation and trading terminal for X, built on Monad. Link identity, inspect a refundable stake, review sourced financial calls, then execute a wallet-approved spot trade. Identity, stake and performance are independent signals.
+Creator evidence and spot trading from X, built on Monad. The product includes a landing page, creator studio, user dashboard, Chrome extension and planned MCP server.
 
-**Phase: testnet stake transaction implementation.** The public app and extension run locally without credentials. Server-verified Privy/X sessions, signed wallet-binding APIs and persisted identity state are implemented. Live testnet wallet/token reads and simulated stake transaction reviews are implemented. The first stake contract deployment is confirmed and recorded in `contracts/deployments/monad-testnet.json`. Deposits, Kuru orders/fills, hosted indexing and Nansen insights remain pending. No example balances, fake reputations or simulated fills are shown as live data.
+Identity binding works. The Circle-token stake contract and mock USDC are deployed on testnet. Deposits, live indexing, Kuru trading, Nansen insights and MCP remain pending.
 
-## Start
+## Run locally
 
-Requirements: Node.js 22+, pnpm 11.1.3, Foundry for contracts. Docker is optional for the local database and Envio runtime.
+Requirements: Node.js 22+, pnpm 11.1.3 and Foundry. Docker is used for local Postgres and the Envio runtime.
 
 ```sh
-pnpm install
+pnpm install --frozen-lockfile
+# On first setup only; preserve an existing .env.local.
 cp apps/web/.env.example apps/web/.env.local
+pnpm indexer:codegen
 pnpm dev
 ```
 
-Open http://localhost:3000. The landing page, user dashboard (`/dashboard`), creator studio (`/creator`), extension hub (`/extension`), agent connection plan (`/integrations`), terminal (`/terminal`) and `/setup` page work before secrets are added. `/api/health` reports configuration presence without returning secrets. `Configured` means a setting exists; it does not mean the provider has been tested.
+Open http://localhost:3000. Public pages work without credentials. Login and persisted identity need Privy and the database configured.
 
-Developer route map, reusable components, proposed API contracts and extension/MCP integration boundaries: [frontend handoff](docs/frontend-handoff.md). Local watchlists and profile drafts are implemented; they do not publish or verify an account.
-
-Completed work, remaining tasks and phase completion tests: [implementation checklist](docs/implementation-plan.md).
-
-Monad testnet **10143** is the default. Mainnet **143** requires explicit configuration. Never use a mainnet market address on testnet. The sample Kuru address is a documented deployment reference, not a liquidity or execution guarantee.
+Monad testnet **10143** is the default. Mainnet requires explicit configuration; stake actions currently support testnet only. Token amounts use bigint or decimal integer strings.
 
 ## Workspace
 
 | Path | Purpose |
 |---|---|
-| `apps/web` | Next.js app, conditional Privy login, server configuration and health endpoint |
-| `apps/extension` | Manifest V3 development extension; adds creator evidence links to X posts |
-| `packages/domain` | Validated chain, identity, stake and trade-intent types; integer token amounts |
-| `packages/integrations` | Monad/Kuru market configuration, sponsor status, server-use Nansen client |
-| `packages/database` | Drizzle/Postgres schema and versioned SQL migrations |
-| `contracts` | Refundable ERC20 stake contract and Foundry tests |
-| `services/indexer` | Envio stake event configuration, schema and snapshot handlers |
+| `apps/web` | Next.js pages, authenticated APIs and wallet review |
+| `apps/extension` | Manifest V3 X extension |
+| `packages/domain` | Runtime schemas and shared types |
+| `packages/integrations` | Chain, market, stake and provider adapters |
+| `packages/database` | Postgres schema, identity service and migrations |
+| `contracts` | Refundable stake, mock USDC and Foundry tests |
+| `services/indexer` | Envio stake event handlers and generated bindings |
 
-## Privy and provider configuration
+## Configuration
 
-Set `NEXT_PUBLIC_PRIVY_APP_ID` in `apps/web/.env.local`. Enable Twitter login, embedded Ethereum wallets and `http://localhost:3000` as an allowed origin in the Privy dashboard. The login button only loads Privy when configured. Set server-only `PRIVY_APP_SECRET`, `NEXT_PUBLIC_APP_URL` and the database connection to enable identity binding on `/creator/profile`. The server verifies Privy access tokens and fetches linked accounts; an explicit off-chain wallet signature proves ownership with an expiring, single-use nonce. The real project X login, user-approved embedded-wallet ownership signature and persisted binding after page refresh have been verified. See [identity binding](docs/identity-binding.md). Login alone does not qualify for the bounty.
+Use `apps/web/.env.local` for `NEXT_PUBLIC_PRIVY_APP_ID`, `PRIVY_APP_SECRET`, `NEXT_PUBLIC_APP_URL`, `MONAD_RPC_URL` and `DATABASE_URL`. Keep provider secrets server-only. Enable Twitter login, EVM embedded wallets and the app origin in Privy.
 
-Server credentials (`PRIVY_APP_SECRET`, `NANSEN_API_KEY`, `DATABASE_URL`) must never use the `NEXT_PUBLIC_` prefix. No credentials are required to view the foundation. Nansen requests are not automatically issued; the fixed-host client currently allows only the documented TGM holders endpoint. Use the server-only web wrapper when adding evidence services. Nansen mainnet coverage must be checked for the selected assets; testnet is not a supported substitute.
+Remote database connections require `sslmode=verify-full` and the trusted RDS CA bundle through `DATABASE_CA_FILE`. `/api/health` reports configuration presence; `/api/ready` checks the six required database tables.
 
-The required sponsors and their completion evidence are tracked in [SPONSORS.md](SPONSORS.md). Optional AI models, Aurora and CRE remain outside this phase.
+Local database:
 
-## Chrome extension
+```sh
+docker compose up -d postgres
+pnpm db:migrate
+pnpm db:check
+```
+
+The migration CLI uses its process `DATABASE_URL` or the local fallback on port 5433; it does not load the web environment. Use the documented AWS bootstrap for RDS migrations and grants.
+
+## Extension
 
 ```sh
 pnpm --filter @call-my-bluff/extension build
 ```
 
-In Chrome, open `chrome://extensions`, enable developer mode and load `apps/extension/dist` as an unpacked extension. Open X. The extension adds **View creator evidence** links to visible posts; the local app must be running. Its current app origin is deliberately fixed to `http://localhost:3000` in `src/content.ts` and `src/popup.ts`. Set an HTTPS origin for a production build.
+In Chrome, enable developer mode at `chrome://extensions` and load `apps/extension/dist`. The current extension adds creator-evidence links using `http://localhost:3000`. Live badges, popovers and trading controls are pending.
 
-This build has no verified tick or trade controls. A future badge needs verified account ownership plus current indexed stake, with a freshness policy. Only extension users see injected UI. X DOM selectors may change; isolate changes in `content.ts`.
+## Contracts and indexer
 
-## Stake contract
+The stake contract accepts a fixed ERC20 and has a seven-day cooldown. Withdrawal requests immediately disable active-stake eligibility. Cancellation restores eligibility when the threshold is met. There is no administrator withdrawal or slashing.
+
+mUSDC has six decimals, no monetary value and an initial 10,000-token mint. Using it requires explicit mock mode and a matching stake deployment. Confirmed Circle-token deployment details are in `contracts/deployments/monad-testnet.json`.
 
 ```sh
 pnpm contracts:build
 pnpm contracts:test
 pnpm contracts:abi
-```
-
-`CreatorStake` accepts a conventional non-rebasing ERC20 and has immutable token, minimum and cooldown settings. Deposits are refundable. `requestWithdrawal()` immediately disables `isActive`; `withdraw()` returns the full balance once the cooldown expires. Cancelling restores stake eligibility and a later request starts a new cooldown. No admin withdrawal or slashing exists. Full `StakeUpdated` snapshots support idempotent indexing.
-
-The proposed deployment uses a seven-day cooldown (`604800` seconds). A nominal $500 stake means `500 * 10^tokenDecimals` for a chosen stablecoin; the contract does not assert a USD exchange rate. Verify the actual token address and decimals before deployment. Fee-on-transfer deposits are rejected. Deployment is prepared on `/creator/stake` and requires explicit wallet approval; setup does not deploy automatically. This is development code, not a production audit.
-
-For a self-contained demo token, see [mock USDC](docs/mock-usdc.md). Its contract and wallet-reviewed deployment are implemented; a confirmed mock-token and replacement stake deployment remain pending.
-
-See [stake transaction handoff](docs/stake-transactions.md) for the verified test token, deployment review and configuration steps.
-
-## Envio
-
-```sh
 pnpm indexer:codegen
-pnpm --filter @call-my-bluff/indexer typecheck
 ```
 
-The indexer config now includes the verified testnet contract address and deployment block **70144598**. Codegen/typecheck pass; the runtime is not yet running. Run `pnpm --filter @call-my-bluff/indexer dev` with Docker available. Add the GraphQL endpoint to the web environment after verifying indexed events.
-
-Position IDs include chain, contract and wallet. Event IDs include chain, block and log index. Handlers replace full balances rather than accumulating deltas, making repeated event handling idempotent. Kuru order/fill contracts and finality/freshness handling will be added after validating the chosen market's event ABI.
-
-## Database
-
-```sh
-docker compose up -d postgres
-pnpm db:migrate
-```
-
-Local Postgres is bound to loopback port **5433**. The checked-in development credentials are for this local container only. Drizzle commands run from `packages/database`; they use its process `DATABASE_URL` or the local fallback, and do not load the web `.env.local`. Supply `DATABASE_URL` explicitly for another database. Do not point development migration commands at production by accident.
-
-`pnpm db:generate` generates a migration after schema changes. The identity APIs persist verified creator bindings and expiring ownership challenges. Store only verified stable X IDs and wallet bindings. Raw token amounts use decimal integer strings / SQL `numeric(78,0)`; actual fills remain distinct from intents and hypothetical call outcomes.
-
-The local database has now been started and the initial migration applied. To verify your own environment, set `DATABASE_URL` explicitly and run `pnpm db:check`. Remote URLs must specify `sslmode=verify-full`; certificate verification remains enabled for runtime connections and migrations. Use the AWS RDS certificate trust bundle if required by the chosen deployment. Do not commit connection credentials.
-
-Mumbai cloud database template, bootstrap and access boundaries: [AWS database setup](infrastructure/aws/README.md). Set server-only `DATABASE_CA_FILE` to the local trusted CA bundle path when using RDS.
-
-`/api/ready` performs a live database check and returns `ready`, `migration_required`, `unconfigured` or `unavailable`; non-ready states return HTTP 503. It checks the six required tables, including wallet challenges, not provider access or full application readiness. `/api/health` remains the lightweight configuration/liveness endpoint. No account records or fixtures are seeded by these checks.
+Envio is configured for the recorded Circle-token stake deployment, but its runtime is not running. After selecting the matching mock deployment, update the exact address/start block and regenerate before starting it.
 
 ## Checks
 
 ```sh
-pnpm indexer:codegen
-pnpm check
+IDENTITY_TEST_DATABASE_URL=postgresql://cmb:cmb_local@localhost:5433/call_my_bluff pnpm check
 ```
 
-Checks include Biome, TypeScript, domain/provider boundary tests, Foundry stake tests and web/extension production builds. Indexer codegen is required before its TypeScript check on a fresh checkout. CI runs it automatically and migrates a local Postgres service for the identity integration tests. Run `IDENTITY_TEST_DATABASE_URL=postgresql://cmb:cmb_local@localhost:5433/call_my_bluff pnpm check` to include those tests locally. No credentials, blockchain transactions or paid provider requests are needed.
+Checks include formatting, TypeScript, application tests, local identity integration tests, Foundry and web/extension builds. Latest local results: 19 application tests and 12 Foundry tests passed. CI provisions its own Postgres service.
 
-## Next milestone
+## Developer documents
 
-1. Confirm remaining provider access and market feasibility; the real X/wallet binding and persistence-after-refresh check are complete.
-2. Deploy and prove Privy-signed stake deposit, request/cancel and withdrawal on testnet.
-3. Read Kuru market parameters, simulate approval/order transactions, obtain explicit wallet approval, and reconcile actual fills.
-4. Deploy Envio and drive badges and portfolio from indexed events with finality/freshness indicators.
-5. Add sourced Nansen mainnet evidence with timestamps, coverage and unavailable states, then implement a transparent call-scoring methodology.
-
-Research and references live in `docs/research`. Implementation is original; the KOLlateral/XSwap references are architectural inspiration, not imported source.
+- [Delivery checklist](docs/implementation-plan.md)
+- [Frontend and API handoff](docs/frontend-handoff.md)
+- [Architecture](docs/architecture.md)
+- [Required sponsors](SPONSORS.md)
+- [Component references](docs/references.md)
+- [Identity binding](docs/identity-binding.md)
+- [Stake transactions](docs/stake-transactions.md)
+- [Mock USDC](docs/mock-usdc.md)
+- [AWS database setup](infrastructure/aws/README.md)

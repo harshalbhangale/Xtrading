@@ -1,168 +1,80 @@
-# Call My Bluff delivery checklist
+# Delivery checklist
 
-Status reviewed on 11 October 2026. Checked items are implemented and locally verified. Unchecked items still need implementation or live verification. A scaffold, configured credential, submitted order or illustrative preview is not a completed integration.
+Updated 11 October 2026. Required sponsors: Kuru, Privy, Envio and Nansen. The Chrome extension is the priority product surface.
 
-Required MVP sponsors: **Kuru, Privy, Envio and Nansen**. The Chrome extension is the highest-priority product surface. The landing page, creator platform, user platform and MCP server support that experience.
+## Done
 
-## Completed work
+- [x] Workspace, TypeScript, formatting, CI and incremental commits pushed to GitHub.
+- [x] Landing page, creator platform and user dashboard pages.
+- [x] Local watchlists, profile drafts, trade drafts and call filters.
+- [x] MV3 extension build with creator-evidence links.
+- [x] Local Postgres and AWS RDS in Mumbai; migrations, restricted access and verified TLS.
+- [x] Real Privy/X login, embedded wallet and server-verified identity.
+- [x] Signed stable-X-ID/wallet binding with expiring, single-use nonces; persistence verified after refresh.
+- [x] Refundable stake contract deployed on Monad testnet; receipt, bytecode and settings verified.
+- [x] Live stake RPC reads and separate wallet reviews for approval, deposit and withdrawal actions.
+- [x] Original six-decimal mUSDC contract and faucet; deployed with 10,000 mUSDC in the project wallet.
+- [x] Envio schema, event handlers, contract configuration and generated bindings.
+- [x] Latest local checks: 19 application tests, 12 Foundry tests, web/extension builds.
 
-### Phase 0 — Repository and technical foundation: complete locally
+## Phase 1: Finish stake and indexing
 
-- [x] pnpm workspace, TypeScript, formatting, build scripts and automated checks.
-- [x] Shared validation for chains, handles, addresses and integer token amounts.
-- [x] Per-chain integration configuration with Monad testnet 10143 as default.
-- [x] Postgres/Drizzle schema and initial migration files.
-- [x] Original refundable-stake contract, exported ABI and nine passing Foundry tests, including fuzz coverage.
-- [x] Envio stake schema, snapshot handlers and generated/typechecked bindings.
-- [x] Conditional Privy frontend setup and server-use Nansen client boundary.
-- [x] GitHub CI workflow definition and developer documentation.
-- [x] Genuine incremental local commits: foundation, then frontend workspaces.
+- [ ] Record the mock deployment receipt and configure mock-token mode.
+- [ ] Deploy and verify a matching mUSDC stake contract; preserve the earlier Circle-token deployment record.
+- [ ] Verify separate bounded approval and deposit transactions.
+- [ ] Verify withdrawal request, cancellation and full refund after cooldown.
+- [ ] Run Envio against the selected deployment; expose stake projections.
+- [ ] Track event idempotency, reorgs, finality and freshness.
 
-Local database migration execution and repository push are now verified. The stake deployment and earlier hosted CI are verified; a running indexer and live deposit remain pending.
+Exit: a deposit updates current stake evidence; requesting withdrawal removes active eligibility.
 
-### Phase 1 — Frontend foundation: complete
+## Phase 2: Live X extension
 
-- [x] Public landing page and navigation into creator and user workspaces.
-- [x] Creator discovery, handle lookup and public creator-profile shells.
-- [x] User overview, watchlist, portfolio, trade-review and activity pages.
-- [x] Creator overview, profile draft, stake, call-history and reputation pages.
-- [x] Working local watchlist and profile-draft save/reload/clear behavior.
-- [x] Buy/sell controls, input validation and call-history filters.
-- [x] Extension hub, illustrative state previews and planned MCP tool catalog.
-- [x] Honest empty/unavailable states, loading, error retry and 404 pages.
-- [x] Responsive desktop/mobile layouts and reusable dashboard components.
-- [x] MV3 extension build with creator-evidence links in the X content script.
-- [x] Frontend handoff and proposed shared view models for backend wiring.
-- [x] Local `pnpm check`, production builds and browser checks passed for this milestone.
+- [ ] Install and test the extension on real X.
+- [ ] Add explicit app/API configuration and minimal permissions.
+- [ ] Resolve handles through verified stable-X-ID mappings.
+- [ ] Add independent identity and stake indicators plus evidence popovers.
+- [ ] Handle missing/stale data, withdrawal pending, feed navigation and duplicate injection.
+- [ ] Verify message origins and safe handoff to wallet review.
 
-The extension has not yet been installed and verified against real X in Chrome. Watchlists/profile drafts are browser-local; trades, stake actions, reputation and MCP connections are not live.
+Exit: a bound creator's profile/post shows current evidence from the backend.
 
-## Remaining phases
+## Phase 3: Kuru trading and user dashboard
 
-### Phase 2 — Provider access, database and verified identity
+- [ ] Verify a supported market, token decimals, ABI and usable liquidity.
+- [ ] Fetch quotes and prepare unsigned orders with fees, expiry and execution limits.
+- [ ] Add X buy/sell entry points with source-post attribution.
+- [ ] Execute only after Privy wallet approval.
+- [ ] Index order/fill events and distinguish open, partial, filled, cancelled and failed orders.
+- [ ] Populate portfolio/activity from confirmed fills; add optional watchlist sync.
+- [ ] Test rejected signatures, expired quotes, wrong chain, insufficient funds and unavailable liquidity.
 
-**Owners:** backend developer, with frontend support. **Dependency:** existing foundation.
+Exit: X → review → approval → Kuru fill → dashboard with actual amounts.
 
-- [x] Confirm Privy Twitter login and embedded-wallet configuration with a real session.
-- [ ] Confirm an authorized X account/post ingestion path; record access limits and supported collection scope.
-- [ ] Confirm the chosen Kuru testnet market, token decimals, ABI and usable liquidity.
-- [ ] Confirm Nansen API access and actual mainnet coverage for demo assets/wallets.
-- [ ] Confirm Envio runtime/hosting access and an RPC suitable for the demo.
-- [x] Start local Postgres and apply the migration; verify foundation tables after a restart.
-- [x] Provision dedicated AWS RDS Postgres in Mumbai, apply cloud migrations and activate a TLS-verified restricted application connection.
-- [x] Add a server-only database runtime, TLS enforcement for remote connections and live readiness checks.
-- [x] Verify Privy sessions server-side; bind stable X user IDs to owned wallets using expiring, single-use nonces.
-- [x] Add runtime-validated API responses, authorization and account isolation.
-- [x] Connect profile/onboarding pages to persisted account state.
-- [x] Configure the Git remote, push existing commits and verify hosted CI. Identity milestone run 38145611740 passed.
+## Phase 4: Calls, reputation and Nansen
 
-- [x] Complete the user-approved real wallet signature and verify the resulting binding after refresh. The real session, challenge, signature and persisted binding are verified against Privy and Mumbai RDS; local Postgres tests cover rejected proofs.
+- [ ] Confirm authorized X ingestion and Nansen access/coverage.
+- [ ] Store sourced calls with stable author ID, asset address, direction, horizon and edit handling.
+- [ ] Publish deterministic evaluation rules, price sources and methodology version.
+- [ ] Show sample size, coverage, unresolved calls and hypothetical outcomes separately from wallet returns.
+- [ ] Add an actual Nansen-backed wallet/token insight with source and timestamp.
+- [ ] Connect dossiers, call ledgers, reputation pages and extension popovers.
 
-**Completion test:** a real user establishes a persistent X-ID/wallet binding; forged, expired and replayed proofs fail. Provider coverage and market feasibility are recorded before building dependent flows.
+Exit: each scored call is traceable to its source and inputs; Nansen adds a useful real insight.
 
-### Phase 3 — Refundable stake and live stake indexing
+## Phase 5: MCP
 
-**Owners:** contracts/backend/indexer developer. **Dependency:** Phase 2 identity, token and network configuration.
+- [ ] Implement MCP transport, schemas and connection instructions.
+- [ ] Add public creator/call/stake tools and authenticated portfolio access.
+- [ ] Add unsigned trade preparation using shared services.
+- [ ] Verify a real MCP client and denied private-data access.
 
-- [x] Implement an original six-decimal, testnet-only mUSDC demo contract with initial mint, once-per-address faucet and stake/refund tests. Mock token and matching stake deployment remain pending wallet approval.
-- [x] Confirm Circle test USDC address and six decimals via live Monad testnet RPC; use 500000000 units and a seven-day cooldown.
-- [x] Deploy the stake contract to Monad testnet and record address, deployment block and immutable settings. Receipt and matching runtime bytecode verified in `contracts/deployments/monad-testnet.json`.
-- [x] Implement separate Privy wallet reviews for bounded allowance/reset, deposit, request, cancel and withdrawal; live transaction verification is still pending.
-- [x] Simulate unsigned transactions with gas estimation and implement submitted/reverted/confirmed receipt states. The real deployment simulation passed; live receipt-state verification remains pending.
-- [ ] Configure Envio with the deployed address/start block and run live indexing.
-- [ ] Expose stake projections with source, chain, indexed time and finality/freshness status.
-- [ ] Define and verify duplicate-event, reorg and RPC/indexer interruption handling.
-- [ ] Wire creator stake pages to contract/indexer evidence.
-- [ ] Run Foundry checks for fund-handling changes; regenerate/typecheck after indexer changes.
+## Phase 6: Deployment and submission
 
-**Completion test:** a real deposit updates indexed stake; requesting withdrawal immediately removes active-stake eligibility; cancel and full refund after cooldown behave correctly. Use a separate short-cooldown test deployment if needed for demonstration, with its settings clearly labeled.
+- [ ] Deploy web/API and indexer with HTTPS origins and server secrets.
+- [ ] Package the extension and document installation.
+- [ ] Test restart recovery, stale data, transaction failures and account isolation.
+- [ ] Record the complete onboarding → stake → X evidence → trade → confirmed-fill demo.
+- [ ] Demonstrate Nansen evidence and MCP; prepare sponsor evidence and submission video.
 
-### Phase 4 — Live Chrome extension identity and stake experience
-
-**Owners:** extension/frontend developer, with backend support. **Dependency:** verified bindings and fresh stake data from Phases 2–3.
-
-- [ ] Install and test the current unpacked extension on real X before expanding it.
-- [ ] Add environment-specific HTTPS app/API configuration and minimal permissions.
-- [ ] Resolve current handles through the server's verified stable-X-ID mapping; reject ambiguous/stale mappings.
-- [ ] Add branded identity and active-stake indicators with independent labels.
-- [ ] Build the evidence popover with unknown, unavailable, stale and withdrawal-pending states.
-- [ ] Keep reputation unavailable until sourced scoring exists in Phase 6.
-- [ ] Handle dynamic feed navigation, duplicate injection and extension enable/disable behavior.
-- [ ] Verify API/message origins and safe handoff into wallet approval pages.
-
-**Completion test:** a real bound creator's X post shows current identity/stake evidence, and withdrawal or stale indexing removes the active indicator. A deposit alone never produces an identity-verification claim.
-
-### Phase 5 — Kuru trading from X and actual-fill dashboard
-
-**Owners:** trading/backend developer plus extension/frontend developer. **Dependency:** Phase 2 market/session setup and Phase 4 handoff.
-
-- [ ] Fetch live market parameters and quotes; validate chain, market, token and integer amounts.
-- [ ] Show fees, slippage, expiry and the venue-appropriate execution limits before approval.
-- [ ] Prepare/simulate unsigned transactions with bounded token approvals.
-- [ ] Execute only after explicit user approval through Privy; handle rejection/failure.
-- [ ] Add buy/sell entry points to X posts and preserve source-post attribution.
-- [ ] Index the selected Kuru order/fill events through Envio with idempotency and finality handling.
-- [ ] Distinguish submitted, open, partially filled, filled, cancelled and failed orders where supported.
-- [ ] Populate portfolio and activity from confirmed fills and wallet evidence.
-- [ ] Replace local watchlist storage with optional authenticated sync, retaining clear local-only behavior when signed out.
-- [ ] Verify quote expiry, insufficient funds, wrong network and unavailable liquidity paths.
-
-**Completion test:** X → trade review → explicit wallet approval → Kuru confirmed fill → dashboard, with actual amounts and source evidence. A submitted order never appears as a confirmed fill.
-
-### Phase 6 — Sourced calls, reputation and Nansen evidence
-
-**Owners:** evidence/backend developer plus frontend/extension developer. **Dependency:** authorized ingestion and provider coverage confirmed in Phase 2.
-
-- [ ] Ingest supported financial calls with stable author ID, source post, timestamp and duplicate/edit handling.
-- [ ] Define explicit assets, direction, entry/evaluation rules and time horizons; mark ambiguous calls unevaluable.
-- [ ] Store sourced price observations and version the scoring methodology.
-- [ ] Show sample size, coverage, evaluation state and missing data alongside any score.
-- [ ] Keep hypothetical call outcomes separate from actual wallet returns and stake participation.
-- [ ] Fetch actual supported Nansen mainnet data server-side and derive a useful token/wallet insight.
-- [ ] Display source, timestamp, network and coverage; show unavailable states for unsupported data.
-- [ ] Wire creator profiles, call ledgers, reputation pages and extension popovers to this evidence.
-- [ ] Validate scoring on auditable cases; use insufficient-evidence states when no defensible score exists.
-
-**Completion test:** a creator call can be traced to its post and evaluation inputs, and a real Nansen-backed insight appears in the product. Testnet transactions and mainnet analytics remain visibly distinct.
-
-Phase 6 evidence work can proceed alongside Phases 3–5 after access is confirmed; the core extension trade journey remains the priority.
-
-### Phase 7 — Working MCP server
-
-**Owners:** backend/agent developer. **Dependency:** shared live identity, evidence and trading services.
-
-- [ ] Implement a real MCP transport, server configuration and runtime input/output schemas.
-- [ ] Add bounded public tools for creator lookup, call history and stake evidence.
-- [ ] Add authenticated portfolio tools with wallet ownership and account isolation.
-- [ ] Add trade preparation returning unsigned, expiring transactions for user review.
-- [ ] Reuse shared services rather than implementing independent reputation/trading logic.
-- [ ] Keep provider secrets server-side; omit automatic signing and arbitrary proxy access.
-- [ ] Replace the planned tool catalog with accurate connection instructions and availability states.
-- [ ] Verify tools with a real MCP client, including denied private-data access and provider failures.
-
-**Completion test:** an MCP client reads live evidence and prepares a reviewable trade; unauthenticated users cannot read private portfolios. The wallet remains responsible for explicit approval.
-
-### Phase 8 — Deployment, complete demo and handoff
-
-**Owners:** whole team. **Dependency:** the required sponsor flows and product surfaces above.
-
-- [ ] Deploy web/API, database and indexer; configure HTTPS origins and server secrets.
-- [ ] Produce an installable extension build with real installation instructions.
-- [ ] Run `pnpm check`, indexer codegen/typecheck and focused live end-to-end checks.
-- [ ] Verify refresh/restart recovery, stale evidence, failed transactions and private-data isolation.
-- [ ] Demonstrate creator onboarding → stake → X evidence → approved trade → confirmed-fill dashboard.
-- [ ] Demonstrate sourced call/Nansen evidence and a real MCP tool invocation.
-- [ ] Record completion evidence for Kuru, Privy, Envio and Nansen in `SPONSORS.md`.
-- [ ] Publish accurate setup documentation, deployment addresses, limitations and demo video.
-- [ ] Push genuine milestone commits, verify CI and prepare developer handoff/submission materials.
-
-**Completion test:** another developer can install/run the project and reproduce the real demo from the documentation without invented balances, reputations or fills.
-
-## Working rules for each phase
-
-1. Implement small, reviewable feature milestones and commit them when they work. Preserve accurate authorship and compatible licenses; do not manufacture development history.
-2. Mark an item complete only when its completion evidence exists. Keep configuration, implementation and live verification separate.
-3. Update this checklist and the frontend handoff as APIs replace placeholder states. Run checks appropriate to each code change.
-4. Keep Kimi optional and Aurora/CRE or other sponsor expansions after the core MVP. They are not prerequisites for the phases above.
-
-**Immediate next work:** obtain test USDC, verify deposit/withdrawal flows and start Envio against the recorded deployment. Confirm remaining Kuru/Nansen provider feasibility in parallel. The frontend developer can prepare API wiring while the extension developer verifies installation/DOM behavior; live badges depend on Phase 3 evidence.
+Commit verified features separately and update this checklist as they land.
