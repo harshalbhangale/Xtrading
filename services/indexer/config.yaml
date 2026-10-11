@@ -1,0 +1,14 @@
+# Deploy CreatorStake first, then set the address and deployment block below.
+name: call-my-bluff-stakes
+description: Refundable creator stake projections on Monad testnet
+contracts:
+  - name: CreatorStake
+    handler: src/handlers.ts
+    events:
+      - event: StakeUpdated(address indexed wallet, uint256 balance, uint256 withdrawableAt)
+chains:
+  - id: 10143
+    start_block: 0
+    contracts:
+      - name: CreatorStake
+        address: []

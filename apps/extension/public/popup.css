@@ -1,0 +1,33 @@
+body {
+  width: 300px;
+  margin: 0;
+  background: #f4f5ef;
+  color: #20231b;
+  font: 14px / 1.55 system-ui;
+}
+main {
+  padding: 22px;
+}
+.label {
+  font:
+    10px ui-monospace,
+    monospace;
+  letter-spacing: 1px;
+}
+h1 {
+  font-size: 25px;
+  line-height: 1.1;
+}
+a {
+  display: block;
+  padding: 12px;
+  background: #d8f58a;
+  color: inherit;
+  border-radius: 7px;
+  text-decoration: none;
+  font-weight: 600;
+}
+.note {
+  font-size: 11px;
+  color: #62685b;
+}

@@ -1,0 +1,20 @@
+.cmb-evidence-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 0;
+  padding: 5px 9px;
+  border: 1px solid #c1cdac;
+  border-radius: 6px;
+  background: #edf5df;
+  color: #25351c;
+  font: 600 12px system-ui;
+  text-decoration: none;
+}
+.cmb-evidence-link:hover {
+  background: #d8f58a;
+}
+.cmb-evidence-link:focus-visible {
+  outline: 3px solid #36651f;
+  outline-offset: 2px;
+}

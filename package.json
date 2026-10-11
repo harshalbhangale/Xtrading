@@ -1,0 +1,32 @@
+{
+  "name": "call-my-bluff",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.1.3",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=11"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @call-my-bluff/web dev",
+    "build": "pnpm --filter @call-my-bluff/web build && pnpm --filter @call-my-bluff/extension build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "vitest run",
+    "contracts:build": "forge build --root contracts",
+    "contracts:test": "forge test --root contracts",
+    "contracts:abi": "node scripts/export-stake-abi.mjs",
+    "indexer:codegen": "pnpm --filter @call-my-bluff/indexer codegen",
+    "db:generate": "pnpm --filter @call-my-bluff/database generate",
+    "db:migrate": "pnpm --filter @call-my-bluff/database migrate",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm contracts:test && pnpm build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "^22.0.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.3"
+  }
+}

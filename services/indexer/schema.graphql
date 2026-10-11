@@ -1,0 +1,19 @@
+type StakePosition {
+  id: ID!
+  chainId: Int!
+  contract: String!
+  wallet: String!
+  balance: BigInt!
+  withdrawableAt: BigInt!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type StakeEvent {
+  id: ID!
+  positionId: String!
+  balance: BigInt!
+  withdrawableAt: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}

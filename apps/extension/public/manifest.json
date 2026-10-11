@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Call My Bluff — development",
+  "description": "Open creator evidence from X. Foundation build; verified badges and trading are pending.",
+  "version": "0.1.0",
+  "action": { "default_popup": "popup.html", "default_title": "Call My Bluff" },
+  "content_scripts": [
+    {
+      "matches": ["https://x.com/*", "https://twitter.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ]
+}
