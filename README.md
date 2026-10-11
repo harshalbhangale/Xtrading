@@ -18,6 +18,8 @@ Open http://localhost:3000. The landing page, user dashboard (`/dashboard`), cre
 
 Developer route map, reusable components, proposed API contracts and extension/MCP integration boundaries: [frontend handoff](docs/frontend-handoff.md). Local watchlists and profile drafts are implemented; they do not publish or verify an account.
 
+Completed work, remaining tasks and phase completion tests: [implementation checklist](docs/implementation-plan.md).
+
 Monad testnet **10143** is the default. Mainnet **143** requires explicit configuration. Never use a mainnet market address on testnet. The sample Kuru address is a documented deployment reference, not a liquidity or execution guarantee.
 
 ## Workspace
