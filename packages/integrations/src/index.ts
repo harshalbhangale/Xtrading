@@ -64,14 +64,16 @@ export function integrationStatus(
       configured: Boolean(env.NANSEN_API_KEY),
       implementation: "foundation",
       detail:
-        "Server-only API client boundary. Authorized endpoint coverage must be verified.",
+        "Wallet DEX-trade consistency checks for creator calls (Monad mainnet coverage). Demo findings are shown and labelled when no key is set.",
     },
     {
       name: "Perpl",
-      configured: false,
+      configured: Boolean(
+        env.PERPL_API_KEY && env.PERPL_API_KEY_SECRET && env.PERPL_ACCOUNT_ID,
+      ),
       implementation: "foundation",
       detail:
-        "Explicit perp routing and public testnet market discovery. Risk checks, account permissions, unsigned order preparation and confirmed execution are pending.",
+        "Perp calls route to open Perpl testnet markets. Reviewed IOC orders with leverage/size caps are submitted with a signed API key; without credentials orders are validated in demo mode only.",
     },
     {
       name: "Chainlink CRE",

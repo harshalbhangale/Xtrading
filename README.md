@@ -2,7 +2,7 @@
 
 Creator evidence and spot/perp trading from X, built on Monad. The product includes a landing page, creator studio, user dashboard, Chrome extension and planned MCP server.
 
-Identity binding works. Both stake contracts and mUSDC are deployed and verified on testnet. A wallet-approved 500 mUSDC deposit is confirmed and indexed by Envio; the authenticated stake page now reads indexed history. Kuru/Perpl execution, Nansen insights, CRE workflow and MCP remain pending.
+Identity binding works. Both stake contracts and mUSDC are deployed and verified on testnet. A wallet-approved 500 mUSDC deposit is confirmed and indexed by Envio; the authenticated stake page now reads indexed history. The X extension adds verified-creator badges, trade-call detection (Groq, or rules without a key), a call-check drawer with the creator record and a Nansen wallet check, and reviewed Kuru spot / Perpl perp trades; providers without keys run in labelled demo mode. Confirmed Kuru fills, a live Perpl order, a keyed Nansen run, CRE workflow and MCP remain pending.
 
 Live withdrawal request and cancellation were confirmed and indexed; the 500 mUSDC stake is active again. The extension implements separate binding/stake indicators, evidence details and spot trade review links. Chrome installation and real-X validation are pending. Its public evidence endpoint exposes recorded stable-X-ID bindings and requires fresh matching RPC/Envio data before showing active stake.
 
@@ -36,7 +36,7 @@ Monad testnet **10143** is the default. Mainnet requires explicit configuration;
 
 ## Configuration
 
-Use `apps/web/.env.local` for `NEXT_PUBLIC_PRIVY_APP_ID`, `PRIVY_APP_SECRET`, `NEXT_PUBLIC_APP_URL`, `MONAD_RPC_URL` and `DATABASE_URL`. Keep provider secrets server-only. Enable Twitter login, EVM embedded wallets and the app origin in Privy.
+Use `apps/web/.env.local` for `NEXT_PUBLIC_PRIVY_APP_ID`, `PRIVY_APP_SECRET`, `NEXT_PUBLIC_APP_URL`, `MONAD_RPC_URL` and `DATABASE_URL`. Optional: `GROQ_API_KEY`, `NANSEN_API_KEY` and the `PERPL_*` keys (see `.env.example`); each runs in labelled demo mode when empty. Keep provider secrets server-only. Enable Twitter login, EVM embedded wallets and the app origin in Privy.
 
 Remote database connections require `sslmode=verify-full` and the trusted RDS CA bundle through `DATABASE_CA_FILE`. `/api/health` reports configuration presence; `/api/ready` checks the six required database tables.
 
@@ -56,7 +56,7 @@ The migration CLI uses its process `DATABASE_URL` or the local fallback on port 
 pnpm --filter @call-my-bluff/extension build
 ```
 
-In Chrome, enable developer mode at `chrome://extensions` and load `apps/extension/dist`. The current extension adds creator-evidence links using `http://localhost:3000`. Live badges, popovers and trading controls are pending.
+In Chrome, enable developer mode at `chrome://extensions` and load `apps/extension/dist`. See [X extension](docs/x-extension.md).
 
 ## Contracts and indexer
 
@@ -91,6 +91,7 @@ Checks include formatting, TypeScript, application tests, local identity integra
 - [Frontend and API handoff](docs/frontend-handoff.md)
 - [Architecture](docs/architecture.md)
 - [Required sponsors](SPONSORS.md)
+- [X extension](docs/x-extension.md)
 - [Component references](docs/references.md)
 - [Identity binding](docs/identity-binding.md)
 - [Stake transactions](docs/stake-transactions.md)

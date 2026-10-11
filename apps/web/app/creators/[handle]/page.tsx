@@ -7,6 +7,7 @@ import {
   Panel,
   RecordTable,
 } from "../../../components/dashboard/ui";
+import { creatorReputation } from "../../../lib/insights";
 import { publicCreatorEvidence } from "../../../lib/public-creator";
 
 export default async function CreatorPage({
@@ -16,7 +17,10 @@ export default async function CreatorPage({
 }) {
   const handle = normalizeHandle((await params).handle);
   if (!handle) notFound();
-  const evidence = await publicCreatorEvidence(handle);
+  const [evidence, reputation] = await Promise.all([
+    publicCreatorEvidence(handle),
+    creatorReputation(handle),
+  ]);
   const identity = evidence?.identity;
   const stake = evidence?.stake;
   return (
@@ -76,7 +80,16 @@ export default async function CreatorPage({
         />
         <MetricCard
           label="Call reputation"
-          detail="No methodology-backed score"
+          value={
+            reputation.status === "ready"
+              ? `${reputation.trackedCalls} tracked`
+              : undefined
+          }
+          detail={
+            reputation.status === "ready"
+              ? `${reputation.bullish} bullish · ${reputation.bearish} bearish · ${reputation.perpCalls} perp · score pending sourced expiry prices`
+              : "No methodology-backed score"
+          }
         />
         <MetricCard
           label="Source coverage"
@@ -88,17 +101,57 @@ export default async function CreatorPage({
         title="Public call history"
         description="Source posts and hypothetical call outcomes stay separate from actual wallet results."
       >
-        <RecordTable
-          columns={[
-            "Source post",
-            "Asset / direction",
-            "Evaluation window",
-            "Status",
-            "Evidence",
-          ]}
-          emptyTitle="No source-backed calls to inspect."
-          emptyDescription="Eligible predictions will appear after ingestion and evaluation are connected."
-        />
+        {reputation.recent.length ? (
+          <div className="table-scroll">
+            <table className="record-table">
+              <thead>
+                <tr>
+                  <th>Source post</th>
+                  <th>Asset / direction</th>
+                  <th>Instrument</th>
+                  <th>Extracted</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reputation.recent.map((call) => (
+                  <tr key={call.postId}>
+                    <td>
+                      <a
+                        className="text-link"
+                        href={`https://x.com/${handle}/status/${call.postId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {call.postId} ↗
+                      </a>
+                    </td>
+                    <td>
+                      {call.asset} · {call.direction ?? "no direction"}
+                    </td>
+                    <td>{call.instrument}</td>
+                    <td>
+                      {call.classifiedAt.slice(0, 16).replace("T", " ")} UTC
+                    </td>
+                    <td>Unevaluated</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <RecordTable
+            columns={[
+              "Source post",
+              "Asset / direction",
+              "Evaluation window",
+              "Status",
+              "Evidence",
+            ]}
+            emptyTitle="No source-backed calls to inspect."
+            emptyDescription="Calls appear here once extension users see this creator's posts."
+          />
+        )}
       </Panel>
     </div>
   );

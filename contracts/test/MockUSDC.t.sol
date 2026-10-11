@@ -21,6 +21,14 @@ contract MockUSDCTest {
         vm.prank(BOB); vm.expectRevert(MockUSDC.AlreadyClaimed.selector); token.faucet();
         vm.prank(ALICE); vm.expectRevert(MockUSDC.AlreadyClaimed.selector); token.faucet();
     }
+    /// The stake UI gates its faucet button on this flag, so it must track claims exactly.
+    function testClaimedFlagTracksFaucetEligibility() public {
+        vm.chainId(10143);
+        MockUSDC token = new MockUSDC(ALICE);
+        require(token.claimed(ALICE) && !token.claimed(BOB), "Initial eligibility");
+        vm.prank(BOB); token.faucet();
+        require(token.claimed(BOB), "Claimed after faucet");
+    }
     function testCannotDeployOrMintOnAnotherChain() public {
         vm.chainId(143); vm.expectRevert(MockUSDC.TestnetOnly.selector); new MockUSDC(ALICE);
         vm.chainId(10143); MockUSDC token = new MockUSDC(ALICE);

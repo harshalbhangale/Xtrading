@@ -178,11 +178,13 @@ export default function ConfiguredStake() {
         );
       await refresh();
       setNotice(
-        transaction.action === "deployMockUSDC"
-          ? `Mock USDC deployed at ${receipt.contractAddress}, block ${receipt.blockNumber}. 10,000 mUSDC minted to the bound wallet. Verify this receipt, configure mock-token mode and deploy a new matching stake contract before deposits.`
-          : transaction.action === "deploy"
-            ? `Deployment confirmed at ${receipt.contractAddress}. Configure this address and deployment block ${receipt.blockNumber} on the server and indexer before deposits.`
-            : `${transaction.action} confirmed in block ${receipt.blockNumber}. Latest state is unfinalized; check indexed evidence below. Prepare the next action separately.`,
+        transaction.action === "faucet"
+          ? `Faucet claim confirmed in block ${receipt.blockNumber}. 1,000 mUSDC minted to the bound wallet. Latest state is unfinalized; this is not an active stake.`
+          : transaction.action === "deployMockUSDC"
+            ? `Mock USDC deployed at ${receipt.contractAddress}, block ${receipt.blockNumber}. 10,000 mUSDC minted to the bound wallet. Verify this receipt, configure mock-token mode and deploy a new matching stake contract before deposits.`
+            : transaction.action === "deploy"
+              ? `Deployment confirmed at ${receipt.contractAddress}. Configure this address and deployment block ${receipt.blockNumber} on the server and indexer before deposits.`
+              : `${transaction.action} confirmed in block ${receipt.blockNumber}. Latest state is unfinalized; check indexed evidence below. Prepare the next action separately.`,
       );
     } catch (error) {
       if (activeUser.current === owner) {
@@ -227,6 +229,12 @@ export default function ConfiguredStake() {
       >
         Refresh contract state
       </button>
+      {(notice || busy) && (
+        <p role="status" className="stake-notice">
+          {notice}
+          {busy ? " Working…" : ""}
+        </p>
+      )}
       {sessionExpired && (
         <button
           className="button secondary-button"
@@ -355,6 +363,22 @@ export default function ConfiguredStake() {
               amount or trading return.
             </p>
           </section>
+          {state.faucetClaimed === false && (
+            <>
+              <p>
+                Claim 1,000 demo mUSDC once from the token faucet; that covers
+                the 500 mUSDC minimum. Demo-only tokens with no monetary value.
+              </p>
+              <button
+                className="button secondary-button"
+                type="button"
+                disabled={busy}
+                onClick={() => void prepare("faucet")}
+              >
+                Review mUSDC faucet claim
+              </button>
+            </>
+          )}
           {state.symbol === "USDC" && (
             <>
               <p>
@@ -442,7 +466,13 @@ export default function ConfiguredStake() {
             <br />
             Expires: {prepared.expiresAt}
           </p>
-          {prepared.action === "deployMockUSDC" ? (
+          {prepared.action === "faucet" ? (
+            <p>
+              Mint 1,000 demo mUSDC to {prepared.wallet}. One claim per address,
+              Monad testnet only. These tokens have no monetary value and no
+              Circle affiliation.
+            </p>
+          ) : prepared.action === "deployMockUSDC" ? (
             <p>
               Deploy Call My Bluff Mock USDC (mUSDC), six decimals. Mint 10,000
               mUSDC to {prepared.wallet}. Anyone else may claim 1,000 mUSDC once
@@ -486,10 +516,6 @@ export default function ConfiguredStake() {
           </button>
         </section>
       )}
-      <p role="status">
-        {notice}
-        {busy ? " Working…" : ""}
-      </p>
       {hash && (
         <a
           className="text-link"

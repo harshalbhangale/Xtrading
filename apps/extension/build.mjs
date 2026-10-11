@@ -31,5 +31,6 @@ await build({
   format: "iife",
   target: "chrome120",
   sourcemap: true,
+  minify: true,
   define: { CMB_APP_ORIGIN: JSON.stringify(url.origin) },
 });

@@ -9,7 +9,9 @@
     "./stake": "./src/stake.ts",
     "./routing": "./src/routing.ts",
     "./kuru": "./src/kuru.ts",
-    "./market-schemas": "./src/market-schemas.ts"
+    "./market-schemas": "./src/market-schemas.ts",
+    "./signals": "./src/signals.ts",
+    "./perpl": "./src/perpl.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

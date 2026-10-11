@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
+  CreatorIdentityCard,
+  CreatorIdentityStep,
+} from "../../components/dashboard/creator-identity";
+import {
   ConnectionNote,
   EmptyState,
   MetricCard,
@@ -11,6 +15,7 @@ import {
 export const metadata: Metadata = { title: "Creator studio" };
 
 export default function CreatorPage() {
+  const identityConfigured = Boolean(process.env.PRIVY_APP_SECRET);
   const steps = [
     {
       number: "01",
@@ -48,12 +53,7 @@ export default function CreatorPage() {
         }
       />
       <div className="metric-grid">
-        <MetricCard
-          label="Identity"
-          value="Unlinked"
-          detail="X ownership has not been verified"
-          icon="◎"
-        />
+        <CreatorIdentityCard serverConfigured={identityConfigured} />
         <MetricCard
           label="Refundable stake"
           detail="Contract balance not connected"
@@ -79,7 +79,11 @@ export default function CreatorPage() {
               <span className="step-number">{step.number}</span>
               <h3>{step.title}</h3>
               <p>{step.description}</p>
-              <span className="status-badge">Not completed</span>
+              {step.number === "01" ? (
+                <CreatorIdentityStep serverConfigured={identityConfigured} />
+              ) : (
+                <span className="status-badge">Not completed</span>
+              )}
               <Link className="text-link" href={step.href}>
                 {step.action} ↗
               </Link>
@@ -113,8 +117,8 @@ export default function CreatorPage() {
         </Panel>
       </div>
       <ConnectionNote>
-        This studio is a frontend foundation. It has not verified your account
-        or fetched your wallet balance.
+        Identity reflects your server-verified binding. Stake balance,
+        reputation and indexed calls are not connected yet.
       </ConnectionNote>
     </>
   );

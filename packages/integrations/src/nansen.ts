@@ -7,10 +7,16 @@ export function createNansenClient(
 ) {
   if (!apiKey.trim()) throw new Error("Nansen API key is not configured");
   return {
-    async post(path: "/api/v1/tgm/holders", body: Record<string, unknown>) {
+    async post(
+      path:
+        | "/api/v1/tgm/holders"
+        | "/api/v1/profiler/dex-trades"
+        | "/api/v1/profiler/address/transactions",
+      body: Record<string, unknown>,
+    ) {
       const response = await fetcher(`https://api.nansen.ai${path}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", apiKey },
+        headers: { "Content-Type": "application/json", apikey: apiKey },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(10_000),
         cache: "no-store",

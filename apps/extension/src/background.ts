@@ -1,68 +1,128 @@
 import {
   normalizeHandle,
+  postSignalRequestSchema,
+  postSignalResponseSchema,
   publicCreatorEvidenceSchema,
 } from "@call-my-bluff/domain";
 import { appOrigin } from "./config";
 
-const cache = new Map<string, { expires: number; value: unknown }>();
+type Entry = { expires: number; value: unknown };
+const cache = new Map<string, Entry>();
 const pending = new Map<string, Promise<unknown>>();
 const waiting: Array<() => void> = [];
 let active = 0;
-async function load(handle: string) {
+
+async function limited<T>(task: () => Promise<T>) {
   if (active >= 4) await new Promise<void>((resolve) => waiting.push(resolve));
   else active++;
   try {
-    const response = await fetch(
-      `${appOrigin}/api/creators/${encodeURIComponent(handle)}`,
-      {
-        signal: AbortSignal.timeout(15000),
-        cache: "no-store",
-        credentials: "omit",
-      },
-    );
-    if (!response.ok) throw new Error("unavailable");
-    const value = publicCreatorEvidenceSchema.parse(await response.json());
-    if (value.handle.toLowerCase() !== handle)
-      throw new Error("mismatched_handle");
-    if (cache.size >= 100) cache.clear();
-    cache.set(handle, { expires: Date.now() + 15000, value });
-    return value;
-  } catch {
-    return { error: "evidence_unavailable" };
+    return await task();
   } finally {
-    pending.delete(handle);
     const next = waiting.shift();
     if (next) next();
     else active--;
   }
 }
+
+/** Deduplicated, bounded fetch through the app API. No cookies or tokens are sent. */
+function cached(
+  key: string,
+  ttl: number,
+  load: () => Promise<unknown>,
+): Promise<unknown> {
+  const hit = cache.get(key);
+  if (hit && hit.expires > Date.now()) return Promise.resolve(hit.value);
+  const existing = pending.get(key);
+  if (existing) return existing;
+  if (pending.size >= 100) return Promise.resolve({ error: "busy" });
+  const request = limited(load)
+    .then((value) => {
+      if (cache.size >= 500) cache.clear();
+      cache.set(key, { expires: Date.now() + ttl, value });
+      return value;
+    })
+    .catch(() => ({ error: "unavailable" }))
+    .finally(() => pending.delete(key));
+  pending.set(key, request);
+  return request;
+}
+
+async function getJson(path: string, init?: RequestInit) {
+  const response = await fetch(`${appOrigin}${path}`, {
+    ...init,
+    signal: AbortSignal.timeout(25000),
+    cache: "no-store",
+    credentials: "omit",
+  });
+  if (!response.ok) throw new Error("unavailable");
+  return (await response.json()) as unknown;
+}
+
+function handleMessage(
+  message: Record<string, unknown>,
+): Promise<unknown> | null {
+  if (
+    message.type === "creator-evidence" &&
+    typeof message.handle === "string"
+  ) {
+    const handle = normalizeHandle(message.handle);
+    if (!handle) return Promise.resolve({ error: "invalid_handle" });
+    return cached(`evidence:${handle}`, 30000, async () => {
+      const value = publicCreatorEvidenceSchema.parse(
+        await getJson(`/api/creators/${encodeURIComponent(handle)}`),
+      );
+      if (value.handle.toLowerCase() !== handle)
+        throw new Error("mismatched_handle");
+      return value;
+    });
+  }
+  if (message.type === "classify-post") {
+    const input = postSignalRequestSchema.safeParse(message.payload);
+    if (!input.success) return Promise.resolve({ error: "invalid_post" });
+    return cached(
+      `signal:${input.data.postId}:${input.data.text.length}:${input.data.text.slice(0, 64)}`,
+      600000,
+      async () =>
+        postSignalResponseSchema.parse(
+          await getJson("/api/signals/classify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(input.data),
+          }),
+        ),
+    );
+  }
+  if (
+    message.type === "creator-insights" &&
+    typeof message.handle === "string"
+  ) {
+    const handle = normalizeHandle(message.handle);
+    if (!handle) return Promise.resolve({ error: "invalid_handle" });
+    const params = new URLSearchParams();
+    if (
+      typeof message.asset === "string" &&
+      /^[A-Z0-9]{1,12}$/.test(message.asset)
+    )
+      params.set("asset", message.asset);
+    if (message.direction === "bullish" || message.direction === "bearish")
+      params.set("direction", message.direction);
+    return cached(`insights:${handle}:${params}`, 30000, () =>
+      getJson(`/api/creators/${encodeURIComponent(handle)}/insights?${params}`),
+    );
+  }
+  return null;
+}
+
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (
     !sender.tab?.url ||
     !/^https:\/\/(x\.com|twitter\.com)\//.test(sender.tab.url) ||
-    message?.type !== "creator-evidence" ||
-    typeof message.handle !== "string"
+    typeof message !== "object" ||
+    message === null
   )
     return false;
-  const handle = normalizeHandle(message.handle);
-  if (!handle) {
-    respond({ error: "invalid_handle" });
-    return false;
-  }
-  const cached = cache.get(handle);
-  if (cached && cached.expires > Date.now()) {
-    respond(cached.value);
-    return false;
-  }
-  let request = pending.get(handle);
-  if (!request) {
-    if (pending.size >= 100) {
-      respond({ error: "evidence_unavailable" });
-      return false;
-    }
-    request = load(handle);
-    pending.set(handle, request);
-  }
-  void request.then(respond);
+  const result = handleMessage(message as Record<string, unknown>);
+  if (!result) return false;
+  void result.then(respond);
   return true;
 });

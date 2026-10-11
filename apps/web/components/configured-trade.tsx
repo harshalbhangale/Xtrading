@@ -281,8 +281,8 @@ export default function ConfiguredTrade() {
         }}
       />
       <p className="small-note">
-        Source attribution is user-supplied and unverified. Perpl execution is
-        not available on this screen yet.
+        Source attribution is user-supplied and unverified. Perp calls open the
+        Perpl review instead.
       </p>
       <button
         type="button"
