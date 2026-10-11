@@ -4,7 +4,16 @@ import {
   type stakeStateSchema,
 } from "@call-my-bluff/domain";
 
-type State = ReturnType<typeof stakeStateSchema.parse>;
+type State = Pick<
+  ReturnType<typeof stakeStateSchema.parse>,
+  | "chainId"
+  | "contract"
+  | "wallet"
+  | "balance"
+  | "withdrawableAt"
+  | "blockNumber"
+  | "blockTimestamp"
+>;
 export async function indexedStake(state: State) {
   const observedAt = new Date().toISOString();
   const unavailable = indexedStakeSchema.parse({

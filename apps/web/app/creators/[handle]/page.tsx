@@ -1,11 +1,13 @@
 import { normalizeHandle } from "@call-my-bluff/domain";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { formatUnits } from "viem";
 import {
   MetricCard,
   Panel,
   RecordTable,
 } from "../../../components/dashboard/ui";
+import { publicCreatorEvidence } from "../../../lib/public-creator";
 
 export default async function CreatorPage({
   params,
@@ -14,6 +16,9 @@ export default async function CreatorPage({
 }) {
   const handle = normalizeHandle((await params).handle);
   if (!handle) notFound();
+  const evidence = await publicCreatorEvidence(handle);
+  const identity = evidence?.identity;
+  const stake = evidence?.stake;
   return (
     <div className="page subpage">
       <Link className="text-link" href="/creators">
@@ -21,12 +26,21 @@ export default async function CreatorPage({
       </Link>
       <p className="eyebrow">Creator record</p>
       <h1>@{handle}</h1>
-      <span className="tag">Not indexed</span>
+      <span className="tag">
+        {identity?.status === "bound"
+          ? "Account binding recorded"
+          : "Binding unavailable"}
+      </span>
       <div className="empty-state panel">
-        <h3>This creator has no record here yet.</h3>
+        <h3>
+          {identity?.status === "bound"
+            ? "Account binding and stake evidence"
+            : "This creator has no record here yet."}
+        </h3>
         <p>
-          There is no verified identity, indexed stake, or scored history to
-          display.
+          {identity?.status === "bound"
+            ? `Stable X ID ${identity.xUserId}; wallet ${identity.wallet}; bound ${identity.linkedAt}. The handle is a lookup hint for the recorded binding. Call performance and wallet returns remain unavailable.`
+            : "There is no verified binding, indexed stake, or scored history to display."}
         </p>
         <a
           className="text-link"
@@ -40,13 +54,24 @@ export default async function CreatorPage({
       <div className="metric-grid">
         <MetricCard
           label="Verified identity"
-          value="Unavailable"
-          detail="No ownership proof has been loaded"
+          value={
+            identity?.status === "bound" ? "Binding recorded" : "Unavailable"
+          }
+          detail="X authentication and signed wallet ownership at binding time; independent of stake"
           icon="◎"
         />
         <MetricCard
           label="Refundable stake"
-          detail="No current indexed stake record"
+          value={
+            stake?.status === "active" && stake.balance
+              ? `${formatUnits(BigInt(stake.balance), 6)} ${stake.symbol}`
+              : stake?.status === "withdrawal-pending"
+                ? "Withdrawal pending"
+                : stake?.status === "inactive"
+                  ? "Inactive"
+                  : "Unavailable"
+          }
+          detail={`Monad testnet · Envio ${stake?.indexing?.status ?? "unavailable"} · block ${stake?.indexing?.progressBlock ?? "unavailable"} · unfinalized; demo tokens have no monetary value`}
           icon="◇"
         />
         <MetricCard

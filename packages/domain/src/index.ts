@@ -129,6 +129,29 @@ export const indexedStakeSchema = z.object({
     )
     .max(20),
 });
+export const publicCreatorEvidenceSchema = z.object({
+  handle: xHandleSchema,
+  identity: z.object({
+    status: z.enum(["bound", "unavailable"]),
+    xUserId: z
+      .string()
+      .regex(/^[0-9]+$/)
+      .optional(),
+    wallet: addressSchema.optional(),
+    linkedAt: z.iso.datetime().optional(),
+  }),
+  stake: z.object({
+    status: z.enum(["active", "inactive", "withdrawal-pending", "unavailable"]),
+    chainId: z.literal(10143),
+    contract: addressSchema.optional(),
+    token: addressSchema.optional(),
+    symbol: z.enum(["USDC", "mUSDC"]).optional(),
+    balance: amountSchema.optional(),
+    withdrawableAt: amountSchema.optional(),
+    indexing: indexedStakeSchema.optional(),
+  }),
+  observedAt: z.iso.datetime(),
+});
 export const stakeStateSchema = z.object({
   chainId: z.literal(10143),
   wallet: addressSchema,
