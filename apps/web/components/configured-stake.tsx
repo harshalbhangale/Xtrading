@@ -90,9 +90,18 @@ export default function ConfiguredStake() {
           ...(action === "deposit" ? { amount } : {}),
         }),
       );
+      const displayState = stakeStateSchema.parse(await request("/api/stake"));
+      if (
+        displayState.wallet !== value.state.wallet ||
+        displayState.contract !== value.state.contract ||
+        displayState.token !== value.state.token
+      )
+        throw new Error(
+          "Wallet or deployment changed. Refresh and prepare again.",
+        );
       if (activeUser.current === owner) {
         setPrepared(value);
-        setState(value.state);
+        setState(displayState);
       }
     } catch (error) {
       if (activeUser.current === owner)
