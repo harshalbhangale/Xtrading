@@ -40,3 +40,7 @@ Nansen is selected as a required product integration. Confirm authorized API acc
 - [Finance track](https://hackathon.monad.xyz/tracks/onchain-finance)
 
 Full portal review: [research/portal-sponsor-expansion.md](docs/research/portal-sponsor-expansion.md). Product architecture: [research/product-blueprint.md](docs/research/product-blueprint.md). This approved selection takes precedence over earlier optional-provider recommendations in research.
+
+## Core reference components
+
+KOLlateral is the reference for creator dossiers, call ledgers and sourced wallet comparisons; XSwap is the reference for inline X trading interactions. The [pinned component and sponsor map](docs/research/reference-component-map.md) records source paths, license findings, required adaptations and demo evidence. Reference source has not been imported; our implementation retains explicit signing, bounded approvals and separate identity/stake/performance signals.
