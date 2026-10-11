@@ -21,3 +21,13 @@ await writeFile(
   new URL("CreatorStake-deployment.json", directory),
   `${JSON.stringify({ bytecode: artifact.bytecode.object }, null, 2)}\n`,
 );
+const mock = JSON.parse(
+  await readFile(
+    new URL("../contracts/out/MockUSDC.sol/MockUSDC.json", import.meta.url),
+    "utf8",
+  ),
+);
+await writeFile(
+  new URL("MockUSDC-deployment.json", directory),
+  `${JSON.stringify({ bytecode: mock.bytecode.object }, null, 2)}\n`,
+);

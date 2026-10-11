@@ -4,7 +4,7 @@ Approved by the user on 11 October 2026. These are MVP requirements for Call My 
 
 Primary track: **Onchain Finance & Trading**.
 
-Current implementation includes server-verified Privy/X sessions, embedded wallet onboarding and nonce-protected wallet binding APIs, per-chain Kuru market configuration, Envio stake schemas and event handlers, and a server-use Nansen API boundary. The real X login, user-approved embedded-wallet signature and persisted binding after refresh are verified. Stake and trading signatures remain pending. These implementations do not yet satisfy the completion evidence below. Nansen evidence is mainnet data; do not imply testnet coverage.
+Current implementation includes server-verified Privy/X sessions, embedded wallet onboarding and nonce-protected wallet binding APIs, per-chain Kuru market configuration, Envio stake schemas and event handlers, and a server-use Nansen API boundary. The real X login, user-approved embedded-wallet signature and persisted binding after refresh are verified. The Circle-token stake contract is deployed. Deposits and trading verification remain pending. An optional self-issued mUSDC demo token is implemented and clearly distinct from Circle USDC or a real financial commitment. These implementations do not yet satisfy the completion evidence below. Nansen evidence is mainnet data; do not imply testnet coverage.
 
 ## Required MVP integrations
 

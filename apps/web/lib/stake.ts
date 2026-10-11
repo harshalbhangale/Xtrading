@@ -20,6 +20,7 @@ import {
 } from "viem";
 import { monadTestnet } from "viem/chains";
 import deployment from "../../../packages/integrations/abi/CreatorStake-deployment.json";
+import mockDeployment from "../../../packages/integrations/abi/MockUSDC-deployment.json";
 import { identityContext } from "./identity-http";
 
 export async function stakeContext(request: Request) {
@@ -48,7 +49,16 @@ export async function stakeContext(request: Request) {
   const block = await client.getBlock();
   if (!block.hash) throw new IdentityError("rpc_unavailable", 503);
   const at = { blockNumber: block.number };
-  const token = testnetStake.token;
+  const mode = process.env.STAKE_TOKEN_MODE ?? "circle";
+  if (!["circle", "mock"].includes(mode))
+    throw new IdentityError("stake_token_mode_invalid", 503);
+  if (mode === "mock" && !process.env.MOCK_USDC_ADDRESS)
+    throw new IdentityError("mock_token_unconfigured", 503);
+  const token =
+    mode === "mock"
+      ? getAddress(process.env.MOCK_USDC_ADDRESS as string)
+      : testnetStake.token;
+  const expectedSymbol = mode === "mock" ? "mUSDC" : "USDC";
   const [decimals, symbol, tokenBalance, nativeBalance] = await Promise.all([
     client.readContract({
       address: token,
@@ -71,7 +81,7 @@ export async function stakeContext(request: Request) {
     }),
     client.getBalance({ address: wallet, ...at }),
   ]);
-  if (decimals !== 6 || symbol !== "USDC")
+  if (decimals !== 6 || symbol !== expectedSymbol)
     throw new IdentityError("stake_token_mismatch", 503);
   let balance = 0n,
     allowance = 0n,
@@ -165,14 +175,27 @@ export async function prepareStake(
   let to: Address | null = state.contract as Address | null,
     data: Hex,
     actualAction = action;
-  if (action === "deploy") {
+  if (action === "deployMockUSDC") {
+    if (state.symbol === "mUSDC")
+      throw new IdentityError("mock_already_configured", 409);
+    to = null;
+    data = encodeDeployData({
+      abi: parseAbi(["constructor(address recipient)"]),
+      bytecode: mockDeployment.bytecode as Hex,
+      args: [wallet],
+    });
+  } else if (action === "deploy") {
     if (to) throw new IdentityError("stake_already_configured", 409);
     data = encodeDeployData({
       abi: parseAbi([
         "constructor(address token_, uint256 minimumStake_, uint256 withdrawalDelay_)",
       ]),
       bytecode: deployment.bytecode as Hex,
-      args: [testnetStake.token, testnetStake.minimum, testnetStake.cooldown],
+      args: [
+        state.token as Address,
+        testnetStake.minimum,
+        testnetStake.cooldown,
+      ],
     });
   } else {
     if (!to) throw new IdentityError("stake_not_deployed", 409);
@@ -188,7 +211,7 @@ export async function prepareStake(
       if (units > BigInt(state.tokenBalance))
         throw new IdentityError("insufficient_test_usdc", 409);
       const step = depositStep(
-        testnetStake.token,
+        state.token as Address,
         to,
         units,
         BigInt(state.allowance),

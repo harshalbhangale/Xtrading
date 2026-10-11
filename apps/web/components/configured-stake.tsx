@@ -127,7 +127,8 @@ export default function ConfiguredStake() {
       const current = stakeStateSchema.parse(await request("/api/stake"));
       if (
         current.wallet.toLowerCase() !== transaction.wallet.toLowerCase() ||
-        current.contract !== transaction.state.contract
+        current.contract !== transaction.state.contract ||
+        current.token.toLowerCase() !== transaction.state.token.toLowerCase()
       )
         throw new Error(
           "Wallet or deployment changed. Refresh and prepare again.",
@@ -168,9 +169,11 @@ export default function ConfiguredStake() {
         );
       await refresh();
       setNotice(
-        transaction.action === "deploy"
-          ? `Deployment confirmed at ${receipt.contractAddress}. Configure this address and deployment block ${receipt.blockNumber} on the server and indexer before deposits.`
-          : `${transaction.action} confirmed in block ${receipt.blockNumber}. Latest state is unfinalized; indexing is pending. Prepare the next action separately.`,
+        transaction.action === "deployMockUSDC"
+          ? `Mock USDC deployed at ${receipt.contractAddress}, block ${receipt.blockNumber}. 10,000 mUSDC minted to the bound wallet. Verify this receipt, configure mock-token mode and deploy a new matching stake contract before deposits.`
+          : transaction.action === "deploy"
+            ? `Deployment confirmed at ${receipt.contractAddress}. Configure this address and deployment block ${receipt.blockNumber} on the server and indexer before deposits.`
+            : `${transaction.action} confirmed in block ${receipt.blockNumber}. Latest state is unfinalized; indexing is pending. Prepare the next action separately.`,
       );
     } catch (error) {
       if (activeUser.current === owner) {
@@ -239,11 +242,11 @@ export default function ConfiguredStake() {
             <dd>{state.wallet}</dd>
             <dt>Stake contract</dt>
             <dd>{state.contract ?? "Not deployed/configured"}</dd>
-            <dt>Test USDC balance</dt>
+            <dt>Token balance ({state.symbol})</dt>
             <dd>{formatUnits(BigInt(state.tokenBalance), 6)}</dd>
             <dt>Test MON for gas</dt>
             <dd>{formatUnits(BigInt(state.nativeBalance), 18)}</dd>
-            <dt>Locked test USDC</dt>
+            <dt>Locked {state.symbol}</dt>
             <dd>
               {state.contract
                 ? formatUnits(BigInt(state.balance), 6)
@@ -268,10 +271,28 @@ export default function ConfiguredStake() {
             </dd>
           </dl>
           <p>
-            Minimum: 500 test USDC · Cooldown: 7 days · Block{" "}
+            Minimum: 500 {state.symbol} · Cooldown: 7 days · Block{" "}
             {state.blockNumber} · Observed {state.observedAt} · Latest,
             unfinalized RPC snapshot; Envio indexing pending.
           </p>
+          {state.symbol === "USDC" && (
+            <>
+              <p>
+                For the hackathon demo, deploy our six-decimal mUSDC. It mints
+                10,000 demo tokens to your bound wallet and has no monetary
+                value or Circle affiliation. A new stake contract will be needed
+                for this token.
+              </p>
+              <button
+                className="button secondary-button"
+                type="button"
+                disabled={busy}
+                onClick={() => void prepare("deployMockUSDC")}
+              >
+                Prepare mock USDC deployment
+              </button>
+            </>
+          )}
           {!state.contract ? (
             <button
               className="button"
@@ -283,7 +304,7 @@ export default function ConfiguredStake() {
             </button>
           ) : (
             <>
-              <label htmlFor="stake-amount">Deposit test USDC</label>
+              <label htmlFor="stake-amount">Deposit {state.symbol}</label>
               <input
                 id="stake-amount"
                 value={amount}
@@ -329,7 +350,11 @@ export default function ConfiguredStake() {
             <br />
             Chain: 10143
             <br />
-            To: {prepared.to ?? "New CreatorStake contract"}
+            To:{" "}
+            {prepared.to ??
+              (prepared.action === "deployMockUSDC"
+                ? "New MockUSDC demo token"
+                : "New CreatorStake contract")}
             <br />
             Native value: 0<br />
             Estimated gas: {prepared.gas} (wallet gas limit includes a 20%
@@ -337,15 +362,23 @@ export default function ConfiguredStake() {
             <br />
             Expires: {prepared.expiresAt}
           </p>
-          {prepared.action === "deploy" ? (
+          {prepared.action === "deployMockUSDC" ? (
             <p>
-              Immutable token: {prepared.state.token}; minimum 500 test USDC;
-              cooldown 604800 seconds. No administrator or slashing.
+              Deploy Call My Bluff Mock USDC (mUSDC), six decimals. Mint 10,000
+              mUSDC to {prepared.wallet}. Anyone else may claim 1,000 mUSDC once
+              per address. Monad testnet only; no dollar backing or Circle
+              affiliation.
+            </p>
+          ) : prepared.action === "deploy" ? (
+            <p>
+              Immutable token: {prepared.state.token}; minimum 500{" "}
+              {prepared.state.symbol}; cooldown 604800 seconds. No administrator
+              or slashing.
             </p>
           ) : (
             <p>
               {prepared.action === "approve"
-                ? `Exact allowance: ${amount} test USDC.`
+                ? `Exact allowance: ${amount} ${prepared.state.symbol}.`
                 : prepared.action === "resetAllowance"
                   ? "Reset the existing insufficient allowance to zero, then review another transaction."
                   : "Each action requires a separate wallet approval."}

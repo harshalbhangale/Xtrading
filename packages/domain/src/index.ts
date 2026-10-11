@@ -106,7 +106,7 @@ export const stakeStateSchema = z.object({
   wallet: addressSchema,
   token: addressSchema,
   decimals: z.literal(6),
-  symbol: z.literal("USDC"),
+  symbol: z.enum(["USDC", "mUSDC"]),
   contract: addressSchema.nullable(),
   minimum: amountSchema,
   cooldown: amountSchema,
@@ -125,6 +125,7 @@ export const stakeActionSchema = z
   .object({
     action: z.enum([
       "deploy",
+      "deployMockUSDC",
       "deposit",
       "requestWithdrawal",
       "cancelWithdrawal",
@@ -136,6 +137,7 @@ export const stakeActionSchema = z
 export const preparedStakeSchema = z.object({
   action: z.enum([
     "deploy",
+    "deployMockUSDC",
     "deposit",
     "approve",
     "resetAllowance",

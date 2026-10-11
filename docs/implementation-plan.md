@@ -64,6 +64,7 @@ The extension has not yet been installed and verified against real X in Chrome. 
 
 **Owners:** contracts/backend/indexer developer. **Dependency:** Phase 2 identity, token and network configuration.
 
+- [x] Implement an original six-decimal, testnet-only mUSDC demo contract with initial mint, once-per-address faucet and stake/refund tests. Mock token and matching stake deployment remain pending wallet approval.
 - [x] Confirm Circle test USDC address and six decimals via live Monad testnet RPC; use 500000000 units and a seven-day cooldown.
 - [x] Deploy the stake contract to Monad testnet and record address, deployment block and immutable settings. Receipt and matching runtime bytecode verified in `contracts/deployments/monad-testnet.json`.
 - [x] Implement separate Privy wallet reviews for bounded allowance/reset, deposit, request, cancel and withdrawal; live transaction verification is still pending.
