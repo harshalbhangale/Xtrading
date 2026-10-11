@@ -62,6 +62,21 @@ Exit: X → review → approval → Kuru fill → dashboard with actual amounts.
 
 Exit: each scored call is traceable to its source and inputs; Nansen adds a useful real insight.
 
+## Phase 4B: Hourly CRE settlement
+
+- [ ] Confirm CRE write support and forwarder for Monad testnet 10143; verify CLI/account access.
+- [ ] Register opt-in calls with immutable expiry, price source, evaluation rules and bounded bond/reward amounts.
+- [ ] Implement a separate call-bond/reward contract; leave refundable CreatorStake deposits separate.
+- [ ] Fund rewards and reserve them at registration; lock each call's bond until settlement or its defined timeout refund.
+- [ ] Build an hourly CRE trigger that scans expired unsettled calls in bounded, paginated batches.
+- [ ] Retrieve historical expiry prices; validate timestamp, asset identity, decimals and coverage.
+- [ ] Submit signed settlement reports through the configured CRE forwarder with workflow identity validation.
+- [ ] Enforce single settlement, replay protection, fixed payout limits and timeout refunds in the contract.
+- [ ] Foundry-test rewards, losses, ties, duplicate/unauthorized reports, missing prices and accounting conservation.
+- [ ] Simulate CRE and index confirmed outcomes with Envio; show evidence and amounts in creator/extension views.
+
+Exit: an expired bonded call produces one verified settlement, paying its reserved reward or deducting only its agreed call bond. Missing prices never trigger a slash. Production activation remains pending until network support and deployment access are verified.
+
 ## Phase 5: MCP
 
 - [ ] Implement MCP transport, schemas and connection instructions.
