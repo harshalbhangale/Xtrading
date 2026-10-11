@@ -15,7 +15,7 @@ Updated 11 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added tar
 - [x] Live stake RPC reads and separate wallet reviews for approval, deposit and withdrawal actions.
 - [x] Original six-decimal mUSDC contract and faucet; deployed with 10,000 mUSDC in the project wallet.
 - [x] Envio schema, event handlers, contract configuration and generated bindings.
-- [x] Latest local checks: 18 application tests, 12 Foundry tests, web/extension builds; six database integration tests skipped in this run.
+- [x] Latest local checks: 21 application tests, 12 Foundry tests, web/extension builds; six database integration tests skipped in this run.
 
 ## Phase 1: Finish stake and indexing
 
@@ -43,7 +43,9 @@ Exit: a bound creator's profile/post shows current evidence from the backend.
 
 - [x] Add explicit spot/perp routing policy with no chain or venue fallback.
 - [ ] Connect routing to reviewed call intent and trading UI.
-- [ ] Verify a supported market, token decimals, ABI and usable liquidity.
+- [x] Verify Kuru testnet MON/USDC deployment, token decimals and SDK ABI with live reads.
+- [x] Add public Kuru/Perpl market discovery and authenticated unsigned Kuru step preparation.
+- [ ] Verify usable liquidity and complete a confirmed fill; gas simulation is not a quote.
 - [ ] Verify Perpl network, market IDs, collateral units and unsigned order interface.
 - [ ] Add user-confirmed leverage, collateral/exposure caps, slippage, reduce-only exits and duplicate-order prevention.
 - [ ] Demonstrate Perpl social trading with actual onchain activity; record its ≤2-minute API-bounty demo.

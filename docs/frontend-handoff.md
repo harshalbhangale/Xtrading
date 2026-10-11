@@ -46,6 +46,18 @@ Use an em dash for unavailable metrics. Do not fabricate balances, scores or cha
 
 `GET /api/identity`, `POST /api/identity/challenge` and `POST /api/identity/bind` require a server-verified Privy bearer token. POST requests also require the configured app origin. Responses use runtime schemas from `packages/domain`; no client-supplied X ID or signing message is trusted. See [identity binding](identity-binding.md) for request contracts, limits and verification. Public creator lookup is still pending.
 
+## Implemented market APIs
+
+`GET /api/markets` reads the fixed Kuru MON/USDC testnet market at one checked block and Perpl's fixed public testnet context. Each provider can independently be unavailable. Perpl metadata is API-reported; it is not onchain execution verification.
+
+`POST /api/trades/prepare` requires a verified Privy session, current X/wallet binding and app origin. Current scope: Kuru spot on testnet 10143 only. Body: `instrument: "spot"`, `chainId: 10143`, `side: "buy" | "sell"`, `amount`, `minimumOutput` and `sourcePostId`. Amounts are integer token-unit strings: buy spends Kuru USDC and receives native MON; sell spends native MON and receives Kuru USDC. Source-post attribution is user-supplied and unverified.
+
+The response prepares one step: allowance reset, exact approval or fill-or-kill order, with gas estimate, balances checked and a 90-second review expiry. Minimum output is user-specified; this is not a provider quote. The underlying ABI has no transaction deadline, so the frontend must refresh preparation before wallet review. An approval simulation does not verify the future order. Signing UI, price quoting, intent persistence and fill tracking remain pending.
+
+Kuru USDC is `0x3bA3d39AFcf8bb994f7964B3e0171Ea2Ba361570`, separate from Circle staking USDC and mUSDC. Perpl discovery currently reports AUSD at `0xa9012a055bd4e0edff8ce09f960291c09d5322dc`; validate this live context rather than the older README collateral address. Perpl execution remains unavailable until exchange/account permissions and wallet approval integration are implemented.
+
+Sources: [Kuru deployments](https://docs.kuru.io/contracts/Contract-addresses), [Kuru SDK](https://docs.kuru.io/sdk/orderbook-sdk), [Perpl API](https://github.com/PerplFoundation/api-docs).
+
 ## Planned backend contracts
 
 These are proposed APIs, **not existing routes**. Serializable view models are exported from `packages/domain/src/view-models.ts`. Add runtime response validation when implementing them. Monetary fields are integer token-unit strings.
@@ -58,7 +70,6 @@ These are proposed APIs, **not existing routes**. Serializable view models are e
 | `GET /api/creators/:xUserId/reputation` | Public, source coverage | Reputation panels |
 | `GET/PUT /api/me/watchlist` | Verified session | Explicit local-list migration and sync |
 | `GET /api/me/portfolio` and `/activity` | Verified session with wallet authorization | Portfolio/activity |
-| `POST /api/trades/prepare` | Verified session, allowlisted market, limits | Extension trade review |
 
 `DataState<T>` distinguishes disconnected, unavailable, loading, error and ready responses. Ready data carries source, observation time, coverage and finality. Signed transactions, submitted orders and confirmed fills are different states. Match market addresses and token decimals to the selected chain.
 

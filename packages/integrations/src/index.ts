@@ -43,7 +43,7 @@ export function integrationStatus(
       configured: Boolean(env.MONAD_RPC_URL && env.KURU_MARKET_ADDRESS),
       implementation: "foundation",
       detail:
-        "Supported-market configuration. Quote and execution adapter is next.",
+        "Live testnet market discovery and unsigned Kuru step preparation implemented. Price quoting, wallet UI and confirmed fills remain pending.",
     },
     {
       name: "Privy",
@@ -71,7 +71,7 @@ export function integrationStatus(
       configured: false,
       implementation: "foundation",
       detail:
-        "Explicit perp routing policy. Market, risk checks, unsigned order preparation and confirmed execution are pending.",
+        "Explicit perp routing and public testnet market discovery. Risk checks, account permissions, unsigned order preparation and confirmed execution are pending.",
     },
     {
       name: "Chainlink CRE",

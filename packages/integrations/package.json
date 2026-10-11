@@ -7,7 +7,9 @@
     ".": "./src/index.ts",
     "./nansen": "./src/nansen.ts",
     "./stake": "./src/stake.ts",
-    "./routing": "./src/routing.ts"
+    "./routing": "./src/routing.ts",
+    "./kuru": "./src/kuru.ts",
+    "./market-schemas": "./src/market-schemas.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
