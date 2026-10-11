@@ -1,158 +1,234 @@
 "use client";
-import { kuruTestnet } from "@call-my-bluff/integrations/kuru";
-import { spotReviewSchema } from "@call-my-bluff/integrations/market-schemas";
+import { kuruV2 } from "@call-my-bluff/integrations/kuru";
+import {
+  kuruAccountSchema,
+  spotReviewSchema,
+  withdrawReviewSchema,
+} from "@call-my-bluff/integrations/market-schemas";
 import { stakeUnits } from "@call-my-bluff/integrations/stake";
 import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPublicClient, formatUnits, http } from "viem";
 import { monadTestnet } from "viem/chains";
 
 type Review = ReturnType<typeof spotReviewSchema.parse>;
+type Withdrawal = ReturnType<typeof withdrawReviewSchema.parse>;
+type Account = ReturnType<typeof kuruAccountSchema.parse>;
+type Market = "WETH" | "WBTC";
+const errors: Record<string, string> = {
+  insufficient_market_token:
+    "Not enough of the input token in your wallet or Kuru account.",
+  invalid_market_amount:
+    "Amount is outside the market's limits (minimum order is 10 USDC).",
+  quote_unavailable_or_insufficient_liquidity:
+    "No executable quote at this size. Try a smaller amount.",
+  trade_simulation_failed:
+    "The transaction would fail onchain. Nothing was sent.",
+  insufficient_gas_balance: "Not enough MON for gas.",
+  current_binding_required: "Bind your X account to this wallet first.",
+  market_verification_failed: "Market checks failed. Trading is paused.",
+  insufficient_balance: "Not enough balance in your Kuru account.",
+};
+const stepTitle = {
+  approve: "Step 1 of 3 · Approve exact amount",
+  deposit: "Step 2 of 3 · Deposit into your Kuru account",
+  swap: "Step 3 of 3 · Swap",
+} as const;
+const units = (value: string | null, decimals: number, symbol: string) =>
+  value === null ? "—" : `${formatUnits(BigInt(value), decimals)} ${symbol}`;
+
 export default function ConfiguredTrade() {
-  const { ready, authenticated, user, login, logout, getAccessToken } =
-    usePrivy();
+  const { ready, authenticated, user, login, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const { sendTransaction } = useSendTransaction();
+  const [market, setMarket] = useState<Market>("WETH");
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [amount, setAmount] = useState("");
   const [postId, setPostId] = useState("");
   const [slippage, setSlippage] = useState("100");
-  const [review, setReview] = useState<Review | null>(null);
+  const [review, setReview] = useState<Review | Withdrawal | null>(null);
+  const [account, setAccount] = useState<Account | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [hash, setHash] = useState<`0x${string}` | null>(null);
-  const [expiredSession, setExpiredSession] = useState(false);
   const [now, setNow] = useState(Date.now());
   const owner = useRef(user?.id);
   owner.current = user?.id;
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (
-      params.get("instrument") !== "spot" ||
-      params.get("chainId") !== "10143"
-    )
-      return;
-    const requestedSide = params.get("side"),
-      source = params.get("postId");
-    if (requestedSide === "buy" || requestedSide === "sell")
-      setSide(requestedSide);
+    const requested = params.get("side"),
+      source = params.get("postId"),
+      requestedMarket = params.get("market");
+    if (requested === "buy" || requested === "sell") setSide(requested);
+    if (requestedMarket === "WETH" || requestedMarket === "WBTC")
+      setMarket(requestedMarket);
     if (source && /^[0-9]{1,30}$/.test(source)) setPostId(source);
   }, []);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Clear private state on account change.
-  useEffect(() => {
-    setReview(null);
-    setHash(null);
-    setNotice("");
-  }, [user?.id, authenticated]);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
-  const inputSymbol = side === "buy" ? "Kuru test USDC" : "test MON";
-  const outputSymbol = side === "buy" ? "MON" : "Kuru test USDC";
+
+  const api = useCallback(
+    async (path: string, body?: unknown) => {
+      const token = await getAccessToken();
+      if (!token) throw new Error("Session expired. Sign in again.");
+      const response = await fetch(path, {
+        method: body ? "POST" : "GET",
+        cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(body ? { "Content-Type": "application/json" } : {}),
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      });
+      const value: unknown = await response.json();
+      if (!response.ok) {
+        const code =
+          typeof value === "object" &&
+          value &&
+          "error" in value &&
+          typeof value.error === "string"
+            ? value.error
+            : "";
+        throw new Error(
+          errors[code] ??
+            (code.replaceAll("_", " ") || "Trade service unavailable."),
+        );
+      }
+      return value;
+    },
+    [getAccessToken],
+  );
+  const loadAccount = useCallback(async () => {
+    try {
+      setAccount(kuruAccountSchema.parse(await api("/api/trades/account")));
+    } catch {
+      setAccount(null);
+    }
+  }, [api]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset private state on account change.
+  useEffect(() => {
+    setReview(null);
+    setHash(null);
+    setNotice("");
+    if (ready && authenticated) void loadAccount();
+  }, [ready, authenticated, user?.id]);
+
+  const tokens =
+    side === "buy"
+      ? { input: kuruV2.quote, output: kuruV2.markets[market].base }
+      : { input: kuruV2.markets[market].base, output: kuruV2.quote };
   const expired = review ? Date.parse(review.expiresAt) <= now : false;
+
   function intent() {
-    if (!/^[0-9]{1,30}$/.test(postId))
-      throw new Error("Enter the source X post ID.");
-    if (!/^[0-9]{1,3}$/.test(slippage))
+    if (postId && !/^[0-9]{1,30}$/.test(postId))
+      throw new Error("Source post ID must be digits.");
+    if (
+      !/^[0-9]{1,3}$/.test(slippage) ||
+      Number(slippage) < 1 ||
+      Number(slippage) > 500
+    )
       throw new Error("Slippage must be 1–500 basis points.");
+    let units: bigint;
+    try {
+      units = stakeUnits(amount, tokens.input.decimals);
+    } catch {
+      throw new Error(
+        `Enter a positive ${tokens.input.symbol} amount with at most ${tokens.input.decimals} decimals.`,
+      );
+    }
     return {
       instrument: "spot",
       chainId: 10143,
+      market,
       side,
-      amount: stakeUnits(amount, side === "buy" ? 6 : 18).toString(),
+      amount: units.toString(),
       slippageBps: Number(slippage),
-      sourcePostId: postId,
+      sourcePostId: postId || null,
     };
   }
-  async function freshReview() {
-    const token = await getAccessToken();
-    if (!token) {
-      setExpiredSession(true);
-      throw new Error("Session expired. Sign in again.");
-    }
-    const response = await fetch("/api/trades/prepare", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(intent()),
-    });
-    const value = await response.json();
-    if (response.status === 401) {
-      setExpiredSession(true);
-      throw new Error("Session expired. Sign in again.");
-    }
-    if (!response.ok)
-      throw new Error(
-        typeof value.error === "string"
-          ? value.error.replaceAll("_", " ")
-          : "Trade service unavailable.",
+  async function fresh(current: Review | Withdrawal | null) {
+    if (current?.action === "withdraw")
+      return withdrawReviewSchema.parse(
+        await api("/api/trades/withdraw", {
+          chainId: 10143,
+          token: current.token.symbol,
+          amount: current.amount,
+        }),
       );
-    setExpiredSession(false);
-    const result = spotReviewSchema.parse(value);
-    const target =
-      result.action === "order" ? kuruTestnet.market : kuruTestnet.quote;
-    if (result.to.toLowerCase() !== target.toLowerCase())
+    const result = spotReviewSchema.parse(
+      await api("/api/trades/prepare", intent()),
+    );
+    const allowed = [
+      kuruV2.accountCore,
+      kuruV2.markets[result.market].market,
+      result.input.address,
+    ].map((a) => a.toLowerCase());
+    if (!allowed.includes(result.to.toLowerCase()))
       throw new Error("Unexpected transaction target.");
     return result;
   }
-  async function prepare() {
-    const account = owner.current;
+  async function run(task: () => Promise<void>) {
+    const who = owner.current;
     setBusy(true);
-    setReview(null);
     setNotice("");
-    setHash(null);
     try {
-      const result = await freshReview();
-      if (account === owner.current) setReview(result);
+      await task();
     } catch (error) {
-      if (account === owner.current)
-        setNotice(
-          error instanceof Error ? error.message : "Quote unavailable.",
-        );
+      if (owner.current === who) {
+        setReview(null);
+        setNotice(error instanceof Error ? error.message : "Request failed.");
+      }
     } finally {
       setBusy(false);
     }
   }
-  async function submit() {
-    if (!review || Date.parse(review.expiresAt) <= Date.now()) {
-      setReview(null);
-      setNotice("Quote expired. Prepare again.");
-      return;
-    }
-    const account = owner.current;
-    const previous = review;
-    setBusy(true);
-    setHash(null);
-    try {
-      const current = await freshReview();
-      if (owner.current !== account) return;
-      if (current.wallet.toLowerCase() !== previous.wallet.toLowerCase())
-        throw new Error("Wallet changed. Prepare again.");
+  const prepare = () =>
+    run(async () => {
+      setHash(null);
+      setReview(await fresh(null));
+    });
+  const prepareWithdraw = (symbol: string, value: string) =>
+    run(async () => {
+      setHash(null);
+      setReview(
+        withdrawReviewSchema.parse(
+          await api("/api/trades/withdraw", {
+            chainId: 10143,
+            token: symbol,
+            amount: value,
+          }),
+        ),
+      );
+    });
+  const submit = () =>
+    run(async () => {
+      const previous = review;
+      if (!previous || Date.parse(previous.expiresAt) <= Date.now()) {
+        setReview(null);
+        throw new Error("Review expired. Prepare again.");
+      }
+      const who = owner.current;
+      const current = await fresh(previous);
       if (
+        current.wallet !== previous.wallet ||
         current.action !== previous.action ||
         current.to !== previous.to ||
         current.data !== previous.data ||
         current.value !== previous.value
       ) {
         setReview(current);
-        setNotice(
-          "Quote or approval step changed. Review the updated values before continuing.",
-        );
+        setNotice("The quote or step changed. Review the updated values.");
         return;
       }
       const wallet = wallets.find(
-        (item) => item.address.toLowerCase() === current.wallet.toLowerCase(),
+        (w) => w.address.toLowerCase() === current.wallet.toLowerCase(),
       );
       if (!wallet) throw new Error("Bound wallet is not connected.");
       await wallet.switchChain(10143);
-      if (
-        owner.current !== account ||
-        Date.parse(current.expiresAt) <= Date.now()
-      )
-        throw new Error("Account changed or quote expired. Prepare again.");
+      if (owner.current !== who) return;
       setReview(null);
       const sent = await sendTransaction(
         {
@@ -164,9 +240,8 @@ export default function ConfiguredTrade() {
         },
         { address: current.wallet, uiOptions: { showWalletUIs: true } },
       );
-      if (owner.current !== account) return;
       setHash(sent.hash);
-      setNotice("Submitted. Waiting for a receipt; no fill is claimed yet.");
+      setNotice("Submitted. Waiting for confirmation…");
       const receipt = await createPublicClient({
         chain: monadTestnet,
         transport: http(),
@@ -175,56 +250,53 @@ export default function ConfiguredTrade() {
         confirmations: 2,
         timeout: 120000,
       });
-      if (owner.current !== account) return;
+      if (owner.current !== who) return;
       if (receipt.status !== "success")
-        throw new Error(
-          "Transaction reverted. No successful trade is claimed.",
+        throw new Error("Transaction reverted. Nothing was traded.");
+      await loadAccount();
+      if (current.action === "approve" || current.action === "deposit") {
+        setNotice(
+          `${current.action === "approve" ? "Approval" : "Deposit"} confirmed in block ${receipt.blockNumber}. Preparing the next step…`,
         );
-      setNotice(
-        current.action === "order"
-          ? `Order transaction confirmed in block ${receipt.blockNumber}. Fill indexing and dashboard reconciliation remain pending.`
-          : `${current.action} confirmed. Request a fresh quote and review the next step separately.`,
-      );
-    } catch (error) {
-      if (owner.current === account) {
-        setReview(null);
-        const message =
-          error instanceof Error ? error.message : "Wallet request failed.";
-        if (
-          /invalid.?auth.?token|token.?expired|expired.?token/i.test(message)
-        ) {
-          setExpiredSession(true);
-          setNotice(
-            "Wallet session expired. Sign in again. No transaction is retried automatically.",
-          );
-        } else setNotice(message);
+        setReview(await fresh(null));
+        return;
       }
-    } finally {
-      setBusy(false);
-    }
-  }
-  if (!ready) return <p>Loading wallet session…</p>;
+      setNotice(
+        current.action === "swap"
+          ? `Swap confirmed in block ${receipt.blockNumber}. Proceeds are in your Kuru account; withdraw them below.`
+          : `Withdrawal confirmed in block ${receipt.blockNumber}.`,
+      );
+    });
+
+  if (!ready) return <p className="small-note">Loading wallet…</p>;
   if (!authenticated)
     return (
       <button type="button" className="button" onClick={() => login()}>
-        Sign in to review a spot trade
+        Sign in to trade
       </button>
     );
   return (
     <div className="stake-form">
-      <p>
-        Kuru · MON / USDC · Monad testnet 10143. Test tokens have no monetary
-        value.
-      </p>
-      <p>
-        Kuru USDC: <code>{kuruTestnet.quote}</code>. Staking USDC and mUSDC
-        cannot be used in this market.
-      </p>
       <fieldset
         className="preview-selector"
-        aria-label="Trade side"
+        aria-label="Market"
         disabled={busy}
       >
+        {(["WETH", "WBTC"] as const).map((choice) => (
+          <button
+            key={choice}
+            type="button"
+            aria-pressed={market === choice}
+            onClick={() => {
+              setMarket(choice);
+              setReview(null);
+            }}
+          >
+            {choice} / USDC
+          </button>
+        ))}
+      </fieldset>
+      <fieldset className="preview-selector" aria-label="Side" disabled={busy}>
         {(["buy", "sell"] as const).map((choice) => (
           <button
             key={choice}
@@ -235,184 +307,240 @@ export default function ConfiguredTrade() {
               setReview(null);
             }}
           >
-            {choice === "buy" ? "Buy MON" : "Sell MON"}
+            {choice === "buy" ? "Buy" : "Sell"} {market}
           </button>
         ))}
       </fieldset>
-      <label htmlFor="trade-amount">Amount to spend ({inputSymbol})</label>
+      <label htmlFor="trade-amount">
+        Amount to spend ({tokens.input.symbol})
+      </label>
       <input
         id="trade-amount"
         inputMode="decimal"
-        maxLength={80}
+        maxLength={40}
         disabled={busy}
         value={amount}
-        onChange={(event) => {
-          setAmount(event.target.value);
+        placeholder={side === "buy" ? "10" : "0.004"}
+        onChange={(e) => {
+          setAmount(e.target.value);
           setReview(null);
-          setNotice("");
         }}
-        placeholder="0.00"
       />
       <label htmlFor="trade-slippage">
-        Slippage limit (basis points; 100 = 1%)
+        Max slippage (basis points, 100 = 1%)
       </label>
       <input
         id="trade-slippage"
         inputMode="numeric"
         disabled={busy}
         value={slippage}
-        onChange={(event) => {
-          setSlippage(event.target.value);
+        onChange={(e) => {
+          setSlippage(e.target.value);
           setReview(null);
-          setNotice("");
         }}
       />
-      <label htmlFor="trade-source">Source X post ID</label>
+      <label htmlFor="trade-source">Source X post ID (optional)</label>
       <input
         id="trade-source"
         inputMode="numeric"
         maxLength={30}
         disabled={busy}
         value={postId}
-        onChange={(event) => {
-          setPostId(event.target.value);
+        onChange={(e) => {
+          setPostId(e.target.value);
           setReview(null);
-          setNotice("");
         }}
       />
-      <p className="small-note">
-        Source attribution is user-supplied and unverified. Perpl execution is
-        not available on this screen yet.
-      </p>
       <button
         type="button"
         className="button"
-        disabled={busy}
+        disabled={busy || !amount}
         onClick={() => void prepare()}
       >
-        Get quote / review next step
+        Review trade
       </button>
-      {expiredSession && (
-        <button
-          type="button"
-          className="button secondary-button"
-          disabled={busy}
-          onClick={async () => {
-            setReview(null);
-            await logout();
-            login();
-          }}
-        >
-          Sign in again
-        </button>
-      )}
-      {review && (
-        <section aria-label="Spot transaction review">
-          <h3>
-            {review.action === "order"
-              ? "Review spot order"
-              : review.action === "approve"
-                ? "Review exact token approval"
-                : "Review allowance reset"}
-          </h3>
+
+      {review && review.action !== "withdraw" && (
+        <section aria-label="Trade review">
+          <h3>{stepTitle[review.action]}</h3>
           <dl className="quote-review">
             <div>
-              <dt>Wallet</dt>
-              <dd>{review.wallet}</dd>
-            </div>
-            <div>
-              <dt>Input</dt>
+              <dt>Spend</dt>
               <dd>
-                {formatUnits(BigInt(review.amount), side === "buy" ? 6 : 18)}{" "}
-                {inputSymbol}
+                {units(
+                  review.amount,
+                  review.input.decimals,
+                  review.input.symbol,
+                )}
               </dd>
             </div>
+            {review.action === "swap" ? (
+              <>
+                <div>
+                  <dt>Expected (simulated)</dt>
+                  <dd>
+                    {units(
+                      review.expectedOutput,
+                      review.output.decimals,
+                      review.output.symbol,
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Minimum received</dt>
+                  <dd>
+                    {units(
+                      review.minimumOutput,
+                      review.output.decimals,
+                      review.output.symbol,
+                    )}
+                  </dd>
+                </div>
+                {review.amountInUsed !== review.amount && (
+                  <div>
+                    <dt>Would execute</dt>
+                    <dd>
+                      {units(
+                        review.amountInUsed,
+                        review.input.decimals,
+                        review.input.symbol,
+                      )}{" "}
+                      (not enough liquidity for the full amount)
+                    </dd>
+                  </div>
+                )}
+                <div>
+                  <dt>Onchain deadline</dt>
+                  <dd>
+                    {review.deadline
+                      ? new Date(
+                          Number(review.deadline) * 1000,
+                        ).toLocaleTimeString()
+                      : "—"}
+                  </dd>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <dt>Indicative output</dt>
+                  <dd>
+                    {units(
+                      review.indicativeOutput,
+                      review.output.decimals,
+                      review.output.symbol,
+                    )}
+                    {!review.indicativeFilled &&
+                      " (book too thin for the full amount)"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>
+                    {review.action === "approve" ? "Approval" : "Deposit"}
+                  </dt>
+                  <dd>
+                    {units(
+                      (
+                        BigInt(review.amount) - BigInt(review.accountBalance)
+                      ).toString(),
+                      review.input.decimals,
+                      review.input.symbol,
+                    )}{" "}
+                    {review.action === "approve"
+                      ? "to Kuru AccountCore, exact amount"
+                      : "from your wallet into your Kuru account"}
+                  </dd>
+                </div>
+              </>
+            )}
             <div>
-              <dt>Expected output</dt>
-              <dd>
-                {review.expectedOutput
-                  ? `${formatUnits(BigInt(review.expectedOutput), side === "buy" ? 18 : 6)} ${outputSymbol}`
-                  : "Unavailable until approval is confirmed"}
-              </dd>
+              <dt>Kuru taker fee</dt>
+              <dd>{Number(review.takerFeePps) / 1000} bps, included</dd>
             </div>
             <div>
-              <dt>Minimum received</dt>
-              <dd>
-                {review.minimumOutput
-                  ? `${formatUnits(BigInt(review.minimumOutput), side === "buy" ? 18 : 6)} ${outputSymbol}`
-                  : "Order not prepared"}
-              </dd>
-            </div>
-            <div>
-              <dt>Trading fee</dt>
-              <dd>
-                {review.action === "order"
-                  ? review.tradingFee
-                  : "No trade in this step"}
-              </dd>
-            </div>
-            <div>
-              <dt>Estimated network fee (20% gas buffer)</dt>
+              <dt>Network fee (est.)</dt>
               <dd>
                 {formatUnits(
                   ((BigInt(review.gas) * 120n) / 100n) *
                     BigInt(review.gasPrice),
                   18,
                 )}{" "}
-                MON; wallet shows final fee
+                MON
               </dd>
             </div>
             <div>
               <dt>Source post</dt>
-              <dd>{review.sourcePostId} · unverified</dd>
-            </div>
-            <div>
-              <dt>Review expires</dt>
-              <dd>{expired ? "Expired" : review.expiresAt}</dd>
-            </div>
-            <div>
-              <dt>Token approval limit</dt>
               <dd>
-                {review.action === "approve"
-                  ? `${formatUnits(BigInt(review.amount), 6)} Kuru USDC`
-                  : review.action === "resetAllowance"
-                    ? "Zero"
-                    : "No new approval"}
+                {review.sourcePostId ?? "None"}{" "}
+                {review.sourcePostId && "· unverified"}
               </dd>
             </div>
           </dl>
-          <p>
-            Block {review.blockNumber} · Observed {review.observedAt} ·
-            Unfinalized.{" "}
-            {review.action === "order"
-              ? "Simulated fill-or-kill output is an estimate; the contract enforces the minimum."
-              : "An approval does not place an order or establish a quote."}{" "}
-            The app refreshes before wallet review; this market has no onchain
-            deadline.
+          <p className="small-note">
+            Block {review.blockNumber}, unfinalized.{" "}
+            {review.action === "swap"
+              ? "The contract enforces the minimum and the deadline."
+              : "This step moves no funds into a trade; the swap is reviewed separately."}{" "}
+            Review{" "}
+            {expired
+              ? "expired"
+              : `expires in ${Math.max(0, Math.ceil((Date.parse(review.expiresAt) - now) / 1000))}s`}
+            .
           </p>
           <details>
             <summary>Unsigned transaction</summary>
             <p>To: {review.to}</p>
             <pre className="ownership-message">{review.data}</pre>
           </details>
-          <button
-            type="button"
-            className="button"
-            disabled={busy || expired}
-            onClick={() => void submit()}
-          >
-            Continue to wallet approval
-          </button>
-          <button
-            type="button"
-            className="button secondary-button"
-            disabled={busy}
-            onClick={() => setReview(null)}
-          >
-            Discard review
-          </button>
+          <div className="button-row">
+            <button
+              type="button"
+              className="button"
+              disabled={busy || expired}
+              onClick={() => void submit()}
+            >
+              Open wallet to approve
+            </button>
+            <button
+              type="button"
+              className="text-link"
+              disabled={busy}
+              onClick={() => setReview(null)}
+            >
+              Discard
+            </button>
+          </div>
         </section>
       )}
+
+      {review && review.action === "withdraw" && (
+        <section aria-label="Withdrawal review">
+          <h3>Withdraw to your wallet</h3>
+          <p>
+            {units(review.amount, review.token.decimals, review.token.symbol)}{" "}
+            from your Kuru account to {review.wallet}.
+          </p>
+          <div className="button-row">
+            <button
+              type="button"
+              className="button"
+              disabled={busy || expired}
+              onClick={() => void submit()}
+            >
+              Open wallet to approve
+            </button>
+            <button
+              type="button"
+              className="text-link"
+              disabled={busy}
+              onClick={() => setReview(null)}
+            >
+              Discard
+            </button>
+          </div>
+        </section>
+      )}
+
       <p role="status">
         {notice}
         {busy ? " Working…" : ""}
@@ -424,9 +552,56 @@ export default function ConfiguredTrade() {
           target="_blank"
           rel="noreferrer"
         >
-          View submitted transaction
+          View transaction ↗
         </a>
       )}
+
+      <h3>Balances</h3>
+      {account ? (
+        <table className="record-table">
+          <thead>
+            <tr>
+              <th scope="col">Token</th>
+              <th scope="col">Wallet</th>
+              <th scope="col">Kuru account</th>
+              <th scope="col" />
+            </tr>
+          </thead>
+          <tbody>
+            {account.balances.map((row) => (
+              <tr key={row.token.address}>
+                <td>{row.token.symbol}</td>
+                <td>{formatUnits(BigInt(row.wallet), row.token.decimals)}</td>
+                <td>{formatUnits(BigInt(row.account), row.token.decimals)}</td>
+                <td>
+                  {row.account !== "0" && (
+                    <button
+                      type="button"
+                      className="text-link"
+                      disabled={busy}
+                      onClick={() =>
+                        void prepareWithdraw(row.token.symbol, row.account)
+                      }
+                    >
+                      Withdraw
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="small-note">Balances unavailable.</p>
+      )}
+      <p className="small-note">
+        Kuru test tokens on Monad testnet; no monetary value. Kuru test USDC is{" "}
+        <code>{kuruV2.quote.address}</code>, not the staking token. Gas:{" "}
+        {account
+          ? `${formatUnits(BigInt(account.nativeBalance), 18)} MON`
+          : "—"}
+        .
+      </p>
     </div>
   );
 }

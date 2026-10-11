@@ -46,7 +46,8 @@ Exit: a bound creator's profile/post shows current evidence from the backend.
 - [ ] Connect routing to reviewed call intent and trading UI.
 - [x] Verify Kuru testnet MON/USDC deployment, token decimals and SDK ABI with live reads.
 - [x] Add public Kuru/Perpl market discovery and authenticated unsigned Kuru step preparation.
-- [ ] Verify usable liquidity and complete a confirmed fill; gas simulation is not a quote.
+- [x] Move spot trading to Kuru Spot V2 testnet (AccountCore `0xdbaa…8038`; WETH/USDC and WBTC/USDC, both with live two-sided books). The old V1 MON/USDC market had no bids. Flow: exact approve → deposit shortfall → swap with simulated minimum and onchain deadline; withdraw back to wallet. A read-only `eth_call` from a funded third-party account returned 0.0037274949 WETH for 10 USDC, matching the book estimate.
+- [ ] Obtain Kuru V2 test USDC (`0xA402…fEF1`, admin-minted, no public faucet) and complete a confirmed fill from the bound wallet.
 - [ ] Verify Perpl network, market IDs, collateral units and unsigned order interface.
 - [ ] Add user-confirmed leverage, collateral/exposure caps, slippage, reduce-only exits and duplicate-order prevention.
 - [ ] Demonstrate Perpl social trading with actual onchain activity; record its ≤2-minute API-bounty demo.

@@ -59,12 +59,7 @@ function scan() {
     );
     box.append(identity, stake, details);
     for (const side of ["buy", "sell"]) {
-      const params = new URLSearchParams({
-        instrument: "spot",
-        chainId: "10143",
-        side,
-        postId,
-      });
+      const params = new URLSearchParams({ market: "WETH", side, postId });
       box.append(
         link(
           side === "buy" ? "Buy · Kuru ↗" : "Sell · Kuru ↗",
@@ -102,7 +97,7 @@ function scan() {
             ? `Stable X ID ${evidence.identity.xUserId}; wallet ${evidence.identity.wallet}; bound ${evidence.identity.linkedAt}. A handle is a lookup hint; this records the account binding at that time.`
             : "No binding found.",
           `Monad testnet 10143. Stake ${evidence.stake.status}; indexer ${evidence.stake.indexing?.status ?? "unavailable"}; block ${evidence.stake.indexing?.progressBlock ?? "unavailable"}.`,
-          "Mock tokens have no monetary value. Indexed evidence is unfinalized. Performance and actual returns are unavailable. Buy/Sell opens a fixed MON/USDC market review; the post does not establish a token or a recommendation. Signing happens only in the app wallet.",
+          "Mock tokens have no monetary value. Indexed evidence is unfinalized. Buy/Sell opens a Kuru testnet trade review in the app; the post does not establish a token or a recommendation. Signing happens only in the app wallet.",
         ];
         explanation.textContent = parts.join(" ");
       })

@@ -7,11 +7,11 @@ export default function TradePage() {
     <>
       <PageHeading
         title="Trade"
-        description="Kuru spot on Monad testnet. Every order is simulated, with exact amounts and approval limits shown before your wallet opens."
+        description="Kuru spot on Monad testnet. Every swap is simulated against the live market, with a minimum output and onchain deadline set before your wallet opens."
       />
       <Panel
-        title="Trade MON / USDC"
-        description="Each approval and order is a separate wallet confirmation."
+        title="WETH and WBTC against USDC"
+        description="First trade: approve, deposit into your Kuru account, then swap. Each is a separate wallet confirmation."
       >
         <TradeControl />
       </Panel>

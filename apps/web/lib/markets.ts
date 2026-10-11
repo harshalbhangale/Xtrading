@@ -1,11 +1,16 @@
 import "server-only";
 import { IdentityError } from "@call-my-bluff/database/identity";
-import { kuruAbi, kuruTestnet } from "@call-my-bluff/integrations/kuru";
+import {
+  EMPTY_BID,
+  type KuruMarketKey,
+  kuruV2,
+  orderBookAbi,
+} from "@call-my-bluff/integrations/kuru";
 import { perplContextSchema } from "@call-my-bluff/integrations/market-schemas";
 import { createPublicClient, erc20Abi, http } from "viem";
 import { monadTestnet } from "viem/chains";
 
-export async function kuruSnapshot() {
+export function testnetClient() {
   if (
     process.env.NEXT_PUBLIC_MONAD_CHAIN_ID &&
     process.env.NEXT_PUBLIC_MONAD_CHAIN_ID !== "10143"
@@ -13,74 +18,80 @@ export async function kuruSnapshot() {
     throw new IdentityError("trading_testnet_only", 409);
   if (!process.env.MONAD_RPC_URL)
     throw new IdentityError("rpc_unconfigured", 503);
-  const client = createPublicClient({
+  return createPublicClient({
     chain: monadTestnet,
     transport: http(process.env.MONAD_RPC_URL, {
       timeout: 15000,
       retryCount: 0,
     }),
   });
+}
+
+/** Verifies the configured Kuru V2 market at one block before any read is trusted. */
+export async function kuruMarketSnapshot(key: KuruMarketKey) {
+  const client = testnetClient();
   if ((await client.getChainId()) !== 10143)
     throw new IdentityError("rpc_chain_mismatch", 503);
+  const config = kuruV2.markets[key];
   const block = await client.getBlock();
   const at = { blockNumber: block.number };
-  const [code, params, book, decimals, symbol] = await Promise.all([
-    client.getCode({ address: kuruTestnet.market, ...at }),
+  const [code, params, top, book, decimals] = await Promise.all([
+    client.getCode({ address: config.market, ...at }),
     client.readContract({
-      address: kuruTestnet.market,
-      abi: kuruAbi,
+      address: config.market,
+      abi: orderBookAbi,
       functionName: "getMarketParams",
       ...at,
     }),
     client.readContract({
-      address: kuruTestnet.market,
-      abi: kuruAbi,
+      address: config.market,
+      abi: orderBookAbi,
       functionName: "bestBidAsk",
       ...at,
     }),
     client.readContract({
-      address: kuruTestnet.quote,
-      abi: erc20Abi,
-      functionName: "decimals",
+      address: config.market,
+      abi: orderBookAbi,
+      functionName: "getL2Book",
+      args: [20n],
       ...at,
     }),
     client.readContract({
-      address: kuruTestnet.quote,
+      address: config.base.address,
       abi: erc20Abi,
-      functionName: "symbol",
+      functionName: "decimals",
       ...at,
     }),
   ]);
   if (
     !code ||
     code === "0x" ||
-    params[2] !== kuruTestnet.base ||
-    params[3] !== 18n ||
-    params[4].toLowerCase() !== kuruTestnet.quote.toLowerCase() ||
-    params[5] !== 6n ||
-    decimals !== 6 ||
-    symbol !== "USDC" ||
-    !block.hash ||
-    (await client.getBlock(at)).hash !== block.hash
+    BigInt(params[0]) !== config.pricePrecision ||
+    params[1] !== config.sizePrecision ||
+    decimals !== config.base.decimals ||
+    !block.hash
   )
     throw new IdentityError("market_verification_failed", 503);
   return {
     client,
     block,
-    params,
+    book,
+    takerFeePps: params[5],
     state: {
       venue: "Kuru",
       instrument: "spot",
       chainId: 10143,
-      market: kuruTestnet.market,
-      base: { address: kuruTestnet.base, symbol: "MON", decimals: 18 },
-      quote: { address: kuruTestnet.quote, symbol, decimals },
+      key,
+      market: config.market,
+      base: config.base,
+      quote: kuruV2.quote,
       pricePrecision: params[0].toString(),
       sizePrecision: params[1].toString(),
-      minimumSize: params[7].toString(),
-      maximumSize: params[8].toString(),
-      bestBid: book[0].toString(),
-      bestAsk: book[1].toString(),
+      minimumQuote: params[3].toString(),
+      takerFeePps: params[5].toString(),
+      // Empty-book sentinels are reported as null, never as prices.
+      bestBid: top[0] === EMPTY_BID ? null : top[0].toString(),
+      bestAsk: top[1] === 0 ? null : top[1].toString(),
       blockNumber: block.number.toString(),
       blockHash: block.hash,
       observedAt: new Date().toISOString(),

@@ -48,19 +48,13 @@ Use an em dash for unavailable metrics. Do not fabricate balances, scores or cha
 
 ## Implemented market APIs
 
-`GET /api/markets` reads the fixed Kuru MON/USDC testnet market at one checked block and Perpl's fixed public testnet context. Each provider can independently be unavailable. Perpl metadata is API-reported; it is not onchain execution verification.
+Kuru Spot V2 on Monad testnet 10143 ([testnet docs](https://kuru-testnet-docs.mintlify.site/deployments/testnet)). Trading runs against the owner's AccountCore balance. Kuru test USDC `0xA402B424f392EAA05DBc8779e4502A1F6A96fEF1` is admin-minted (no public faucet) and separate from staking USDC, mUSDC and the hackathon faucet tokens.
 
-`POST /api/trades/prepare` requires a verified Privy session, current X/wallet binding and app origin. Current scope: Kuru spot on testnet 10143 only. Body: `instrument: "spot"`, `chainId: 10143`, `side: "buy" | "sell"`, `amount`, `slippageBps` (1–500) and `sourcePostId`. Amounts are integer token-unit strings: buy spends Kuru USDC and receives native MON; sell spends native MON and receives Kuru USDC. Source-post attribution is user-supplied and unverified.
+- `GET /api/markets`: verified WETH/USDC and WBTC/USDC market parameters and top of book at one block (empty-book sentinels reported as null), plus Perpl discovery.
+- `POST /api/trades/prepare` (session, binding, origin): `{ instrument: "spot", chainId: 10143, market: "WETH" | "WBTC", side, amount, slippageBps, sourcePostId | null }`; `amount` is integer input-token units. Returns exactly one next step: exact `approve` to AccountCore, `deposit` of the shortfall, or `swap`. Swaps are simulated with `eth_call` at a pinned block; the minimum output is derived with integer slippage and the swap carries an onchain deadline. Non-swap steps show a display-only order-book estimate.
+- `GET /api/trades/account` and `POST /api/trades/withdraw`: wallet and Kuru-account balances for USDC/WETH/WBTC, and a reviewed withdrawal to the bound wallet.
 
-The response prepares one step: allowance reset, exact approval or fill-or-kill order. For orders, a pinned-block `eth_call` executes the actual unsigned order with a one-unit minimum to estimate output; integer slippage arithmetic derives its enforceable positive minimum. No balance/allowance overrides are used. Buy quotes require the input balance and confirmed allowance; an approval step has no expected output and does not promise liquidity. Gas is estimated for the final protected transaction.
-
-Reviews expire after 30 seconds. The frontend re-prepares before opening Privy; changed wallet, target, calldata, value or action requires a new review. The underlying market has no onchain deadline, so expiry is an app check. Each reset, approval and order is a separate wallet action. Submitted hashes and successful transaction receipts remain separate from confirmed fills; persistence and fill reconciliation are pending. Separate fee breakdown is unavailable, while fees are included in simulated output.
-
-Browser checks on 11 October: bound-wallet sell simulation returned `InsufficientLiquidity()`; buying returned insufficient Kuru token balance. No transaction was submitted.
-
-Kuru USDC is `0x3bA3d39AFcf8bb994f7964B3e0171Ea2Ba361570`, separate from Circle staking USDC and mUSDC. Perpl discovery currently reports AUSD at `0xa9012a055bd4e0edff8ce09f960291c09d5322dc`; validate this live context rather than the older README collateral address. Perpl execution remains unavailable until exchange/account permissions and wallet approval integration are implemented.
-
-Sources: [Kuru deployments](https://docs.kuru.io/contracts/Contract-addresses), [Kuru SDK](https://docs.kuru.io/sdk/orderbook-sdk), [Perpl API](https://github.com/PerplFoundation/api-docs).
+Reviews expire after 30 seconds and are re-prepared before Privy opens; a changed target, calldata, value or step requires a new review. Submitted hashes and receipts are not fill records; Envio fill indexing is pending.
 
 ## Planned backend contracts
 

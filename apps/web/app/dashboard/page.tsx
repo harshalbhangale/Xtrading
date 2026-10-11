@@ -20,7 +20,7 @@ export default function DashboardPage() {
           <CreatorSearch />
         </Panel>
         <Panel
-          title="Trade MON / USDC"
+          title="Trade WETH and WBTC"
           description="Kuru spot on Monad testnet. Simulated before you open your wallet."
         >
           <Link className="button" href="/dashboard/trade">
