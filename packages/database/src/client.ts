@@ -28,6 +28,10 @@ export function databaseOptions(connectionString: string) {
 
 export function createDatabase(connectionString: string) {
   const { url, options } = databaseOptions(connectionString);
+  const caFile = process.env.DATABASE_CA_FILE;
+  if (options.ssl && caFile) {
+    Object.assign(options.ssl, { ca: readFileSync(caFile, "utf8") });
+  }
   const sql = postgres(url, options);
   return { sql, db: drizzle(sql, { schema }) };
 }
@@ -42,3 +46,5 @@ export async function databaseReadiness(sql: ReturnType<typeof postgres>) {
   `;
   return rows[0]?.ready === true;
 }
+
+import { readFileSync } from "node:fs";

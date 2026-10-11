@@ -48,7 +48,8 @@ The extension has not yet been installed and verified against real X in Chrome. 
 - [ ] Confirm the chosen Kuru testnet market, token decimals, ABI and usable liquidity.
 - [ ] Confirm Nansen API access and actual mainnet coverage for demo assets/wallets.
 - [ ] Confirm Envio runtime/hosting access and an RPC suitable for the demo.
-- [x] Start local Postgres and apply the migration; verify foundation tables after a restart. AWS database provisioning remains pending credential refresh.
+- [x] Start local Postgres and apply the migration; verify foundation tables after a restart.
+- [x] Provision dedicated AWS RDS Postgres in Mumbai, apply cloud migrations and activate a TLS-verified restricted application connection.
 - [x] Add a server-only database runtime, TLS enforcement for remote connections and live readiness checks.
 - [ ] Verify Privy sessions server-side; bind stable X user IDs to owned wallets using expiring, single-use nonces.
 - [ ] Add runtime-validated API responses, authorization and account isolation.

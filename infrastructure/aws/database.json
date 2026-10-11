@@ -1,0 +1,143 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Call My Bluff hackathon development PostgreSQL. TLS and a single developer IPv4 CIDR.",
+  "Parameters": {
+    "VpcId": {
+      "Type": "AWS::EC2::VPC::Id"
+    },
+    "SubnetIds": {
+      "Type": "List<AWS::EC2::Subnet::Id>"
+    },
+    "DeveloperCidr": {
+      "Type": "String",
+      "AllowedPattern": "(\\d{1,3}\\.){3}\\d{1,3}/32",
+      "Description": "Current developer public IPv4 address; exactly one host."
+    },
+    "EngineVersion": {
+      "Type": "String",
+      "Default": "17.11",
+      "AllowedPattern": "17\\.\\d+"
+    }
+  },
+  "Resources": {
+    "DatabaseSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Call My Bluff PostgreSQL developer-only ingress",
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 5432,
+            "ToPort": 5432,
+            "CidrIp": {
+              "Ref": "DeveloperCidr"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "call-my-bluff"
+          }
+        ]
+      }
+    },
+    "DatabaseSubnets": {
+      "Type": "AWS::RDS::DBSubnetGroup",
+      "Properties": {
+        "DBSubnetGroupDescription": "Call My Bluff development database subnets",
+        "SubnetIds": {
+          "Ref": "SubnetIds"
+        }
+      }
+    },
+    "DatabaseParameters": {
+      "Type": "AWS::RDS::DBParameterGroup",
+      "Properties": {
+        "Description": "Require PostgreSQL TLS",
+        "Family": "postgres17",
+        "Parameters": {
+          "rds.force_ssl": "1"
+        }
+      }
+    },
+    "Database": {
+      "Type": "AWS::RDS::DBInstance",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "DBInstanceIdentifier": {
+          "Fn::Sub": "${AWS::StackName}-postgres"
+        },
+        "DBName": "call_my_bluff",
+        "Engine": "postgres",
+        "EngineVersion": {
+          "Ref": "EngineVersion"
+        },
+        "DBInstanceClass": "db.t4g.micro",
+        "AllocatedStorage": "20",
+        "StorageType": "gp3",
+        "StorageEncrypted": true,
+        "MasterUsername": "cmb_admin",
+        "ManageMasterUserPassword": true,
+        "DBSubnetGroupName": {
+          "Ref": "DatabaseSubnets"
+        },
+        "DBParameterGroupName": {
+          "Ref": "DatabaseParameters"
+        },
+        "VPCSecurityGroups": [
+          {
+            "Ref": "DatabaseSecurityGroup"
+          }
+        ],
+        "PubliclyAccessible": true,
+        "MultiAZ": false,
+        "BackupRetentionPeriod": 7,
+        "DeletionProtection": true,
+        "AutoMinorVersionUpgrade": true,
+        "CopyTagsToSnapshot": true,
+        "EnableCloudwatchLogsExports": ["postgresql"],
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "call-my-bluff"
+          },
+          {
+            "Key": "Environment",
+            "Value": "hackathon"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "DatabaseHost": {
+      "Description": "PostgreSQL hostname; restricted by developer CIDR",
+      "Value": {
+        "Fn::GetAtt": ["Database", "Endpoint.Address"]
+      }
+    },
+    "DatabasePort": {
+      "Description": "PostgreSQL port",
+      "Value": {
+        "Fn::GetAtt": ["Database", "Endpoint.Port"]
+      }
+    },
+    "MasterSecretArn": {
+      "Description": "AWS-managed secret ARN; not the secret value",
+      "Value": {
+        "Fn::GetAtt": ["Database", "MasterUserSecret.SecretArn"]
+      }
+    },
+    "DatabaseSecurityGroupId": {
+      "Description": "Developer-only database security group",
+      "Value": {
+        "Ref": "DatabaseSecurityGroup"
+      }
+    }
+  }
+}

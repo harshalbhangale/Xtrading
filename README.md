@@ -88,6 +88,8 @@ Local Postgres is bound to loopback port **5433**. The checked-in development cr
 
 The local database has now been started and the initial migration applied. To verify your own environment, set `DATABASE_URL` explicitly and run `pnpm db:check`. Remote URLs must specify `sslmode=verify-full`; certificate verification remains enabled for runtime connections and migrations. Use the AWS RDS certificate trust bundle if required by the chosen deployment. Do not commit connection credentials.
 
+Mumbai cloud database template, bootstrap and access boundaries: [AWS database setup](infrastructure/aws/README.md). Set server-only `DATABASE_CA_FILE` to the local trusted CA bundle path when using RDS.
+
 `/api/ready` performs a live database check and returns `ready`, `migration_required`, `unconfigured` or `unavailable`; non-ready states return HTTP 503. It checks the five foundation tables, not provider access or full application readiness. `/api/health` remains the lightweight configuration/liveness endpoint. No account records or fixtures are seeded by these checks.
 
 ## Checks
