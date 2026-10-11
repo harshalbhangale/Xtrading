@@ -22,7 +22,8 @@ Updated 11 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added tar
 - [x] Record and verify the mock deployment receipt/runtime and configure local mock-token mode.
 - [x] Deploy and verify a matching mUSDC stake contract; preserve the earlier Circle-token deployment record.
 - [x] Verify separate exact 500 mUSDC approval and deposit transactions; active stake confirmed.
-- [ ] Verify withdrawal request, cancellation and full refund after cooldown.
+- [x] Verify live withdrawal request disables eligibility and cancellation restores it; both indexed by Envio.
+- [ ] Verify a live full refund after the seven-day cooldown. Foundry refund/conservation tests pass; the demo stake currently remains active.
 - [x] Run Envio against both verified deployments; expose authenticated stake history and indexing progress.
 - [x] Preserve event IDs, configure reorg rollback and display freshness with explicit unfinalized status. Live reorg recovery still needs validation.
 

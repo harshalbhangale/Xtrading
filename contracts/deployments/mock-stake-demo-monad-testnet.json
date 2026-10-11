@@ -19,6 +19,26 @@
       "blockHash": "0x2ac1b404401720ebb1168a1bfd9df9878f3eaa8e8740c91471abd3126a2faf64",
       "receiptStatus": "success",
       "amount": "500000000"
+    },
+    {
+      "action": "requestWithdrawal",
+      "transactionHash": "0xcafe4f4d12bfd5af50f5bc8f873cdf7f698b431be68faf6060b918d91688f622",
+      "blockNumber": "70176254",
+      "blockHash": "0x22ec56ac58e7eabea70ca15ac061dcb74239562d3f09aa5b6d1eb7beff438fda",
+      "receiptStatus": "success",
+      "lockedBalance": "500000000",
+      "withdrawableAt": "1792346094",
+      "indexedEventId": "10143:70176254:1"
+    },
+    {
+      "action": "cancelWithdrawal",
+      "transactionHash": "0x06615685b97e0d6e0d5d12148c30d21032f9545f1d0fe612c23588a125cb3879",
+      "blockNumber": "70176441",
+      "blockHash": "0x4f36cf68eaf132a97158a07e29aa3f7e1c9cd377b738e6e9d491cdec29e68ce7",
+      "receiptStatus": "success",
+      "lockedBalance": "500000000",
+      "withdrawableAt": "0",
+      "indexedEventId": "10143:70176441:1"
     }
   ],
   "indexedDepositEventId": "10143:70172401:5",
