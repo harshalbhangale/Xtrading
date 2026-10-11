@@ -29,8 +29,8 @@ export default function ExtensionPage() {
             </Link>
           </div>
           <p className="small-note">
-            Current build: evidence links. Badges, popovers and trading are
-            planned next.
+            Current build: binding and stake indicators, evidence details and
+            Kuru review links. Real-X installation testing is pending.
           </p>
         </div>
         <ExtensionPreview />
@@ -72,8 +72,9 @@ export default function ExtensionPage() {
             <div>
               <strong>Start the app and open X</strong>
               <p>
-                Run <code>pnpm dev</code>. Visible posts get a “View creator
-                evidence” link to the local app.
+                Run <code>pnpm dev</code> and the Envio indexer. Visible posts
+                get separate evidence indicators and Buy/Sell links to wallet
+                review.
               </p>
             </div>
           </li>

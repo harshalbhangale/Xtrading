@@ -4,6 +4,8 @@ Creator evidence and spot/perp trading from X, built on Monad. The product inclu
 
 Identity binding works. Both stake contracts and mUSDC are deployed and verified on testnet. A wallet-approved 500 mUSDC deposit is confirmed and indexed by Envio; the authenticated stake page now reads indexed history. Kuru/Perpl execution, Nansen insights, CRE workflow and MCP remain pending.
 
+Live withdrawal request and cancellation were confirmed and indexed; the 500 mUSDC stake is active again. The extension implements separate binding/stake indicators, evidence details and spot trade review links. Chrome installation and real-X validation are pending. Its public evidence endpoint exposes recorded stable-X-ID bindings and requires fresh matching RPC/Envio data before showing active stake.
+
 ## Run locally
 
 Requirements: Node.js 22+, pnpm 11.1.3 and Foundry. Docker is used for local Postgres and the Envio runtime.

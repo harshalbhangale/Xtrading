@@ -18,3 +18,34 @@
   outline: 3px solid #36651f;
   outline-offset: 2px;
 }
+.cmb-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px;
+  padding: 10px;
+  border: 1px solid #7960cc;
+  border-radius: 10px;
+  background: #171223;
+  color: #eee7ff;
+  font: 12px / 1.5 system-ui;
+}
+.cmb-evidence > span {
+  padding: 3px 7px;
+  border: 1px solid #7960cc;
+  border-radius: 5px;
+}
+.cmb-evidence a {
+  color: #cebcff;
+  text-decoration: underline;
+}
+.cmb-evidence details {
+  flex-basis: 100%;
+}
+.cmb-evidence summary {
+  cursor: pointer;
+}
+.cmb-evidence p {
+  max-width: 560px;
+  overflow-wrap: anywhere;
+}

@@ -79,7 +79,9 @@ These are proposed APIs, **not existing routes**. Serializable view models are e
 
 ## Extension
 
-The current extension adds evidence links only. The preview defines next display states: unknown identity, linked identity with current stake, and stale stake. Implement actual rendering after the public APIs exist. Keep X DOM discovery in `apps/extension/src/content.ts` separate from transport and evidence components.
+The extension now reads bounded public evidence from `GET /api/creators/:handle` through its service worker. It renders separate recorded-binding and stake indicators, evidence details and spot Buy/Sell handoffs. Handles are lookup hints for stored stable X IDs; ambiguous bindings remain unavailable. Stake eligibility requires matching fresh Envio and RPC evidence. Real-X installation testing remains pending. The preview illustrations are not live evidence.
+
+Build with `CMB_EXTENSION_APP_ORIGIN=https://your-app.example pnpm --filter @call-my-bluff/extension build` for an explicit HTTPS origin; default is localhost:3000. The generated manifest grants only that app host permission alongside X content-script matches. No cookies, Privy tokens or keys go through extension messages. Requests are deduplicated per handle, capped at four concurrent fetches and refreshed every minute. Buy/Sell prefills only the fixed Kuru testnet market's side and an unverified source-post ID; amount, simulation and wallet approval remain in the app.
 
 An active-stake badge requires verified identity and fresh matching chain/contract data. A pending withdrawal immediately removes eligibility. Trade review needs quote expiry, bounded approval, fees, slippage protection and exact amounts before wallet signing. No infinite approval default or automatic copy trade.
 

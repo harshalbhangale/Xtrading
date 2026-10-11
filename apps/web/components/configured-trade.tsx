@@ -25,6 +25,19 @@ export default function ConfiguredTrade() {
   const [now, setNow] = useState(Date.now());
   const owner = useRef(user?.id);
   owner.current = user?.id;
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (
+      params.get("instrument") !== "spot" ||
+      params.get("chainId") !== "10143"
+    )
+      return;
+    const requestedSide = params.get("side"),
+      source = params.get("postId");
+    if (requestedSide === "buy" || requestedSide === "sell")
+      setSide(requestedSide);
+    if (source && /^[0-9]{1,30}$/.test(source)) setPostId(source);
+  }, []);
   // biome-ignore lint/correctness/useExhaustiveDependencies: Clear private state on account change.
   useEffect(() => {
     setReview(null);

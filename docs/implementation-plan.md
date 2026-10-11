@@ -15,7 +15,7 @@ Updated 11 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added tar
 - [x] Live stake RPC reads and separate wallet reviews for approval, deposit and withdrawal actions.
 - [x] Original six-decimal mUSDC contract and faucet; deployed with 10,000 mUSDC in the project wallet.
 - [x] Envio schema, event handlers, contract configuration and generated bindings.
-- [x] Latest local checks: 27 application tests, 12 Foundry tests, web/extension builds; six database integration tests skipped in this run.
+- [x] Latest local checks: 30 application tests, 12 Foundry tests, web/extension builds; six database integration tests skipped in this run.
 
 ## Phase 1: Finish stake and indexing
 
@@ -32,11 +32,11 @@ Exit: a deposit updates current stake evidence; requesting withdrawal removes ac
 ## Phase 2: Live X extension
 
 - [ ] Install and test the extension on real X.
-- [ ] Add explicit app/API configuration and minimal permissions.
+- [x] Add build-time app origin configuration and narrowly scoped host permission; service-worker transport is limited to X senders and creator handles.
 - [ ] Resolve handles through verified stable-X-ID mappings.
-- [ ] Add independent identity and stake indicators plus evidence popovers.
+- [x] Implement separate recorded-binding and current indexed stake indicators plus evidence details. Validate on real X after installation approval.
 - [ ] Handle missing/stale data, withdrawal pending, feed navigation and duplicate injection.
-- [ ] Verify message origins and safe handoff to wallet review.
+- [x] Validate message sender origins and implement unsigned spot Buy/Sell handoffs with source post ID. Real-X end-to-end validation remains pending.
 
 Exit: a bound creator's profile/post shows current evidence from the backend.
 
