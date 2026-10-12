@@ -8,3 +8,9 @@ production-settings:
   rpcs:
     - chain-name: monad-testnet
       url: https://testnet-rpc.monad.xyz
+
+# Local anvil fork of Monad testnet (anvil --fork-url <rpc> --port 8548) for end-to-end simulation.
+local-fork-settings:
+  rpcs:
+    - chain-name: monad-testnet
+      url: http://127.0.0.1:8548

@@ -2,7 +2,7 @@
 
 Creator evidence and spot/perp trading from X, built on Monad. The product includes a landing page, creator studio, user dashboard, Chrome extension and planned MCP server.
 
-Identity binding works. Both stake contracts and mUSDC are deployed and verified on testnet. A wallet-approved 500 mUSDC deposit is confirmed and indexed by Envio; the authenticated stake page now reads indexed history. The X extension adds creator records on profile headers, trade-call detection (Groq, or rules without a key), a call-check drawer with the creator record and a Nansen wallet check, and reviewed Kuru spot / Perpl perp trades; providers without keys run in labelled demo mode. Confirmed Kuru fills, a live Perpl order, a keyed Nansen run, CRE workflow and MCP remain pending.
+Identity binding works. Both stake contracts and mUSDC are deployed and verified on testnet. A wallet-approved 500 mUSDC deposit is confirmed and indexed by Envio; the authenticated stake page now reads indexed history. The X extension adds creator records on profile headers, trade-call detection (Groq, or rules without a key), a call-check drawer with the creator record and a Nansen wallet check, and reviewed Kuru spot / Perpl perp trades; providers without keys run in labelled demo mode. The MCP server is live. The Chainlink CRE settlement workflow for bonded calls has run end to end on a local Monad fork (success and slash paths); its testnet deployment is pending. Confirmed Kuru fills, a live Perpl order and a keyed Nansen run remain pending.
 
 Live withdrawal request and cancellation were confirmed and indexed; the 500 mUSDC stake is active again. The extension implements separate binding/stake indicators, evidence details and spot trade review links. Chrome installation and real-X validation are pending. Its public evidence endpoint exposes recorded stable-X-ID bindings and requires fresh matching RPC/Envio data before showing active stake.
 
@@ -80,6 +80,17 @@ Envio also indexes Kuru V2 swaps, deposits, withdrawals and account registration
 To run locally, copy `services/indexer/.env.example` to `.env`, run `docker compose -p cmb-stake-indexer -f services/indexer/docker-compose.yml up -d`, then `pnpm --filter @call-my-bluff/indexer start`. Hasura is bound to localhost port 8081; its local development admin secret is `testing`. These settings are for local development only. Indexed history remains empty until stake events occur; a block lag is not a claim of chain finality.
 
 Set server-only `ENVIO_GRAPHQL_URL=http://localhost:8081/v1/graphql` and `ENVIO_HASURA_ADMIN_SECRET=testing` for local app access. The authenticated endpoint scopes queries to the current bound wallet and configured contract, validates integer strings and timestamps, and compares indexer freshness and latest balance to the RPC snapshot. Unavailable indexing does not disable direct chain reads or transaction review. Hasura must stringify numeric types; never convert token balances through JavaScript numbers.
+
+## Bonded calls (Chainlink CRE)
+
+`contracts/src/CallSettlement.sol` holds opt-in call bonds, separate from refundable stake. A creator registers a call (asset, direction, target move, 1h–30d horizon, bond); its window starts at the registration block. Every hour, the workflow in `services/cre/settlement` reads due calls at a finalized block. It fetches the opens of the Binance 1-minute candles at the window start and expiry; each node fetches independently and the median is agreed. It then writes one signed report through the Chainlink forwarder. Success returns bond + reward, failure moves the bond into the reward pool, and a tie returns the bond. A missing price never slashes; the bond is refundable after three days.
+
+```sh
+cd services/cre/settlement && bun install && bun test
+services/cre/scripts/fork-e2e.sh ETH 0 1   # asset, direction (0 Up, 1 Down), target bps
+```
+
+The script forks Monad testnet about three hours back (anvil dev account, port 8548). It deploys against the simulation forwarder, registers and funds a call, and moves time past expiry. Then it runs `cre workflow simulate --broadcast` and prints the onchain outcome. Testnet deployment needs a funded deployer and `cre login`. Deploy the contract with the production forwarder `0xF8344CFd5c43616a4366C34E3EEE75af79a74482`, set `settlementAddress` in `config.staging.json`, and deploy the workflow.
 
 ## Deployment
 

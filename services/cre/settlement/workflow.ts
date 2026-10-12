@@ -40,7 +40,8 @@ export const configSchema = z.object({
   gasLimit: z.string().regex(/^[0-9]+$/),
   scanLimit: z.number().int().min(1).max(200),
   maxSettlementsPerRun: z.number().int().min(1).max(20),
-  priceApi: z.string().url(),
+  // zod .url() needs the URL global, which the CRE WASM runtime lacks.
+  priceApi: z.string().regex(/^https:\/\/[^\s?#]+$/),
   symbols: z.record(z.string(), z.string()),
 });
 type Config = z.infer<typeof configSchema>;

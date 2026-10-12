@@ -13,3 +13,11 @@ production-settings:
     workflow-path: "./main.ts"
     config-path: "./config.production.json"
     secrets-path: ""
+
+local-fork-settings:
+  user-workflow:
+    workflow-name: "tradepost-settlement-local"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.local-fork.json"
+    secrets-path: ""
