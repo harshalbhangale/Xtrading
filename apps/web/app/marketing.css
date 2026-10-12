@@ -1,14 +1,7 @@
 /* biome-ignore-all lint/style/noDescendingSpecificity: Component-scoped selectors and responsive overrides. */
-@font-face {
-  font-family: "Xtrading Inter";
-  src: url("/fonts/inter-latin.ttf") format("truetype");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
 .xp-page,
 .xp-header {
-  font-family: "Xtrading Inter", Arial, sans-serif;
+  font-family: var(--sans);
 }
 .xp-page {
   max-width: 1600px;
@@ -26,12 +19,6 @@
   margin-inline: auto;
   gap: 32px;
 }
-.xp-header nav a {
-  font-size: 10px;
-}
-.xp-header .network {
-  font-size: 9px;
-}
 .xp-button {
   display: inline-flex;
   justify-content: center;
@@ -40,24 +27,24 @@
   background: var(--ink);
   color: var(--paper);
   border: 1px solid var(--ink);
-  border-radius: 2px;
-  padding: 15px 21px;
-  font: 11px var(--mono);
-  line-height: 1.4;
+  border-radius: 6px;
+  padding: 13px 20px;
+  font: 600 15px var(--sans);
+  line-height: 1.3;
   transition: background 0.2s;
 }
 .xp-button:hover {
   background: #414639;
 }
 .xp-button-small {
-  padding: 10px 15px;
-  font-size: 10px;
+  padding: 9px 14px;
+  font-size: 14px;
 }
 .xp-text-link {
   display: inline-block;
   padding: 9px 0;
-  border-bottom: 1px solid #2a342c;
-  font: 11px var(--mono);
+  border-bottom: 1px solid var(--line-strong);
+  font: 500 15px var(--sans);
   line-height: 1.5;
 }
 .xp-text-link:hover {
@@ -70,7 +57,7 @@
   align-items: center;
 }
 .xp-eyebrow {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   letter-spacing: 0.08em;
   line-height: 1.7;
   color: var(--muted);
@@ -101,8 +88,8 @@
   color: #d5ddd0;
 }
 .x-hero-content > p:not(.xp-eyebrow) {
-  font: 14px / 1.85 var(--mono);
-  color: #8b978c;
+  font: 18px / 1.6 var(--sans);
+  color: var(--ink-soft);
   margin: 0 0 29px;
 }
 .x-signal-field {
@@ -136,7 +123,7 @@
   margin-top: 44px;
 }
 .x-stack > span {
-  font: 8px var(--mono);
+  font: 11px var(--mono);
   letter-spacing: 0.12em;
   color: var(--muted);
 }
@@ -156,7 +143,7 @@
   bottom: 22px;
   left: 50%;
   transform: translateX(-50%);
-  font: 8px var(--mono);
+  font: 11px var(--mono);
   letter-spacing: 0.13em;
   color: var(--muted);
   z-index: 1;
@@ -190,7 +177,7 @@
 }
 .x-post-form label {
   display: block;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   letter-spacing: 0.08em;
   margin-bottom: 12px;
 }
@@ -219,10 +206,10 @@
   flex-shrink: 0;
   background: var(--ink);
   color: var(--paper);
-  font: 11px var(--mono);
+  font: 13px var(--mono);
 }
 .x-post-form > p {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
   margin: 10px 0 0;
 }
@@ -252,7 +239,7 @@
   font-size: 23px;
 }
 .x-feed-heading > span:last-child {
-  font: 9px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
   letter-spacing: 0.08em;
 }
@@ -276,13 +263,13 @@
   border: 0;
   border-bottom: 1px solid var(--line);
   padding: 10px 0;
-  font: 11px var(--mono);
+  font: 13px var(--mono);
 }
 .x-context-empty {
   padding-top: 35px;
 }
 .x-context-empty span {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
 }
 .x-real-author {
@@ -308,7 +295,7 @@
 }
 .x-real-author a > span {
   display: block;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
   margin-top: 5px;
 }
@@ -321,7 +308,7 @@
   overflow: auto;
 }
 .x-source-note {
-  font: 10px / 1.8 var(--mono);
+  font: 12px / 1.8 var(--mono);
   color: var(--muted);
   overflow-wrap: anywhere;
   margin: 20px 0;
@@ -354,7 +341,7 @@
   border: 1px solid #3d2e22;
 }
 .x-demo-footnote {
-  font: 9px / 1.9 var(--mono);
+  font: 12px / 1.9 var(--mono);
   color: var(--muted);
   margin: 15px 0 0;
 }
@@ -372,7 +359,7 @@
   padding-top: 20px;
 }
 .xp-detail-card > span {
-  font: 9px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
 }
 .xp-detail-card h3 {
@@ -411,7 +398,7 @@
 }
 .x-install-banner > b {
   margin-left: auto;
-  font: 11px var(--mono);
+  font: 13px var(--mono);
   white-space: nowrap;
 }
 .xp-detail {
@@ -462,12 +449,12 @@
   font-size: 13px;
 }
 .x-creator-sheet > div > span {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
   margin-right: 15px;
 }
 .x-creator-sheet > p:last-child {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
   margin-top: 25px;
 }
@@ -552,7 +539,7 @@
     margin: 0;
   }
   .xp-header nav a {
-    font-size: 9px;
+    font-size: 12px;
   }
   .x-hero {
     min-height: 690px;
@@ -568,7 +555,7 @@
     font-size: 12px;
   }
   .xp-eyebrow {
-    font-size: 8px;
+    font-size: 11px;
   }
   .x-signal-field {
     width: 120%;
@@ -659,7 +646,7 @@
   z-index: 1;
   border: 0;
   padding: 0;
-  font: 8px var(--mono);
+  font: 11px var(--mono);
   color: var(--muted);
   background: transparent;
   text-decoration: underline;

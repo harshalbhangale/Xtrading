@@ -69,12 +69,32 @@ export default function ConfiguredCreatorStatus() {
   if (!ready) return <p className="small-note">Loading…</p>;
   if (!authenticated)
     return (
-      <div className="creator-status">
-        <p>Sign in with X to see your identity and stake status.</p>
-        <button type="button" className="button" onClick={login}>
-          Sign in
-        </button>
-      </div>
+      <Checklist
+        steps={[
+          {
+            title: "Bind X to a wallet",
+            done: false,
+            detail: "Sign in with X, then sign a wallet proof.",
+            href: "/start",
+            action: "Sign in with X",
+          },
+          {
+            title: "Lock a refundable stake",
+            done: false,
+            detail: "Available after binding.",
+            href: "/creator/stake",
+            action: "Stake",
+          },
+          {
+            title: "Register calls",
+            done: false,
+            detail: "Available after binding.",
+            href: "/creator/calls",
+            action: "Register a call",
+          },
+        ]}
+        onSignIn={() => login({ loginMethods: ["twitter"] })}
+      />
     );
   if (state.kind === "loading")
     return <p className="small-note">Checking your account…</p>;
@@ -90,7 +110,7 @@ export default function ConfiguredCreatorStatus() {
   const stake = evidence?.stake;
   const staked =
     stake?.status === "active" || stake?.status === "withdrawal-pending";
-  const steps = [
+  const steps: Step[] = [
     {
       title: "Bind X to a wallet",
       done: Boolean(bound),
@@ -129,22 +149,10 @@ export default function ConfiguredCreatorStatus() {
   ];
   return (
     <>
-      <div className="onboarding-grid">
-        {steps.map((step, index) => (
-          <article key={step.title}>
-            <span className="step-number">0{index + 1}</span>
-            <h3>{step.title}</h3>
-            <p>{step.detail}</p>
-            <span className="status-badge">{step.done ? "Done" : "To do"}</span>
-            <Link className="text-link" href={step.href}>
-              {step.action} ↗
-            </Link>
-          </article>
-        ))}
-      </div>
+      <Checklist steps={steps} />
       {bound && (
         <p className="small-note">
-          Public record:{" "}
+          Your public record:{" "}
           <Link
             className="text-link"
             href={`/creators/${identity.binding?.handle}`}
@@ -153,6 +161,75 @@ export default function ConfiguredCreatorStatus() {
           </Link>
         </p>
       )}
+    </>
+  );
+}
+
+type Step = {
+  title: string;
+  done: boolean;
+  detail: string;
+  href: string;
+  action: string;
+};
+
+function Checklist({
+  steps,
+  onSignIn,
+}: {
+  steps: Step[];
+  onSignIn?: () => void;
+}) {
+  const complete = steps.filter((step) => step.done).length;
+  const next = steps.findIndex((step) => !step.done);
+  return (
+    <>
+      <div className="setup-progress">
+        <span>
+          {complete} of {steps.length} complete
+        </span>
+        <div
+          className="progress-bar"
+          role="progressbar"
+          aria-label="Creator setup"
+          aria-valuemin={0}
+          aria-valuemax={steps.length}
+          aria-valuenow={complete}
+        >
+          <span style={{ width: `${(complete / steps.length) * 100}%` }} />
+        </div>
+      </div>
+      <ol className="setup-steps">
+        {steps.map((step, index) => {
+          const primary = index === next;
+          const className = primary ? "button" : "button secondary-button";
+          return (
+            <li className="setup-step" data-done={step.done} key={step.title}>
+              <span className="step-marker" aria-hidden="true">
+                {step.done ? "✓" : index + 1}
+              </span>
+              <div>
+                <h3>
+                  {step.title}
+                  <span className="sr-only">
+                    {step.done ? " (done)" : " (to do)"}
+                  </span>
+                </h3>
+                <p>{step.detail}</p>
+              </div>
+              {primary && onSignIn ? (
+                <button type="button" className={className} onClick={onSignIn}>
+                  {step.action}
+                </button>
+              ) : (
+                <Link className={className} href={step.href}>
+                  {step.action}
+                </Link>
+              )}
+            </li>
+          );
+        })}
+      </ol>
     </>
   );
 }

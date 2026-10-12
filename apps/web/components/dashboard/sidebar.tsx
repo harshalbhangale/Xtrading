@@ -1,60 +1,148 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Brand } from "../brand";
+import { Icon, type IconName } from "./icons";
 
-const navigation = {
+type Item = { href: string; label: string; icon: IconName };
+
+const navigation: Record<"user" | "creator", Item[]> = {
   user: [
-    { href: "/dashboard", label: "Overview" },
-    { href: "/dashboard/trade", label: "Trade" },
-    { href: "/dashboard/portfolio", label: "Portfolio" },
-    { href: "/dashboard/activity", label: "Activity" },
-    { href: "/dashboard/watchlist", label: "Watchlist" },
-    { href: "/creators", label: "Creators" },
+    { href: "/dashboard", label: "Overview", icon: "overview" },
+    { href: "/dashboard/trade", label: "Trade", icon: "trade" },
+    { href: "/dashboard/portfolio", label: "Portfolio", icon: "portfolio" },
+    { href: "/dashboard/activity", label: "Activity", icon: "activity" },
+    { href: "/dashboard/watchlist", label: "Watchlist", icon: "watchlist" },
+    { href: "/creators", label: "Creators", icon: "creators" },
+    { href: "/dashboard/faucet", label: "Test funds", icon: "faucet" },
   ],
   creator: [
-    { href: "/creator", label: "Overview" },
-    { href: "/creator/profile", label: "Identity" },
-    { href: "/creator/stake", label: "Stake" },
-    { href: "/creator/calls", label: "Calls" },
-    { href: "/creator/reputation", label: "Reputation" },
+    { href: "/creator", label: "Overview", icon: "overview" },
+    { href: "/creator/profile", label: "Identity", icon: "identity" },
+    { href: "/creator/stake", label: "Stake", icon: "stake" },
+    { href: "/creator/calls", label: "Calls", icon: "calls" },
+    { href: "/creator/reputation", label: "Reputation", icon: "reputation" },
   ],
-} as const;
+};
+
+const tools: Item[] = [
+  { href: "/extension", label: "X extension", icon: "extension" },
+  { href: "/integrations", label: "Agent access", icon: "agent" },
+  { href: "/setup", label: "System status", icon: "status" },
+];
+
+const SidebarAccount = dynamic(() => import("./sidebar-account"), {
+  ssr: false,
+  loading: () => <div className="account-card account-card-loading" />,
+});
+
+function current(pathname: string, href: string) {
+  // Overview pages only match exactly; sections match their sub-pages too.
+  if (href === "/dashboard" || href === "/creator") return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function Sidebar({ audience }: { audience: "user" | "creator" }) {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Close the mobile drawer after navigation.
+  useEffect(() => setOpen(false), [pathname]);
+  const testnet = process.env.NEXT_PUBLIC_MONAD_CHAIN_ID !== "143";
   return (
-    <aside className="dashboard-sidebar">
-      <p className="eyebrow">
-        {audience === "creator" ? "Creator studio" : "Your workspace"}
-      </p>
-      <nav
-        aria-label={`${audience === "creator" ? "Creator" : "User"} workspace navigation`}
-      >
-        {navigation[audience].map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={pathname === item.href ? "page" : undefined}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
-      <div className="sidebar-divider" />
-      <nav aria-label="Other surfaces">
-        <Link href="/extension">X extension</Link>
-        <Link href="/integrations">Agent access (MCP)</Link>
-      </nav>
-      <div className="sidebar-bottom">
-        <Link
-          className="text-link"
-          href={audience === "creator" ? "/dashboard" : "/creator"}
-        >
-          Switch to{" "}
-          {audience === "creator" ? "user workspace" : "creator studio"} ↗
+    <>
+      <div className="workspace-mobilebar">
+        <Link href="/" aria-label="Xtrading home" className="workspace-brand">
+          <Brand />
         </Link>
+        <button
+          type="button"
+          className="icon-button"
+          aria-expanded={open}
+          aria-controls="workspace-sidebar"
+          onClick={() => setOpen((value) => !value)}
+        >
+          <Icon name={open ? "close" : "menu"} />
+          <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
+        </button>
       </div>
-    </aside>
+      <aside
+        id="workspace-sidebar"
+        className="dashboard-sidebar"
+        data-open={open}
+      >
+        <Link href="/" aria-label="Xtrading home" className="workspace-brand">
+          <Brand />
+        </Link>
+        <nav className="workspace-switch" aria-label="Workspace">
+          <Link
+            href="/dashboard"
+            aria-current={audience === "user" ? "true" : undefined}
+          >
+            User
+          </Link>
+          <Link
+            href="/creator"
+            aria-current={audience === "creator" ? "true" : undefined}
+          >
+            Creator
+          </Link>
+        </nav>
+        <nav
+          className="sidebar-nav"
+          aria-label={audience === "creator" ? "Creator studio" : "Dashboard"}
+        >
+          {navigation[audience].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={current(pathname, item.href) ? "page" : undefined}
+            >
+              <Icon name={item.icon} />
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <p className="sidebar-label">Tools</p>
+        <nav className="sidebar-nav" aria-label="Tools">
+          {tools.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={current(pathname, item.href) ? "page" : undefined}
+            >
+              <Icon name={item.icon} />
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="sidebar-bottom">
+          <p className="sidebar-network">
+            <i aria-hidden="true" />
+            Monad {testnet ? "testnet · 10143" : "mainnet · 143"}
+          </p>
+          {process.env.NEXT_PUBLIC_PRIVY_APP_ID ? (
+            <SidebarAccount />
+          ) : (
+            <div className="account-card">
+              <p className="account-meta">Sign-in is not configured.</p>
+              <Link className="text-link" href="/setup">
+                System status
+              </Link>
+            </div>
+          )}
+        </div>
+      </aside>
+      {open && (
+        <button
+          type="button"
+          className="sidebar-scrim"
+          aria-label="Close menu"
+          onClick={() => setOpen(false)}
+        />
+      )}
+    </>
   );
 }

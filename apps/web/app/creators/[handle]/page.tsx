@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CallLedger, CallSummary } from "../../../components/call-ledger";
 import { CreatorOverviewPanel } from "../../../components/creator-overview";
-import { Panel } from "../../../components/dashboard/ui";
+import { PageHeading, Panel } from "../../../components/dashboard/ui";
 import { publicCallLedger } from "../../../lib/calls";
 import { creatorReputation } from "../../../lib/insights";
 import { publicCreatorEvidence } from "../../../lib/public-creator";
@@ -38,24 +38,29 @@ export default async function CreatorPage({
   const stake = evidence?.stake;
   const bound = identity?.status === "bound";
   return (
-    <div className="page subpage">
-      <Link className="text-link back-link" href="/creators">
+    <>
+      <Link className="back-link" href="/creators">
         ← All creators
       </Link>
-      <h1>@{handle}</h1>
-      <p className="hero-copy">
-        {bound
-          ? "This X account is bound to a wallet. Identity, stake and call performance are shown separately."
-          : "No verified binding for this handle. Nothing here should be read as a claim about this account."}{" "}
-        <a
-          className="text-link"
-          href={`https://x.com/${handle}`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          View on X ↗
-        </a>
-      </p>
+      <PageHeading
+        eyebrow="Creator record"
+        title={`@${handle}`}
+        description={
+          bound
+            ? "This X account is bound to a wallet. Identity, stake and call performance are shown separately."
+            : "No verified binding for this handle. Nothing here should be read as a claim about this account."
+        }
+        action={
+          <a
+            className="button secondary-button"
+            href={`https://x.com/${handle}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            View on X ↗
+          </a>
+        }
+      />
       <Panel title="Ongoing calls & wallet activity">
         <CreatorOverviewPanel key={handle} handle={handle} />
       </Panel>
@@ -182,6 +187,6 @@ export default async function CreatorPage({
           </div>
         </Panel>
       )}
-    </div>
+    </>
   );
 }

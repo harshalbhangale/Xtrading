@@ -46,7 +46,7 @@ export function LandingMotion({ children }: { children: ReactNode }) {
         }
         root.current
           .querySelectorAll<HTMLElement>(
-            ".x-section-heading, .x-principles > h2, .xp-detail-card, .x-install-banner",
+            ".x-section-heading, .x-principles > h2, .xp-detail-card, .x-paths > h2, .x-path, .x-install-banner",
           )
           .forEach((element) => {
             gsap.from(element, {

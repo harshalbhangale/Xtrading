@@ -5,7 +5,11 @@ const ConfiguredActivity = dynamic(() => import("./configured-activity"), {
   ssr: false,
   loading: () => <p className="small-note">Loading…</p>,
 });
-export function ActivityControl({ view }: { view: "fills" | "all" }) {
+export function ActivityControl({
+  view,
+}: {
+  view: "fills" | "all" | "recent";
+}) {
   return process.env.NEXT_PUBLIC_PRIVY_APP_ID ? (
     <ConfiguredActivity view={view} />
   ) : (

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Icon, type IconName } from "./icons";
 import { Sidebar } from "./sidebar";
 
 export function DashboardShell({
@@ -121,6 +122,33 @@ export function RecordTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+export function ActionCard({
+  href,
+  icon,
+  title,
+  description,
+}: {
+  href: string;
+  icon: IconName;
+  title: string;
+  description: string;
+}) {
+  return (
+    <Link className="action-card" href={href}>
+      <span className="action-icon">
+        <Icon name={icon} />
+      </span>
+      <span className="action-text">
+        <strong>{title}</strong>
+        <span>{description}</span>
+      </span>
+      <span className="action-arrow">
+        <Icon name="arrow" size={16} />
+      </span>
+    </Link>
   );
 }
 

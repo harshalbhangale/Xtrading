@@ -3,6 +3,7 @@
 import { normalizeHandle } from "@call-my-bluff/domain";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Icon } from "./dashboard/icons";
 
 export function CreatorSearch() {
   const router = useRouter();
@@ -22,22 +23,22 @@ export function CreatorSearch() {
         router.push(`/creators/${handle}`);
       }}
     >
-      <label className="eyebrow" htmlFor="creator-search">
+      <label className="sr-only" htmlFor="creator-search">
         Find a creator
       </label>
       <div className="search-row">
-        <span aria-hidden="true">⌕</span>
+        <span>
+          <Icon name="search" size={18} />
+        </span>
         <input
           id="creator-search"
-          placeholder="@handle"
+          placeholder="Enter an X handle"
           value={value}
           onChange={(event) => setValue(event.target.value)}
           autoComplete="off"
           aria-describedby={error ? "search-error" : undefined}
         />
-        <button type="submit">
-          View record <span aria-hidden="true">↗</span>
-        </button>
+        <button type="submit">View record</button>
       </div>
       {error && (
         <p id="search-error" role="alert">

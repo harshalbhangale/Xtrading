@@ -90,8 +90,8 @@ export function KineticHero() {
           {active.body}
         </p>
         <div className="xp-actions x-hero-actions">
-          <Link href="/extension" className="xp-button">
-            Get the extension <span>↗</span>
+          <Link href="/start" className="xp-button">
+            Get started <span>↗</span>
           </Link>
           <a href="#try-it" className="xp-text-link">
             Try a real X post <span>↓</span>

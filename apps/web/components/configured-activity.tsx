@@ -37,7 +37,7 @@ function price(swap: KuruActivity["swaps"][number]) {
 export default function ConfiguredActivity({
   view,
 }: {
-  view: "fills" | "all";
+  view: "fills" | "all" | "recent";
 }) {
   const { ready, authenticated, login, getAccessToken, user } = usePrivy();
   const [activity, setActivity] = useState<KuruActivity | null>(null);
@@ -75,6 +75,20 @@ export default function ConfiguredActivity({
     );
   if (error) return <p className="small-note">{error}</p>;
   if (!activity) return <p className="small-note">Loading confirmed fills…</p>;
+  if (view === "recent" && activity.swaps.length === 0)
+    return (
+      <div className="dashboard-empty">
+        <h3>No confirmed fills yet.</h3>
+        <p>
+          {activity.status === "unavailable"
+            ? "Fill history is unavailable right now. This is not an empty history."
+            : "Your Kuru fills appear here once they are confirmed and indexed."}
+        </p>
+        <Link className="text-link" href="/dashboard/trade">
+          Make your first trade
+        </Link>
+      </div>
+    );
 
   const status =
     activity.status === "current"
@@ -112,7 +126,10 @@ export default function ConfiguredActivity({
               </tr>
             </thead>
             <tbody>
-              {activity.swaps.map((swap) => {
+              {(view === "recent"
+                ? activity.swaps.slice(0, 5)
+                : activity.swaps
+              ).map((swap) => {
                 const base = swap.market;
                 const [inSymbol, outSymbol] =
                   swap.side === "buy"
@@ -195,12 +212,14 @@ export default function ConfiguredActivity({
           </div>
         </>
       )}
-      <p className="small-note">
-        Amounts come from confirmed SpotSwap events indexed by Envio, fees
-        included. Source posts are what you entered when trading; they are not
-        verified. These are your actual fills, separate from any creator's call
-        outcomes.
-      </p>
+      {view !== "recent" && (
+        <p className="small-note">
+          Amounts come from confirmed SpotSwap events indexed by Envio, fees
+          included. Source posts are what you entered when trading; they are not
+          verified. These are your actual fills, separate from any creator's
+          call outcomes.
+        </p>
+      )}
     </>
   );
 }
