@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit",
-    "package": "CMB_EXTENSION_APP_ORIGIN=https://nomorebluff.vercel.app node build.mjs && mkdir -p ../web/public/downloads && rm -f ../web/public/downloads/no-more-bluff-extension.zip && cd dist && zip -qr ../../web/public/downloads/no-more-bluff-extension.zip . -x '*.map'"
+    "package": "CMB_EXTENSION_APP_ORIGIN=https://tradepostapp.vercel.app node build.mjs && mkdir -p ../web/public/downloads && rm -f ../web/public/downloads/tradepost-extension.zip && cd dist && zip -qr ../../web/public/downloads/tradepost-extension.zip . -x '*.map'"
   },
   "dependencies": {
     "@call-my-bluff/domain": "workspace:*",

@@ -1,4 +1,4 @@
-# Call My Bluff
+# Tradepost
 
 Creator evidence and spot/perp trading from X, built on Monad. The product includes a landing page, creator studio, user dashboard, Chrome extension and planned MCP server.
 
@@ -6,7 +6,7 @@ Identity binding works. Both stake contracts and mUSDC are deployed and verified
 
 Live withdrawal request and cancellation were confirmed and indexed; the 500 mUSDC stake is active again. The extension implements separate binding/stake indicators, evidence details and spot trade review links. Chrome installation and real-X validation are pending. Its public evidence endpoint exposes recorded stable-X-ID bindings and requires fresh matching RPC/Envio data before showing active stake.
 
-Live: https://nomorebluff.vercel.app (Monad testnet). See [Deployment](#deployment).
+Live: https://tradepostapp.vercel.app (Monad testnet). See [Deployment](#deployment).
 
 ## Run locally
 
@@ -81,10 +81,10 @@ Set server-only `ENVIO_GRAPHQL_URL=http://localhost:8081/v1/graphql` and `ENVIO_
 
 ## Deployment
 
-- **Web:** Vercel project `nomorebluff`, root directory `apps/web`, Node 22, function region `bom1`. Pushes to `main` deploy to production. Environment variables mirror `apps/web/.env.example`; `NEXT_PUBLIC_APP_URL` must equal the production origin because POST routes check it. Add that origin to the Privy app's allowed domains.
+- **Web:** Vercel project `tradepostapp`, root directory `apps/web`, Node 22, function region `bom1`. Pushes to `main` deploy to production. Environment variables mirror `apps/web/.env.example`; `NEXT_PUBLIC_APP_URL` must equal the production origin because POST routes check it. Add that origin to the Privy app's allowed domains.
 - **Database:** AWS RDS (ap-south-1). Hosted runtimes pass the regional CA bundle as `DATABASE_CA_PEM`. Run schema changes with the bootstrap in `infrastructure/aws`.
 - **Indexer:** Envio Hosted Service with root `services/indexer` and `config.yaml`; set `ENVIO_MONAD_RPC_URL` there, then set the hosted GraphQL URL as `ENVIO_GRAPHQL_URL` on Vercel (no admin secret needed for a public endpoint).
-- **Extension:** `pnpm --filter @call-my-bluff/extension package` builds for the production origin and writes `apps/web/public/downloads/no-more-bluff-extension.zip`, served from the extension page. Re-run it after extension changes. A production build only talks to that origin; `build` without the variable targets localhost.
+- **Extension:** `pnpm --filter @call-my-bluff/extension package` builds for the production origin and writes `apps/web/public/downloads/tradepost-extension.zip`, served from the extension page. Re-run it after extension changes. A production build only talks to that origin; `build` without the variable targets localhost.
 
 ## Checks
 

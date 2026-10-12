@@ -32,13 +32,6 @@ a {
   color: #62685b;
 }
 
-.brand-logo {
-  display: block;
-  width: 150px;
-  height: auto;
-  margin-bottom: 18px;
-}
-
 #status {
   list-style: none;
   margin: 12px 0;
@@ -59,4 +52,27 @@ a {
 }
 #status b.off {
   color: #a5281b;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  font:
+    700 21px / 1 "Futura",
+    "Avenir Next",
+    system-ui,
+    sans-serif;
+  letter-spacing: -0.03em;
+}
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #4f1ff0;
+  color: #fff;
+  font-size: 14px;
+  letter-spacing: -0.06em;
 }

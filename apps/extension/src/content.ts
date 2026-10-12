@@ -233,7 +233,7 @@ async function scanProfile() {
     el(
       "div",
       { class: "title" },
-      "No More Bluff record",
+      "Tradepost record",
       el("span", { class: "note" }, "loading…"),
     ),
   );

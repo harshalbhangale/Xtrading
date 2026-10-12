@@ -159,7 +159,7 @@ export async function openDrawer(
     {
       class: "drawer",
       role: "dialog",
-      "aria-label": "No More Bluff call details",
+      "aria-label": "Tradepost call details",
     },
     el("header", {}, el("strong", {}, `@${signal.handle} · call check`), close),
     body,

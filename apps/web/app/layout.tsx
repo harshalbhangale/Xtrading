@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import { Jost } from "next/font/google";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AuthProvider } from "../components/auth-provider";
+import { Brand } from "../components/brand";
 import { Navigation } from "../components/navigation";
 import { WalletControl } from "../components/wallet-control";
 import "./globals.css";
@@ -10,33 +11,31 @@ import "./frontend.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "No More Bluff — conviction has a record",
-    template: "%s · No More Bluff",
+    default: "Tradepost — conviction has a record",
+    template: "%s · Tradepost",
   },
   description:
     "Verified X identity, refundable stake and wallet-approved trading from X, on Monad.",
 };
 
+const brandFont = Jost({
+  subsets: ["latin"],
+  weight: ["700"],
+  variable: "--brand-font",
+});
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   const testnet = process.env.NEXT_PUBLIC_MONAD_CHAIN_ID !== "143";
   return (
-    <html lang="en">
+    <html lang="en" className={brandFont.variable}>
       <body>
         <AuthProvider>
           <a href="#main" className="skip-link">
             Skip to content
           </a>
           <header className="topbar">
-            <Link href="/" className="wordmark" aria-label="No More Bluff home">
-              <Image
-                src="/brand/no-more-bluff.png"
-                alt="No More Bluff"
-                width={1774}
-                height={887}
-                className="brand-logo"
-                sizes="160px"
-                priority
-              />
+            <Link href="/" className="wordmark" aria-label="Tradepost home">
+              <Brand />
             </Link>
             <Navigation />
             <div className="header-actions">
@@ -49,7 +48,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </header>
           <main id="main">{children}</main>
           <footer>
-            <span>No More Bluff · Monad {testnet ? "testnet" : "mainnet"}</span>
+            <span>Tradepost · Monad {testnet ? "testnet" : "mainnet"}</span>
             <Link href="/setup">System status</Link>
           </footer>
         </AuthProvider>

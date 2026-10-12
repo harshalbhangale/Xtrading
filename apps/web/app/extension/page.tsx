@@ -38,7 +38,7 @@ export default function ExtensionPage() {
           </p>
           <a
             className="button"
-            href="/downloads/no-more-bluff-extension.zip"
+            href="/downloads/tradepost-extension.zip"
             download
           >
             Download extension (.zip)

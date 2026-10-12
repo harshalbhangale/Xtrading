@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "No More Bluff — put conviction on the record",
+  title: "Tradepost — put conviction on the record",
 };
 
 export default function LandingPage() {
@@ -38,7 +38,7 @@ export default function LandingPage() {
         </div>
         <div className="landing-record">
           <div className="receipt-top">
-            <span>NO MORE BLUFF</span>
+            <span>TRADEPOST</span>
             <span>THE PUBLIC RECORD / 01</span>
           </div>
           <div className="receipt-arrow" aria-hidden="true">
@@ -127,7 +127,7 @@ export default function LandingPage() {
               IN YOUR FEED.
             </span>
           </div>
-          <span className="poster-bottom">NO MORE BLUFF / X EXTENSION</span>
+          <span className="poster-bottom">TRADEPOST / X EXTENSION</span>
         </div>
         <div>
           <p className="eyebrow">Chrome extension</p>

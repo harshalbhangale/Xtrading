@@ -28,7 +28,7 @@ export function bindingMessage(input: {
   issuedAt: Date;
   expiresAt: Date;
 }) {
-  return `${new URL(input.origin).host} requests a Call My Bluff identity binding.\n\nWallet: ${getAddress(input.wallet)}\nX user ID: ${input.xUserId}\nSession owner: ${input.privyUserId}\nOrigin: ${input.origin}\nChain ID: ${input.chainId}\nNonce: ${input.nonce}\nIssued at: ${input.issuedAt.toISOString()}\nExpires at: ${input.expiresAt.toISOString()}\n\nThis proves account-to-wallet ownership. It authorizes no transaction, stake, token approval or trade.`;
+  return `${new URL(input.origin).host} requests a Tradepost identity binding.\n\nWallet: ${getAddress(input.wallet)}\nX user ID: ${input.xUserId}\nSession owner: ${input.privyUserId}\nOrigin: ${input.origin}\nChain ID: ${input.chainId}\nNonce: ${input.nonce}\nIssued at: ${input.issuedAt.toISOString()}\nExpires at: ${input.expiresAt.toISOString()}\n\nThis proves account-to-wallet ownership. It authorizes no transaction, stake, token approval or trade.`;
 }
 export async function verifyWalletProof(
   wallet: string,
