@@ -57,7 +57,7 @@ beforeEach(() => {
     },
   );
   sendMessage = vi.fn(async () => response("buy $ETH"));
-  vi.stubGlobal("chrome", { runtime: { sendMessage } });
+  vi.stubGlobal("chrome", { runtime: { id: "test-extension", sendMessage } });
 });
 
 afterEach(() => {
@@ -133,9 +133,9 @@ it("badges a verified author's post quietly, without a tooltip", async () => {
   await import("./content");
   await flush();
   const root = document.querySelector(".cmb-badge-host")?.shadowRoot;
-  expect(root?.querySelector(".tp-badge.tp-static")).not.toBeNull();
-  expect(root?.querySelector(".tp-tooltip")).toBeNull();
-  expect(root?.querySelector(".tp-badge")?.hasAttribute("tabindex")).toBe(
+  expect(root?.querySelector(".xt-badge.xt-static")).not.toBeNull();
+  expect(root?.querySelector(".xt-tooltip")).toBeNull();
+  expect(root?.querySelector(".xt-badge")?.hasAttribute("tabindex")).toBe(
     false,
   );
 });
@@ -150,7 +150,7 @@ it("puts an explained badge beside a verified creator's profile name", async () 
   const hosts = document.querySelectorAll(".cmb-profile-badge-host");
   expect(hosts).toHaveLength(1);
   expect(hosts[0]?.previousElementSibling?.textContent).toBe("Alice");
-  expect(hosts[0]?.shadowRoot?.textContent).toContain("Tradepost Verified");
+  expect(hosts[0]?.shadowRoot?.textContent).toContain("XTrading Verified");
 });
 
 it.each([null, { signal: { isCall: true } }])(
@@ -271,4 +271,14 @@ it("loads expanded creator evidence only after the Expand button is clicked", as
   ).toBe(true);
   button?.click();
   expect(button?.getAttribute("aria-expanded")).toBe("false");
+});
+
+it("treats an invalidated extension context as no answer instead of throwing", async () => {
+  const { send } = await import("./dom");
+  sendMessage.mockImplementation(() => {
+    throw new Error("Extension context invalidated.");
+  });
+  await expect(send({ type: "x" })).resolves.toBeNull();
+  vi.stubGlobal("chrome", { runtime: { sendMessage } });
+  await expect(send({ type: "x" })).resolves.toBeNull();
 });
