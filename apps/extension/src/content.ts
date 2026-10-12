@@ -1,32 +1,9 @@
 import {
   normalizeHandle,
   postSignalResponseSchema,
-  publicCreatorEvidenceSchema,
 } from "@call-my-bluff/domain";
-import type { z } from "zod";
-import { appOrigin } from "./config";
-import { el, safeLink, send, shadowHost, shortAddress } from "./dom";
-import { loadInsights, openDrawer } from "./drawer";
-
-type Evidence = z.infer<typeof publicCreatorEvidenceSchema>;
-const evidenceRequests = new Map<string, Promise<Evidence | null>>();
-
-function evidence(handle: string) {
-  let request = evidenceRequests.get(handle);
-  if (!request) {
-    if (evidenceRequests.size > 300) evidenceRequests.clear();
-    request = send<unknown>({ type: "creator-evidence", handle }).then(
-      (raw) => {
-        const parsed = publicCreatorEvidenceSchema.safeParse(raw);
-        return parsed.success ? parsed.data : null;
-      },
-    );
-    evidenceRequests.set(handle, request);
-    // Re-check after a minute so new bindings and stake changes appear.
-    setTimeout(() => evidenceRequests.delete(handle), 60000);
-  }
-  return request;
-}
+import { el, send, shadowHost } from "./dom";
+import { openDrawer } from "./drawer";
 
 function postIdentity(article: HTMLElement) {
   const postLink = Array.from(
@@ -38,65 +15,6 @@ function postIdentity(article: HTMLElement) {
   );
   const handle = match?.[1] ? normalizeHandle(match[1]) : null;
   return handle && match?.[2] ? { handle, postId: match[2] } : null;
-}
-
-function badgeChips(value: Evidence | null) {
-  const chips: HTMLElement[] = [];
-  if (value?.identity.status === "bound")
-    chips.push(
-      el(
-        "span",
-        {
-          class: "chip verified",
-          title:
-            "Recorded stable X ID/wallet binding; handle is a lookup hint, not a fresh ownership check",
-        },
-        "✓ Verified",
-      ),
-    );
-  if (value?.stake.status === "active")
-    chips.push(
-      el(
-        "span",
-        {
-          class: "chip staked",
-          title: `Refundable ${value.stake.symbol ?? ""} stake active on Monad testnet`,
-        },
-        "◆ Staked",
-      ),
-    );
-  return chips;
-}
-
-async function addBadge(article: HTMLElement, handle: string, postId: string) {
-  const name = article.querySelector<HTMLElement>('[data-testid="User-Name"]');
-  if (!name || name.querySelector(".cmb-badge-host")) return;
-  const { host, root } = shadowHost("cmb-badge-host");
-  name.append(host);
-  const chips = badgeChips(await evidence(handle));
-  const current = postIdentity(article);
-  if (
-    !host.isConnected ||
-    seen.get(article) !== `${handle}:${postId}` ||
-    current?.handle !== handle ||
-    current.postId !== postId
-  ) {
-    host.remove();
-    return;
-  }
-  if (!chips.length) return host.remove();
-  const badge = el("span", { class: "badge" }, ...chips);
-  for (const chip of chips)
-    chip.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      window.open(
-        new URL(`/creators/${handle}`, appOrigin).href,
-        "_blank",
-        "noopener",
-      );
-    });
-  root.append(badge);
 }
 
 async function addSignal(article: HTMLElement, handle: string, postId: string) {
@@ -175,7 +93,6 @@ const visible = new IntersectionObserver(
       visible.unobserve(article);
       const id = postIdentity(article);
       if (!id) continue;
-      void addBadge(article, id.handle, id.postId);
       void addSignal(article, id.handle, id.postId);
     }
   },
@@ -200,135 +117,6 @@ function scanPosts() {
   }
 }
 
-const reserved = new Set([
-  "home",
-  "explore",
-  "notifications",
-  "messages",
-  "i",
-  "settings",
-  "search",
-  "compose",
-  "jobs",
-  "lists",
-  "communities",
-  "premium",
-  "tos",
-  "privacy",
-]);
-function profileHandle() {
-  const [first, second] = location.pathname.split("/").filter(Boolean);
-  if (!first || reserved.has(first.toLowerCase())) return null;
-  if (
-    second &&
-    ![
-      "with_replies",
-      "media",
-      "likes",
-      "highlights",
-      "articles",
-      "superfollows",
-    ].includes(second)
-  )
-    return null;
-  return normalizeHandle(first);
-}
-
-async function scanProfile() {
-  const handle = profileHandle();
-  const existing = document.querySelector<HTMLElement>(".cmb-profile-host");
-  if (existing && existing.dataset.handle !== handle) existing.remove();
-  if (!handle || document.querySelector(".cmb-profile-host")) return;
-  const anchor = document.querySelector<HTMLElement>(
-    '[data-testid="primaryColumn"] [data-testid="UserName"]',
-  );
-  if (!anchor) return;
-  const { host, root } = shadowHost("cmb-profile-host");
-  host.dataset.handle = handle;
-  host.style.display = "block";
-  const card = el(
-    "div",
-    { class: "card" },
-    el(
-      "div",
-      { class: "title" },
-      "Tradepost record",
-      el("span", { class: "note" }, "loading…"),
-    ),
-  );
-  root.append(card);
-  anchor.after(host);
-  const insights = await loadInsights(handle, null, null);
-  if (!host.isConnected || profileHandle() !== handle) return;
-  card.replaceChildren();
-  const ev = insights?.evidence;
-  const bound = ev?.identity.status === "bound";
-  const title = el(
-    "div",
-    { class: "title" },
-    `@${handle}`,
-    el("span", { class: "badge" }, ...badgeChips(ev ?? null)),
-  );
-  if (!insights) {
-    card.append(
-      title,
-      el(
-        "p",
-        { class: "note" },
-        "Record unavailable. Start the app or check the extension's app origin.",
-      ),
-    );
-    return;
-  }
-  const rep = insights.reputation;
-  const stat = (value: string, label: string) =>
-    el("div", { class: "stat" }, el("b", {}, value), el("small", {}, label));
-  card.append(
-    title,
-    el(
-      "div",
-      { class: "grid" },
-      stat(
-        bound ? "Verified" : "Unverified",
-        bound ? shortAddress(ev?.identity.wallet ?? "") : "no wallet binding",
-      ),
-      stat(
-        ev?.stake.status === "active"
-          ? "Staked"
-          : ev?.stake.status === "withdrawal-pending"
-            ? "Exiting"
-            : ev?.stake.status === "inactive"
-              ? "No stake"
-              : "—",
-        "refundable stake",
-      ),
-      stat(
-        String(rep.trackedCalls),
-        `calls · ${rep.bullish}↑ ${rep.bearish}↓ ${rep.perpCalls} perp`,
-      ),
-    ),
-    ...rep.recent
-      .slice(0, 3)
-      .map((call) =>
-        el(
-          "div",
-          { class: "finding" },
-          `${call.direction === "bearish" ? "📉" : call.direction === "bullish" ? "📈" : "🎯"} ${call.asset ?? ""} ${call.direction ?? ""} · ${call.instrument ?? ""} · ${call.classifiedAt.slice(0, 10)}`,
-        ),
-      ),
-    el(
-      "p",
-      { class: "note" },
-      "Score pending until calls can be evaluated against sourced prices. Identity, stake and calls are separate signals.",
-    ),
-    safeLink(
-      new URL(`/creators/${handle}`, appOrigin).href,
-      "Open full record ↗",
-      "cta",
-    ),
-  );
-}
-
 let queued = false;
 function schedule() {
   if (queued) return;
@@ -336,7 +124,6 @@ function schedule() {
   requestAnimationFrame(() => {
     queued = false;
     scanPosts();
-    void scanProfile();
   });
 }
 new MutationObserver(schedule).observe(document.body, {
@@ -344,26 +131,3 @@ new MutationObserver(schedule).observe(document.body, {
   subtree: true,
 });
 schedule();
-
-// Cached promises expiring alone do not refresh rendered badges/profile cards.
-// Clear old evidence first, then refresh only posts near the visible viewport.
-setInterval(() => {
-  if (document.visibilityState !== "visible") return;
-  evidenceRequests.clear();
-  for (const article of document.querySelectorAll<HTMLElement>(
-    'article[data-testid="tweet"]',
-  )) {
-    for (const badge of article.querySelectorAll(".cmb-badge-host"))
-      badge.remove();
-    const rect = article.getBoundingClientRect();
-    if (rect.bottom < -200 || rect.top > innerHeight + 200) {
-      // Re-entering the viewport should obtain evidence again.
-      seen.delete(article);
-      continue;
-    }
-    const id = postIdentity(article);
-    if (id) void addBadge(article, id.handle, id.postId);
-  }
-  document.querySelector(".cmb-profile-host")?.remove();
-  void scanProfile();
-}, 60000);

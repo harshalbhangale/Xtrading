@@ -2,10 +2,10 @@
 
 The extension is the primary product surface. On x.com it adds:
 
-1. **Author badges** next to names in posts: `✓ Verified` when the handle has a recorded X-ID/wallet binding, `◆ Staked` when the refundable stake is active and indexed. No badge otherwise.
-2. **Signal bars** under posts the server classifies as trade calls: asset, direction, spot/perp and venue, with **Trade ▸** (routable) or **Details ▸** (no testnet market).
-3. **A call-check drawer** (in-page, shadow DOM): what the post says, the creator's identity/stake/tracked calls, the Nansen wallet check and the venue route, with **Review trade in app ↗**.
-4. **Profile cards** on `x.com/<handle>`: verification, stake, tracked-call counts and recent calls.
+1. **Signal bars** only under posts classified as trading calls: asset, direction, spot/perp and venue, with **Trade ▸** (routable) or **Details ▸** (no testnet market).
+2. **A call-check drawer**, opened only when the user clicks: the post, separate creator identity/stake/call evidence, Nansen wallet observations and the venue route, with **Review trade in app ↗**.
+
+Ordinary posts remain untouched. Profile pages have no automatically inserted cards, and author names have no automatically inserted badges. Creator evidence is fetched when the call drawer opens.
 
 Signing never happens in the extension. The drawer opens `/dashboard/trade` with the route prefilled; the user sets amounts and approves in the app.
 
@@ -42,9 +42,9 @@ Trade ▸ → GET /api/creators/:handle/insights?asset&direction → evidence + 
 - `POST /api/signals/classify`: public, 90 requests/min per client, body ≤ 4 KB, text ≤ 2000 chars, global LLM budget 120 calls/min (overflow falls back to rules), cached by post ID + text hash.
 - The service worker only accepts messages from x.com/twitter.com tabs, caps concurrency at 4, deduplicates requests and sends no cookies or tokens.
 - Untrusted post text is rendered with `textContent` only and isolated in shadow roots.
-- Delayed evidence/classification responses are discarded if X has recycled the post. Visible badges and profile evidence refresh every minute; a failed refresh removes previous stake claims. Binding badges describe a recorded stable-ID proof, not a fresh handle ownership check.
+- Delayed classification responses are discarded if X has recycled the post. Missing or invalid classification produces no injected UI.
 
-Four DOM regression tests cover independent identity/stake chips, recycled posts and loss of current stake evidence. This does not replace validation of the production build on real X.
+Six DOM regression cases cover ordinary posts, click-only drawers, quiet profiles, invalid responses and recycled posts. Production validation on real X is still pending.
 
 ## Build and install
 

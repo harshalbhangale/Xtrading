@@ -1,40 +1,33 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { heuristicSignal } from "../../../packages/integrations/src/signals";
+import { openDrawer } from "./drawer";
 
-vi.mock("./drawer", () => ({
-  loadInsights: vi.fn().mockResolvedValue(null),
-  openDrawer: vi.fn(),
-}));
+vi.mock("./drawer", () => ({ openDrawer: vi.fn() }));
 
-const recorded = {
-  handle: "alice",
-  identity: { status: "bound", xUserId: "123" },
-  stake: { status: "active", chainId: 10143, symbol: "mUSDC" },
-  observedAt: "2026-10-12T08:00:00.000Z",
-};
-const unavailable = {
-  ...recorded,
-  identity: { status: "unavailable" },
-  stake: { status: "unavailable", chainId: 10143 },
-};
+const response = (text: string) => ({
+  signal: heuristicSignal({
+    handle: "alice",
+    postId: "123",
+    now: new Date("2026-10-12T08:00:00Z"),
+    text,
+  }),
+  route: { status: "unavailable", reason: "No market" },
+  llm: "unavailable",
+});
 let sendMessage = vi.fn<(message: { type: string }) => Promise<unknown>>();
 const flush = async () => {
   for (let i = 0; i < 10; i++) await Promise.resolve();
 };
-const badgeText = () =>
-  document.querySelector(".cmb-badge-host")?.shadowRoot?.textContent ?? "";
 
 beforeEach(() => {
   vi.resetModules();
-  vi.useFakeTimers();
+  vi.clearAllMocks();
   window.history.replaceState(null, "", "/home");
   document.body.innerHTML = `<article data-testid="tweet">
     <div data-testid="User-Name"><a href="https://x.com/alice/status/123"><time>now</time></a></div>
     <div data-testid="tweetText">buy $ETH</div>
   </article>`;
-  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
-  vi.stubGlobal("CMB_APP_ORIGIN", "https://tradepostapp.vercel.app");
   vi.stubGlobal("requestAnimationFrame", (fn: () => void) => {
     fn();
     return 1;
@@ -55,80 +48,76 @@ beforeEach(() => {
       unobserve() {}
     },
   );
-  sendMessage = vi.fn(async ({ type }) =>
-    type === "creator-evidence" ? recorded : null,
-  );
+  sendMessage = vi.fn(async () => response("buy $ETH"));
   vi.stubGlobal("chrome", { runtime: { sendMessage } });
 });
 
 afterEach(() => {
-  vi.clearAllTimers();
-  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   document.body.replaceChildren();
 });
 
-it("renders independent binding and active-stake chips", async () => {
+it("leaves ordinary posts untouched without creator evidence requests", async () => {
+  const textNode = document.querySelector('[data-testid="tweetText"]');
+  if (textNode) textNode.textContent = "Good morning everyone";
+  sendMessage.mockResolvedValue(response("Good morning everyone"));
   await import("./content");
   await flush();
-  expect(badgeText()).toContain("✓ Verified");
-  expect(badgeText()).toContain("◆ Staked");
+  expect(document.querySelector('[class^="cmb-"]')).toBeNull();
+  expect(sendMessage.mock.calls.map(([message]) => message.type)).toEqual([
+    "classify-post",
+  ]);
+  expect(openDrawer).not.toHaveBeenCalled();
 });
 
-it("does not attach a delayed creator binding to a recycled post", async () => {
-  let resolveEvidence: (value: unknown) => void = () => {};
-  const pending = new Promise((resolve) => {
-    resolveEvidence = resolve;
-  });
-  sendMessage.mockImplementation(async ({ type }) =>
-    type === "creator-evidence" ? pending : null,
-  );
+it("opens a detected call's drawer only after clicking its entry point", async () => {
   await import("./content");
-  document
-    .querySelector("a")
-    ?.setAttribute("href", "https://x.com/bob/status/456");
-  resolveEvidence(recorded);
   await flush();
+  const host = document.querySelector(".cmb-signal-host");
+  expect(host?.shadowRoot?.textContent).toContain("ETH");
   expect(document.querySelector(".cmb-badge-host")).toBeNull();
+  expect(openDrawer).not.toHaveBeenCalled();
+  host?.shadowRoot?.querySelector("button")?.click();
+  expect(openDrawer).toHaveBeenCalledWith(
+    "123",
+    response("buy $ETH").signal,
+    response("buy $ETH").route,
+  );
 });
+
+it("does not inject a profile card on profile pages", async () => {
+  window.history.replaceState(null, "", "/alice");
+  document.body.innerHTML =
+    '<div data-testid="primaryColumn"><div data-testid="UserName">Alice</div></div>';
+  await import("./content");
+  await flush();
+  expect(document.querySelector('[class^="cmb-"]')).toBeNull();
+  expect(sendMessage).not.toHaveBeenCalled();
+});
+
+it.each([null, { signal: { isCall: true } }])(
+  "leaves posts untouched when classification is invalid: %j",
+  async (value) => {
+    sendMessage.mockResolvedValue(value);
+    await import("./content");
+    await flush();
+    expect(document.querySelector(".cmb-signal-host")).toBeNull();
+  },
+);
 
 it("does not attach a delayed trade signal to a recycled post", async () => {
   let resolveSignal: (value: unknown) => void = () => {};
-  const pending = new Promise((resolve) => {
-    resolveSignal = resolve;
-  });
-  sendMessage.mockImplementation(async ({ type }) =>
-    type === "classify-post" ? pending : recorded,
+  sendMessage.mockReturnValue(
+    new Promise((resolve) => {
+      resolveSignal = resolve;
+    }),
   );
   await import("./content");
   document
     .querySelector("a")
     ?.setAttribute("href", "https://x.com/bob/status/456");
-  resolveSignal({
-    signal: heuristicSignal({
-      handle: "alice",
-      postId: "123",
-      text: "buy $ETH",
-    }),
-    route: { status: "unavailable", reason: "No market" },
-    llm: "unavailable",
-  });
+  resolveSignal(response("buy $ETH"));
   await flush();
   expect(document.querySelector(".cmb-signal-host")).toBeNull();
-});
-
-it("removes previous stake claims when the next evidence read is unavailable", async () => {
-  await import("./content");
-  await flush();
-  expect(badgeText()).toContain("◆ Staked");
-  sendMessage.mockImplementation(async ({ type }) =>
-    type === "creator-evidence" ? unavailable : null,
-  );
-  await vi.advanceTimersByTimeAsync(60000);
-  await flush();
-  expect(document.querySelector(".cmb-badge-host")).toBeNull();
-  expect(
-    sendMessage.mock.calls.filter(([m]) => m.type === "creator-evidence"),
-  ).toHaveLength(2);
 });
