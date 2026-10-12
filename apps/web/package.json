@@ -12,6 +12,7 @@
     "@call-my-bluff/database": "workspace:*",
     "@call-my-bluff/domain": "workspace:*",
     "@call-my-bluff/integrations": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.30.1",
     "@privy-io/node": "^0.35.0",
     "@privy-io/react-auth": "3.48.1",
     "drizzle-orm": "0.45.4",

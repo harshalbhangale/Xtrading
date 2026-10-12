@@ -49,7 +49,7 @@ Exit: a bound creator's profile/post shows current evidence from the backend.
 - [x] Add public Kuru/Perpl market discovery and authenticated unsigned Kuru step preparation.
 - [x] Move spot trading to Kuru Spot V2 testnet (AccountCore `0xdbaa…8038`; WETH/USDC and WBTC/USDC, both with live two-sided books). The old V1 MON/USDC market had no bids. Flow: exact approve → deposit shortfall → swap with simulated minimum and onchain deadline; withdraw back to wallet. A read-only `eth_call` from a funded third-party account returned 0.0037274949 WETH for 10 USDC, matching the book estimate.
 - [ ] Obtain Kuru V2 test USDC (`0xA402…fEF1`, admin-minted, no public faucet) and complete a confirmed fill from the bound wallet.
-- [ ] Verify Perpl network, market IDs, collateral units and unsigned order interface.
+- [x] Verify Perpl network, market IDs, collateral units and order interface: signed reads against testnet show account 1096 with forwarding enabled and 100 AUSD; order format matches Perpl's OrderSpec. Ticket reads back order status, fill and position (`/api/trades/perp/status`).
 - [x] Add user-confirmed leverage, server leverage/size caps, slippage and duplicate-order prevention for Perpl opens. Reduce-only exits remain.
 - [x] Ed25519-signed Perpl order submission; demo mode without credentials. Live submission pending a funded, forwarding-enabled account.
 - [ ] Demonstrate Perpl social trading with actual onchain activity; record its ≤2-minute API-bounty demo.
@@ -96,10 +96,10 @@ Exit: an expired bonded call produces one verified settlement, paying its reserv
 
 ## Phase 5: MCP
 
-- [ ] Implement MCP transport, schemas and connection instructions.
-- [ ] Add public creator/call/stake tools and authenticated portfolio access.
-- [ ] Add unsigned trade preparation using shared services.
-- [ ] Verify a real MCP client and denied private-data access.
+- [x] Implement MCP transport, schemas and connection instructions: stateless Streamable HTTP at `/api/mcp` (SDK 1.30.1), setup on `/integrations`.
+- [x] Public tools `get_creator`, `get_stake_status`, `list_calls`, `get_markets`, `quote_trade`, `classify_post`; signed-in `get_portfolio` via the user's Privy bearer token.
+- [x] `prepare_trade` returns one unsigned Kuru step from the shared `prepareSpot` service; nothing signs or submits.
+- [x] Verified with the SDK's Streamable HTTP client: 8 tools listed, live public results, and signed-in tools refused without a session.
 
 ## Phase 6: Deployment and submission
 
