@@ -282,3 +282,45 @@ it("treats an invalidated extension context as no answer instead of throwing", a
   vi.stubGlobal("chrome", { runtime: { sendMessage } });
   await expect(send({ type: "x" })).resolves.toBeNull();
 });
+
+it("does not insert temporary profile badges for missing identity evidence", async () => {
+  document.body.innerHTML =
+    '<div data-testid="primaryColumn"><div data-testid="UserName"><span>Alice</span></div></div>';
+  const { addProfileBadge } = await import("./creator-badge");
+  const name = document.querySelector('[data-testid="UserName"]');
+  const span = name?.querySelector("span");
+  if (!name || !span) throw new Error("Missing fixture");
+  const append = vi.spyOn(name, "append");
+  const after = vi.spyOn(span, "after");
+  for (let i = 0; i < 5; i++) await addProfileBadge("alice");
+  expect(append).not.toHaveBeenCalled();
+  expect(after).not.toHaveBeenCalled();
+  expect(sendMessage).toHaveBeenCalledTimes(1);
+});
+
+it("removes a profile badge when refreshed identity evidence is unavailable", async () => {
+  document.body.innerHTML =
+    '<div data-testid="primaryColumn"><div data-testid="UserName"><span>Alice</span></div></div>';
+  sendMessage.mockResolvedValue(bound);
+  const { addProfileBadge } = await import("./creator-badge");
+  await addProfileBadge("alice");
+  expect(document.querySelector(".cmb-profile-badge-host")).not.toBeNull();
+  sendMessage.mockResolvedValue(null);
+  await vi.advanceTimersByTimeAsync(60001);
+  await addProfileBadge("alice");
+  expect(document.querySelector(".cmb-profile-badge-host")).toBeNull();
+  expect(sendMessage).toHaveBeenCalledTimes(2);
+});
+
+it("refreshes feed evidence and discards an expired badge", async () => {
+  sendMessage.mockResolvedValue(bound);
+  const { addPostBadge } = await import("./creator-badge");
+  const article = document.querySelector("article");
+  if (!article) throw new Error("Missing fixture");
+  await addPostBadge(article, "alice");
+  expect(article.querySelector(".cmb-badge-host")).not.toBeNull();
+  sendMessage.mockResolvedValue(null);
+  await vi.advanceTimersByTimeAsync(60001);
+  await addPostBadge(article, "alice");
+  expect(article.querySelector(".cmb-badge-host")).toBeNull();
+});

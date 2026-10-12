@@ -50,16 +50,10 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
   if (article.querySelector(".cmb-signal-host")) return;
   const { signal, route } = parsed.data;
   const { host, root } = shadowHost("cmb-signal-host");
-  const arrow =
-    signal.direction === "bullish"
-      ? "📈"
-      : signal.direction === "bearish"
-        ? "📉"
-        : "🎯";
   const open = el(
     "button",
     { class: "btn", type: "button" },
-    route.status === "available" ? "Trade ▸" : "Details ▸",
+    route.status === "available" ? "Swap ▸" : "Details ▸",
   );
   open.addEventListener("click", (event) => {
     event.preventDefault();
@@ -78,20 +72,20 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
         "span",
         { class: "label" },
         signal.isCall
-          ? `${arrow} Call: ${signal.direction ?? "trade"} ${signal.asset ?? ""}`
+          ? `${signal.asset ?? "Trade"} · ${signal.direction ?? "call"}`
           : "Token address shared · unverified",
       ),
       el("span", { class: "meta" }, routeText),
-      el(
-        "span",
-        { class: "meta" },
-        signal.source === "llm" ? "· AI-extracted" : "· rule-extracted",
-      ),
       open,
-      safeLink(`https://x.com/${handle}/status/${postId}`, "View post ↗"),
     ),
   );
-  const bar = root.querySelector(".bar");
+  const bar = el(
+    "details",
+    { class: "feed-actions" },
+    el("summary", {}, "Post actions"),
+    safeLink(`https://x.com/${handle}/status/${postId}`, "View post ↗"),
+  );
+  root.querySelector(".bar")?.append(bar);
   for (const side of ["buy", "sell"] as const) {
     const path = tradeReviewPath(signal, route, side);
     const label =
@@ -179,7 +173,16 @@ new MutationObserver(schedule).observe(document.body, {
 schedule();
 
 setInterval(() => {
-  if (document.visibilityState === "visible") void scanProfile();
+  if (document.visibilityState === "visible") {
+    void scanProfile();
+    for (const article of document.querySelectorAll<HTMLElement>(
+      'article[data-testid="tweet"]',
+    )) {
+      if (!seen.has(article)) continue;
+      const id = postIdentity(article);
+      if (id) void addPostBadge(article, id.handle);
+    }
+  }
 }, 60_000);
 
 setInterval(observeFollowing, 3000);

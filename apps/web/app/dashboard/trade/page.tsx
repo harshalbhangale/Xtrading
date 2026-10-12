@@ -16,6 +16,18 @@ export default async function TradePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  const network =
+    params.chainId === undefined ? "10143" : (one(params.chainId) ?? "invalid");
+  const supportedNetwork = network === "10143" || network === "143";
+  const mainnet = network === "143";
+  const href = (changes: Record<string, string>) => {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (typeof value === "string") query.set(key, value);
+    }
+    for (const [key, value] of Object.entries(changes)) query.set(key, value);
+    return `/dashboard/trade?${query}`;
+  };
   const perp = one(params.instrument) === "perp";
   const handle = one(params.handle),
     postId = one(params.postId);
@@ -26,17 +38,38 @@ export default async function TradePage({
       <PageHeading
         title="Trade"
         description={
-          perp
-            ? "Perpl perpetuals on Monad testnet. Check market, size, leverage and caps before confirming. Perp positions can be liquidated."
-            : "Kuru spot on Monad testnet. Every swap is simulated against the live market, with a minimum output and onchain deadline set before your wallet opens."
+          !supportedNetwork
+            ? "Unsupported network. Select Monad testnet or mainnet."
+            : mainnet
+              ? "Monad mainnet · real funds. Trading is unavailable until the mainnet integration is validated."
+              : perp
+                ? "Perpl perpetuals on Monad testnet. Check market, size, leverage and caps before confirming. Perp positions can be liquidated."
+                : "Kuru spot on Monad testnet. Every swap is simulated against the live market, with a minimum output and onchain deadline set before your wallet opens."
         }
       />
+      <nav className="preview-selector" aria-label="Network">
+        <Link
+          href={href({ chainId: "10143" })}
+          aria-current={network === "10143" ? "page" : undefined}
+        >
+          Testnet · 10143
+        </Link>
+        <Link
+          href={href({ chainId: "143" })}
+          aria-current={mainnet ? "page" : undefined}
+        >
+          Mainnet · 143
+        </Link>
+      </nav>
       <nav className="preview-selector" aria-label="Instrument">
-        <Link href="/dashboard/trade" aria-current={perp ? undefined : "page"}>
+        <Link
+          href={href({ instrument: "spot" })}
+          aria-current={perp ? undefined : "page"}
+        >
           Spot · Kuru
         </Link>
         <Link
-          href="/dashboard/trade?instrument=perp"
+          href={href({ instrument: "perp" })}
           aria-current={perp ? "page" : undefined}
         >
           Perps · Perpl
@@ -54,7 +87,18 @@ export default async function TradePage({
           }
         />
       )}
-      {perp ? (
+      {!supportedNetwork || mainnet ? (
+        <Panel
+          title={mainnet ? "Mainnet trading not ready" : "Unsupported network"}
+          description="No wallet approval or transaction is available on this network."
+        >
+          <p>
+            {mainnet
+              ? "The current Kuru and Perpl adapters use Monad testnet contracts. Mainnet requires separate market configuration and execution validation. Your selection will never fall back to testnet."
+              : "Choose a supported network above to continue."}
+          </p>
+        </Panel>
+      ) : perp ? (
         <Panel
           title="Perpl perpetual order"
           description="Immediate-or-cancel market order with server-enforced leverage and size caps."

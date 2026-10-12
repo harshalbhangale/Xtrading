@@ -5,6 +5,22 @@ import { appOrigin } from "./config";
 import { el, send, shadowHost } from "./dom";
 
 type Evidence = z.infer<typeof publicCreatorEvidenceSchema>;
+const rendered = new WeakMap<
+  HTMLElement,
+  { handle: string; expiresAt: number; request: object }
+>();
+function begin(name: HTMLElement, handle: string, className: string) {
+  const previous = rendered.get(name);
+  if (previous?.handle === handle && previous.expiresAt > Date.now())
+    return null;
+  const request = {};
+  rendered.set(name, { handle, expiresAt: Date.now() + 60000, request });
+  name.querySelector(`.${className}`)?.remove();
+  return request;
+}
+function stillCurrent(name: HTMLElement, request: object) {
+  return name.isConnected && rendered.get(name)?.request === request;
+}
 const evidenceRequests = new Map<string, Promise<Evidence | null>>();
 
 function evidence(handle: string) {
@@ -63,7 +79,7 @@ function insertAfterName(container: HTMLElement, host: HTMLElement) {
  * and @handle, the host's own centring would land between the two lines, so nudge it by the
  * measured offset (a relative shift never disturbs X's layout).
  */
-function alignToName(host: HTMLElement, name: HTMLElement | void) {
+function alignToName(host: HTMLElement, name: HTMLElement | undefined) {
   if (!name) return;
   const apply = () => {
     if (!host.isConnected || !name.isConnected) return;
@@ -95,18 +111,19 @@ function openRecord(handle: string) {
 /** Quiet badge beside the author name in a post: no tooltip, not a focus stop. */
 export async function addPostBadge(article: HTMLElement, handle: string) {
   const name = article.querySelector<HTMLElement>('[data-testid="User-Name"]');
-  if (!name || name.querySelector(".cmb-badge-host")) return;
-  const { host, root } = shadowHost("cmb-badge-host");
-  const nameText = insertAfterName(name, host);
+  if (!name) return;
+  const request = begin(name, handle, "cmb-badge-host");
+  if (!request) return;
   const value = await evidence(handle);
-  if (!host.isConnected) return;
+  if (!stillCurrent(name, request)) return;
+  const { host, root } = shadowHost("cmb-badge-host");
   const chips: HTMLElement[] = [];
   if (value?.identity.status === "bound")
     chips.push(
       verifiedBadge({
         size: 20,
         title: "XTrading Verified",
-        subtitle: "Identity linked · On-chain record",
+        subtitle: "X identity linked · Wallet ownership verified",
         tooltip: false,
       }),
     );
@@ -121,10 +138,10 @@ export async function addPostBadge(article: HTMLElement, handle: string) {
         "◆ Staked",
       ),
     );
-  if (!chips.length) return host.remove();
+  if (!chips.length) return;
   for (const chip of chips) chip.addEventListener("click", openRecord(handle));
   root.append(el("span", { class: "badge" }, ...chips));
-  alignToName(host, nameText);
+  alignToName(host, insertAfterName(name, host));
 }
 
 /** Badge beside the profile display name, with the explanatory tooltip. */
@@ -137,22 +154,28 @@ export async function addProfileBadge(handle: string | null) {
     '[data-testid="primaryColumn"] [data-testid="UserName"]',
   );
   if (!name) return;
-  if (existing) {
-    if (existing.dataset.handle === handle && name.contains(existing)) return;
+  if (
+    existing &&
+    (existing.dataset.handle !== handle || !name.contains(existing))
+  )
     existing.remove();
-  }
+  const request = begin(name, handle, "cmb-profile-badge-host");
+  if (!request) return;
+  const value = await evidence(handle);
+  if (!stillCurrent(name, request) || value?.identity.status !== "bound")
+    return;
   const { host, root } = shadowHost("cmb-profile-badge-host");
   host.dataset.handle = handle;
-  const nameText = insertAfterName(name, host);
-  const value = await evidence(handle);
-  if (!host.isConnected) return;
-  if (value?.identity.status !== "bound") return host.remove();
   const badge = verifiedBadge({
     size: 24,
     title: "XTrading Verified",
-    subtitle: "Identity linked · On-chain record",
+    subtitle: "X identity linked · Wallet ownership verified",
   });
+  badge.setAttribute("role", "link");
   badge.addEventListener("click", openRecord(handle));
+  badge.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") openRecord(handle)(event);
+  });
   root.append(badge);
-  alignToName(host, nameText);
+  alignToName(host, insertAfterName(name, host));
 }
