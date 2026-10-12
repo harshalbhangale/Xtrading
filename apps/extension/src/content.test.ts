@@ -1,6 +1,9 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { heuristicSignal } from "../../../packages/integrations/src/signals";
+import {
+  deriveTradeRoute,
+  heuristicSignal,
+} from "../../../packages/integrations/src/signals";
 import { loadInsights, openDrawer } from "./drawer";
 
 vi.mock("./drawer", () => ({
@@ -130,6 +133,53 @@ it("does not attach a delayed trade signal to a recycled post", async () => {
   resolveSignal(response("buy $ETH"));
   await flush();
   expect(document.querySelector(".cmb-signal-host")).toBeNull();
+});
+
+it("rejects a response for a different post", async () => {
+  const value = response("buy $ETH");
+  value.signal.postId = "456";
+  sendMessage.mockResolvedValue(value);
+  await import("./content");
+  await flush();
+  expect(document.querySelector(".cmb-signal-host")).toBeNull();
+});
+
+it("keeps address-only posts out of scored calls and disables unknown token trades", async () => {
+  const text = "CA: 39fzweMMY4DRAgBQN61jbMGRoa2RBFTjAY3Vg95Epump";
+  const textNode = document.querySelector('[data-testid="tweetText"]');
+  if (textNode) textNode.textContent = text;
+  sendMessage.mockResolvedValue(response(text));
+  await import("./content");
+  await flush();
+  const shadow = document.querySelector(".cmb-signal-host")?.shadowRoot;
+  expect(shadow?.textContent).toContain("Token address shared");
+  expect(
+    shadow?.querySelector('a[href="https://x.com/alice/status/123"]'),
+  ).not.toBeNull();
+  expect(shadow?.querySelectorAll("button:disabled")).toHaveLength(2);
+  expect(response(text).signal.isCall).toBe(false);
+});
+
+it("offers separate buy and sell review links for a configured spot market", async () => {
+  const signal = response("buy $ETH").signal;
+  sendMessage.mockResolvedValue({
+    signal,
+    route: deriveTradeRoute(signal, []),
+    llm: "unavailable",
+  });
+  await import("./content");
+  await flush();
+  const links = document
+    .querySelector(".cmb-signal-host")
+    ?.shadowRoot?.querySelectorAll<HTMLAnchorElement>(
+      'a[href*="/dashboard/trade?"]',
+    );
+  expect(links).toHaveLength(2);
+  expect(
+    Array.from(links ?? []).map((link) =>
+      new URL(link.href).searchParams.get("side"),
+    ),
+  ).toEqual(["buy", "sell"]);
 });
 
 it("discards profile evidence if navigation changes before the response", async () => {

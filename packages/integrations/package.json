@@ -13,6 +13,7 @@
     "./calls": "./src/calls.ts",
     "./call-evaluation": "./src/call-evaluation.ts",
     "./signals": "./src/signals.ts",
+    "./token-references": "./src/token-references.ts",
     "./perpl": "./src/perpl.ts"
   },
   "scripts": {

@@ -95,17 +95,14 @@ function handleMessage(
   if (message.type === "classify-post") {
     const input = postSignalRequestSchema.safeParse(message.payload);
     if (!input.success) return Promise.resolve({ error: "invalid_post" });
-    return cached(
-      `signal:${input.data.postId}:${input.data.text.length}:${input.data.text.slice(0, 64)}`,
-      600000,
-      async () =>
-        postSignalResponseSchema.parse(
-          await getJson("/api/signals/classify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(input.data),
-          }),
-        ),
+    return cached(`signal:${JSON.stringify(input.data)}`, 600000, async () =>
+      postSignalResponseSchema.parse(
+        await getJson("/api/signals/classify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input.data),
+        }),
+      ),
     );
   }
   if (

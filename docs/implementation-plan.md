@@ -132,3 +132,14 @@ Commit verified features separately and update this checklist as they land.
 - [x] Reload extension 0.4.0 and validate profile expansion, real-X header/list selectors and the production app bridge. On 12 October, 25 observed follows appeared in Watchlist after opt-in.
 - [ ] Validate live account switching and observed unfollows; storage isolation/removal are covered by automated tests.
 - [ ] Creator-owned Perpl account mapping and actual open-position reads.
+
+## Images, address references and post actions
+
+- [x] Capture original-post X photo metadata; exclude avatars and quoted-post photos.
+- [x] Show images, full address references and View post in extension drawers and expanded creator dashboards.
+- [x] Add separate buy/sell review links for configured Kuru spot markets and long/short links for configured Perpl markets; unknown token/network routes stay unavailable.
+- [x] Add optional browser OCR with unverified text and address candidates; no paid image API or automatic trade terms.
+- [x] Verify dashboard media, address-only classification, original-post links and browser OCR on a real X attachment.
+- [ ] Verify extension 0.5.0 after Chrome reload.
+- [ ] Extract explicit target/stop/timeframe from observed calls and evaluate historical price paths; publish the default observation-window policy for calls without a deadline.
+- [ ] Add confirmed token/network mappings for address-bearing posts. Solana execution is outside the current Monad MVP.

@@ -1,5 +1,6 @@
 import { creatorOverviewSchema } from "@call-my-bluff/domain";
 import { el, safeLink, send } from "./dom";
+import { postActions, postAttachments } from "./drawer";
 
 export async function renderOverview(
   handle: string,
@@ -24,6 +25,36 @@ export async function renderOverview(
     return;
   }
   const value = parsed.data;
+  container.append(el("h3", {}, "Posts detected on X · not evaluated"));
+  if (value.detectedPostsStatus !== "ready")
+    container.append(el("p", { class: "note" }, "Detected posts unavailable."));
+  else if (!value.detectedPosts.length)
+    container.append(
+      el(
+        "p",
+        { class: "note" },
+        "No captured trade calls or token references yet.",
+      ),
+    );
+  for (const { signal, route } of value.detectedPosts.slice(0, 5)) {
+    container.append(
+      el(
+        "div",
+        { class: "finding" },
+        el(
+          "strong",
+          {},
+          `${signal.asset ?? "Token reference"} · ${signal.direction ?? "No direction stated"}`,
+        ),
+        el("p", { class: "note" }, signal.summary),
+        postAttachments(signal),
+        postActions(signal, route),
+        route.status === "unavailable"
+          ? el("p", { class: "note" }, route.reason)
+          : null,
+      ),
+    );
+  }
   container.append(el("h3", {}, "Ongoing registered calls"));
   if (value.callsStatus !== "ready")
     container.append(

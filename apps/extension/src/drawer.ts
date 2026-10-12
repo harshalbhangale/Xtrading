@@ -6,6 +6,7 @@ import {
   type Reputation,
   reputationSchema,
   type TradeRoute,
+  tradeReviewPath,
 } from "@call-my-bluff/domain";
 import { z } from "zod";
 import { appOrigin } from "./config";
@@ -40,23 +41,79 @@ export function tradeUrl(
   signal: PostSignal,
   route: TradeRoute,
 ) {
-  if (route.status !== "available") return null;
-  const params = new URLSearchParams({
-    instrument: route.instrument,
-    chainId: "10143",
-    postId,
-    handle: signal.handle,
-  });
-  if (route.side) params.set("side", route.side);
-  if (signal.asset) params.set("asset", signal.asset);
-  if (signal.direction) params.set("direction", signal.direction);
-  if (route.venue === "Kuru") params.set("market", route.marketId);
-  if (route.venue === "Perpl") {
-    params.set("marketId", route.marketId);
-    if (signal.leverage)
-      params.set("leverage", String(Math.min(signal.leverage, 50)));
+  const path = tradeReviewPath({ ...signal, postId }, route);
+  return path ? new URL(path, appOrigin).href : null;
+}
+
+export function postActions(signal: PostSignal, route: TradeRoute) {
+  const result = el(
+    "div",
+    { class: "bar" },
+    safeLink(
+      `https://x.com/${signal.handle}/status/${signal.postId}`,
+      "View post ↗",
+    ),
+  );
+  for (const side of ["buy", "sell"] as const) {
+    const path = tradeReviewPath(signal, route, side);
+    const label =
+      route.status === "available" && route.instrument === "perp"
+        ? side === "buy"
+          ? "Long"
+          : "Short"
+        : side === "buy"
+          ? "Buy"
+          : "Sell";
+    result.append(
+      path
+        ? safeLink(new URL(path, appOrigin).href, `${label} · review ↗`, "btn")
+        : el(
+            "button",
+            {
+              type: "button",
+              disabled: "",
+              class: "btn",
+              title:
+                route.status === "unavailable" ? route.reason : "Unavailable",
+            },
+            `${label} unavailable`,
+          ),
+    );
   }
-  return new URL(`/dashboard/trade?${params}`, appOrigin).href;
+  return result;
+}
+export function postAttachments(signal: PostSignal) {
+  const result = el("div", {});
+  for (const ref of signal.tokenReferences)
+    result.append(
+      el(
+        "p",
+        { class: "note", style: "overflow-wrap:anywhere" },
+        `${ref.kind === "solana" ? "Solana-shaped" : "EVM · chain unverified"} address: ${ref.address} · token identity unverified`,
+      ),
+    );
+  for (const image of signal.images) {
+    const link = safeLink(image.url, "", "");
+    link.append(
+      el("img", {
+        src: image.url,
+        alt: image.alt || "Post image",
+        loading: "lazy",
+        referrerpolicy: "no-referrer",
+        style: "width:100%;max-height:240px;object-fit:contain",
+      }),
+    );
+    result.append(link);
+  }
+  if (signal.images.length)
+    result.append(
+      el(
+        "p",
+        { class: "note" },
+        "Browser-observed image. Read image text in the creator dashboard; attachments and image prices are not independently verified.",
+      ),
+    );
+  return result;
 }
 
 const row = (label: string, value: string) =>
@@ -189,6 +246,8 @@ export async function openDrawer(
     el("p", { class: "note" }, signal.summary),
     row("Horizon", signal.horizon ?? "Not stated"),
     row("Confidence", signal.confidence),
+    postAttachments(signal),
+    postActions(signal, route),
     row(
       "Extracted by",
       signal.source === "llm"

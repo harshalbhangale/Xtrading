@@ -4,6 +4,7 @@ import {
   signalMethodologyVersion,
   type TradeRoute,
 } from "@call-my-bluff/domain";
+import { hasTokenMention, tokenReferences } from "./token-references";
 
 /** Kuru testnet spot markets, keyed by base asset symbol. Configure explicitly; no fallback. */
 // Kuru Spot V2 testnet markets with two-sided books; marketId is the trade page's market key.
@@ -90,6 +91,9 @@ export function heuristicSignal(input: {
     model: null,
     methodologyVersion: signalMethodologyVersion,
     classifiedAt: (input.now ?? new Date()).toISOString(),
+    images: [],
+    tokenReferences: tokenReferences(text),
+    tokenMention: hasTokenMention(text) && tokenReferences(text).length > 0,
   };
 }
 
@@ -107,6 +111,12 @@ export function deriveTradeRoute(
   signal: PostSignal,
   perplMarkets: PerplMarketSummary[],
 ): TradeRoute {
+  if (signal.tokenReferences.length)
+    return {
+      status: "unavailable",
+      reason:
+        "Address reference requires token and network verification. No ticker-based substitute is offered.",
+    };
   if (!signal.isCall || !signal.asset)
     return { status: "unavailable", reason: "The post is not a trade call." };
   if (signal.instrument === "perp") {

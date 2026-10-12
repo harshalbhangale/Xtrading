@@ -210,7 +210,7 @@ export function tradepostMcp(request: Request) {
         text: z.string().min(1).max(2000),
       },
     },
-    (input) => run(() => classifyPost(input)),
+    (input) => run(() => classifyPost({ ...input, images: [] })),
   );
 
   server.registerTool(

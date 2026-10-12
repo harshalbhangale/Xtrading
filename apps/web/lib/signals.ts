@@ -12,7 +12,11 @@ import {
   mentionsAsset,
   type PerplMarketSummary,
 } from "@call-my-bluff/integrations/signals";
-import { eq } from "drizzle-orm";
+import {
+  hasTokenMention,
+  tokenReferences,
+} from "@call-my-bluff/integrations/token-references";
+import { and, eq } from "drizzle-orm";
 import { getDatabase } from "./database";
 import { classifyWithLlm, llmMode } from "./llm";
 import { perplSnapshot } from "./markets";
@@ -60,7 +64,7 @@ async function stored(postId: string, textHash: string) {
 
 async function persist(signal: PostSignal, textHash: string) {
   const database = getDatabase();
-  if (!database || !signal.isCall) return;
+  if (!database || (!signal.isCall && !signal.tokenMention)) return;
   try {
     await database.db
       .insert(postSignals)
@@ -79,6 +83,17 @@ async function persist(signal: PostSignal, textHash: string) {
       })
       // First classification wins; an edited post with new text is re-keyed by hash on read.
       .onConflictDoNothing();
+    // Enrich the same captured text with image metadata; never replace changed text.
+    if (signal.images.length)
+      await database.db
+        .update(postSignals)
+        .set({ signal })
+        .where(
+          and(
+            eq(postSignals.postId, signal.postId),
+            eq(postSignals.textHash, textHash),
+          ),
+        );
   } catch {
     // Persistence is best-effort; the response still reflects this classification.
   }
@@ -104,8 +119,15 @@ export async function classifyPost(input: PostSignalRequest) {
         ? await classifyWithLlm(input)
         : null;
     signal = modelled ?? baseline;
-    await persist(signal, textHash);
   }
+  signal = {
+    ...signal,
+    images: input.images.length ? input.images : signal.images,
+    tokenReferences: tokenReferences(input.text),
+    tokenMention:
+      hasTokenMention(input.text) && tokenReferences(input.text).length > 0,
+  };
+  await persist(signal, textHash);
   if (cache.size >= 2000) cache.clear();
   cache.set(key, { expires: Date.now() + 3_600_000, signal });
   return {

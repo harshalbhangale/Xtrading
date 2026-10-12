@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { detectedPostSchema } from "./signals";
 
 export type {
   CallView,
@@ -339,6 +340,8 @@ export const creatorOverviewSchema = z.object({
   expiredUnresolved: z.number().int().nonnegative(),
   activity: kuruActivitySchema.nullable(),
   positionsNote: z.string(),
+  detectedPosts: z.array(detectedPostSchema).max(10).default([]),
+  detectedPostsStatus: z.enum(["ready", "unavailable"]).default("unavailable"),
 });
 export type CreatorOverview = z.infer<typeof creatorOverviewSchema>;
 

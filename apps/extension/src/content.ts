@@ -1,10 +1,13 @@
 import {
   normalizeHandle,
   postSignalResponseSchema,
+  tradeReviewPath,
 } from "@call-my-bluff/domain";
-import { el, send, shadowHost } from "./dom";
+import { appOrigin } from "./config";
+import { el, safeLink, send, shadowHost } from "./dom";
 import { openDrawer } from "./drawer";
 import { observeFollowing } from "./follow-observer";
+import { postImages } from "./post-media";
 import { scanProfile } from "./profile";
 
 function postIdentity(article: HTMLElement) {
@@ -27,17 +30,20 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
   if (!textNode || !text || text.length > 2000) return;
   const raw = await send<unknown>({
     type: "classify-post",
-    payload: { postId, handle, text },
+    payload: { postId, handle, text, images: postImages(article, postId) },
   });
   const parsed = postSignalResponseSchema.safeParse(raw);
   const current = postIdentity(article);
   if (
     !parsed.success ||
-    !parsed.data.signal.isCall ||
+    parsed.data.signal.postId !== postId ||
+    parsed.data.signal.handle !== handle ||
+    (!parsed.data.signal.isCall && !parsed.data.signal.tokenMention) ||
     !article.isConnected ||
     seen.get(article) !== `${handle}:${postId}` ||
     current?.handle !== handle ||
-    current.postId !== postId
+    current.postId !== postId ||
+    textNode.innerText.trim() !== text
   )
     return;
   if (article.querySelector(".cmb-signal-host")) return;
@@ -70,7 +76,9 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
       el(
         "span",
         { class: "label" },
-        `${arrow} Call: ${signal.direction ?? "trade"} ${signal.asset ?? ""}`,
+        signal.isCall
+          ? `${arrow} Call: ${signal.direction ?? "trade"} ${signal.asset ?? ""}`
+          : "Token address shared · unverified",
       ),
       el("span", { class: "meta" }, routeText),
       el(
@@ -79,8 +87,40 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
         signal.source === "llm" ? "· AI-extracted" : "· rule-extracted",
       ),
       open,
+      safeLink(`https://x.com/${handle}/status/${postId}`, "View post ↗"),
     ),
   );
+  const bar = root.querySelector(".bar");
+  for (const side of ["buy", "sell"] as const) {
+    const path = tradeReviewPath(signal, route, side);
+    const label =
+      route.status === "available" && route.instrument === "perp"
+        ? side === "buy"
+          ? "Long"
+          : "Short"
+        : side === "buy"
+          ? "Buy"
+          : "Sell";
+    bar?.append(
+      path
+        ? safeLink(
+            new URL(path, appOrigin).href,
+            `${label} · review ↗`,
+            "btn secondary",
+          )
+        : el(
+            "button",
+            {
+              type: "button",
+              disabled: "",
+              class: "btn secondary",
+              title:
+                route.status === "unavailable" ? route.reason : "Unavailable",
+            },
+            `${label} unavailable`,
+          ),
+    );
+  }
   // Clicks inside the bar must not open the post.
   host.addEventListener("click", (e) => e.stopPropagation());
   textNode.after(host);
