@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import {
-  PageHeading,
-  Panel,
-  RecordTable,
-} from "../../../components/dashboard/ui";
+import { ActivityControl } from "../../../components/activity-control";
+import { PageHeading, Panel } from "../../../components/dashboard/ui";
 
 export const metadata: Metadata = { title: "Activity" };
 
@@ -12,14 +9,10 @@ export default function ActivityPage() {
     <>
       <PageHeading
         title="Activity"
-        description="Account changes, stake events, orders and confirmed fills."
+        description="Kuru swaps, deposits and withdrawals from your wallet, as indexed by Envio. Stake history is on the creator Stake page."
       />
       <Panel title="Events">
-        <RecordTable
-          columns={["Event", "Status", "Source", "Time", "Receipt"]}
-          emptyTitle="No events yet."
-          emptyDescription="Your stake history is on the Stake page; trade events appear once fill indexing is live."
-        />
+        <ActivityControl view="all" />
       </Panel>
     </>
   );

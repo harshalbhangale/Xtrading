@@ -71,7 +71,7 @@ pnpm contracts:abi
 pnpm indexer:codegen
 ```
 
-Envio is running locally and has indexed the first mock stake deposit, using contract-qualified position IDs, reorg rollback, a ten-block indexing lag and a 200-block reorg window. Its local database is isolated from the app database. The stake page shows up to 20 indexed balance updates, indexing progress and current/lagging/unavailable states. Extension projections are not connected yet.
+Envio also indexes Kuru V2 swaps, deposits, withdrawals and account registrations for the portfolio and activity pages. Set `ENVIO_MONAD_RPC_URL` in `services/indexer/.env` to use a keyed RPC; adding contracts requires `envio start -r` (local projection rebuild). Envio is running locally and has indexed the first mock stake deposit, using contract-qualified position IDs, reorg rollback, a ten-block indexing lag and a 200-block reorg window. Its local database is isolated from the app database. The stake page shows up to 20 indexed balance updates, indexing progress and current/lagging/unavailable states. Extension projections are not connected yet.
 
 To run locally, copy `services/indexer/.env.example` to `.env`, run `docker compose -p cmb-stake-indexer -f services/indexer/docker-compose.yml up -d`, then `pnpm --filter @call-my-bluff/indexer start`. Hasura is bound to localhost port 8081; its local development admin secret is `testing`. These settings are for local development only. Indexed history remains empty until stake events occur; a block lag is not a claim of chain finality.
 

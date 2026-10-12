@@ -261,9 +261,14 @@ export default function ConfiguredTrade() {
         setReview(await fresh(null));
         return;
       }
+      if (current.action === "swap" && current.sourcePostId)
+        await api("/api/trades/record", {
+          transactionHash: sent.hash,
+          sourcePostId: current.sourcePostId,
+        }).catch(() => undefined);
       setNotice(
         current.action === "swap"
-          ? `Swap confirmed in block ${receipt.blockNumber}. Proceeds are in your Kuru account; withdraw them below.`
+          ? `Swap confirmed in block ${receipt.blockNumber}. Proceeds are in your Kuru account; withdraw them below. The fill appears in your portfolio once Envio indexes it.`
           : `Withdrawal confirmed in block ${receipt.blockNumber}.`,
       );
     });

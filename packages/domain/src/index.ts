@@ -272,3 +272,53 @@ export const publicCallLedgerSchema = z.object({
   observedAt: z.iso.datetime(),
 });
 export * from "./signals";
+
+const txHashSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
+const indexedIdSchema = z.string().regex(/^10143:[0-9]+:[0-9]+$/);
+export const kuruActivitySchema = z.object({
+  status: z.enum(["current", "lagging", "unavailable"]),
+  observedAt: z.iso.datetime(),
+  progressBlock: amountSchema.nullable(),
+  headBlock: amountSchema.nullable(),
+  accountIds: z.array(amountSchema).max(20),
+  swaps: z
+    .array(
+      z.object({
+        id: indexedIdSchema,
+        market: z.enum(["WETH", "WBTC"]),
+        side: z.enum(["buy", "sell"]),
+        amountIn: amountSchema,
+        amountOut: amountSchema,
+        minAmountOut: amountSchema,
+        blockNumber: amountSchema,
+        timestamp: amountSchema,
+        transactionHash: txHashSchema,
+        // User-supplied when the trade was placed; not verified against the post.
+        sourcePostId: z
+          .string()
+          .regex(/^[0-9]{1,30}$/)
+          .nullable(),
+      }),
+    )
+    .max(50),
+  transfers: z
+    .array(
+      z.object({
+        id: indexedIdSchema,
+        kind: z.enum(["deposit", "withdrawal"]),
+        token: z.enum(["USDC", "WETH", "WBTC"]),
+        amount: amountSchema,
+        blockNumber: amountSchema,
+        timestamp: amountSchema,
+        transactionHash: txHashSchema,
+      }),
+    )
+    .max(50),
+});
+export type KuruActivity = z.infer<typeof kuruActivitySchema>;
+export const recordTradeSchema = z
+  .object({
+    transactionHash: txHashSchema,
+    sourcePostId: z.string().regex(/^[0-9]{1,30}$/),
+  })
+  .strict();

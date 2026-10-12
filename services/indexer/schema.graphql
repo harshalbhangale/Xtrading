@@ -17,3 +17,43 @@ type StakeEvent {
   blockNumber: BigInt!
   timestamp: BigInt!
 }
+
+# Kuru V2 AccountCore numeric account, keyed by chain and account ID.
+type KuruAccount {
+  id: ID!
+  chainId: Int!
+  accountId: BigInt!
+  rootAccountId: BigInt!
+  rootOwner: String!
+  registeredAtBlock: BigInt!
+}
+
+# One confirmed taker swap (SpotSwap). Amounts are raw token atoms.
+type KuruSwap {
+  id: ID!
+  chainId: Int!
+  market: String!
+  accountId: BigInt!
+  executor: String!
+  isBuy: Boolean!
+  amountIn: BigInt!
+  amountOut: BigInt!
+  minAmountOut: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  transactionHash: String!
+}
+
+# AccountCore custody movement: "deposit" (payer) or "withdrawal" (recipient).
+type KuruTransfer {
+  id: ID!
+  chainId: Int!
+  kind: String!
+  accountId: BigInt!
+  token: String!
+  counterparty: String!
+  amount: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  transactionHash: String!
+}

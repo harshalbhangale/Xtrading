@@ -57,8 +57,9 @@ Exit: a bound creator's profile/post shows current evidence from the backend.
 - [ ] Verify successful quotes and wallet approval in funded/liquid conditions; separate fee breakdown remains unavailable.
 - [x] Add X trade entry points with source-post attribution.
 - [ ] Execute only after Privy wallet approval.
-- [ ] Index order/fill events and distinguish open, partial, filled, cancelled and failed orders.
-- [ ] Populate portfolio/activity from confirmed fills; add optional watchlist sync.
+- [x] Index Kuru V2 `SpotSwap`, AccountCore `Deposit`/`Withdrawal` and `AccountRegistered` with Envio (from block 70280000; event IDs are chain:block:logIndex; reorg rollback on). Swaps are taker-level fills; resting-order lifecycle (open/partial/cancelled) is not indexed because the app only places swaps.
+- [x] Populate portfolio/activity from indexed fills with freshness against the chain head (`GET /api/me/activity`). Source posts are linked after the receipt is verified as the bound wallet's successful swap (`POST /api/trades/record`); the post ID stays user-supplied.
+- [ ] Verify a live fill end to end once Kuru test USDC is available; optional watchlist sync remains.
 - [ ] Test rejected signatures, expired quotes, wrong chain, insufficient funds and unavailable liquidity.
 
 Exit: X → review → approval → Kuru fill → dashboard with actual amounts.

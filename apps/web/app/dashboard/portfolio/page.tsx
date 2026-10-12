@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
+import { ActivityControl } from "../../../components/activity-control";
 import {
   ConnectionNote,
   PageHeading,
   Panel,
-  RecordTable,
 } from "../../../components/dashboard/ui";
 
 export const metadata: Metadata = { title: "Portfolio" };
@@ -13,33 +13,10 @@ export default function PortfolioPage() {
     <>
       <PageHeading
         title="Portfolio"
-        description="Holdings and returns from confirmed fills only, each linked to the post that prompted it."
+        description="Your confirmed Kuru fills, each linked to its transaction and the post that prompted it. Current balances are on the Trade page."
       />
-      <Panel
-        title="Holdings"
-        description="Token amounts and valuation are shown separately."
-      >
-        <RecordTable
-          columns={["Asset", "Amount", "Value", "Cost basis", "Data as of"]}
-          emptyTitle="No holdings to show."
-          emptyDescription="Holdings appear once fill indexing is live."
-        />
-      </Panel>
-      <Panel
-        title="Trade history"
-        description="Submitted orders are not confirmed fills."
-      >
-        <RecordTable
-          columns={[
-            "Market / side",
-            "Actual amounts",
-            "Fees",
-            "Source post",
-            "Transaction",
-          ]}
-          emptyTitle="No confirmed fills to display."
-          emptyDescription="Each fill will show its transaction, source post and status."
-        />
+      <Panel title="Confirmed fills">
+        <ActivityControl view="fills" />
       </Panel>
       <ConnectionNote>
         Hypothetical creator call outcomes never count as your wallet returns.

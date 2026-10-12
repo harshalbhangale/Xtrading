@@ -1,19 +1,35 @@
 # Verified deployments: contracts/deployments/{monad-testnet,mock-stake-monad-testnet}.json.
+# Kuru Spot V2: https://kuru-testnet-docs.mintlify.site/deployments/testnet (SDK 0.2.0 ABIs).
 name: call-my-bluff-stakes
-description: Refundable creator stake projections on Monad testnet
+description: Refundable creator stakes and Kuru V2 spot swaps on Monad testnet
 rollback_on_reorg: true
+field_selection:
+  transaction_fields:
+    - hash
 contracts:
   - name: CreatorStake
     handler: src/handlers.ts
     events:
       - event: StakeUpdated(address indexed wallet, uint256 balance, uint256 withdrawableAt)
+  - name: KuruOrderBook
+    handler: src/handlers.ts
+    events:
+      # Taker-level swap summary; enough for user fill history, not for book mirroring.
+      - event: SpotSwap(uint40 indexed userId, address indexed executor, bool indexed isBuy, uint128 amountInUsed, uint128 amountOut, uint128 minAmountOut)
+  - name: KuruAccountCore
+    handler: src/handlers.ts
+    events:
+      - event: AccountRegistered(uint40 indexed accountId, uint40 indexed rootAccountId, address indexed rootOwner, uint16 subaccountSeq)
+      - event: Deposit(uint40 indexed accountId, address indexed token, address indexed payer, uint256 amount)
+      - event: Withdrawal(uint40 indexed accountId, address indexed token, address indexed recipient, uint256 amount)
 chains:
   - id: 10143
     start_block: 70144598
     max_reorg_depth: 200
     block_lag: 10
     rpc:
-      url: https://testnet-rpc.monad.xyz
+      # Set ENVIO_MONAD_RPC_URL in .env for a keyed provider; never commit the key.
+      url: ${ENVIO_MONAD_RPC_URL:-https://testnet-rpc.monad.xyz}
       for: sync
       initial_block_interval: 99
       interval_ceiling: 99
@@ -22,3 +38,13 @@ chains:
         address:
           - "0x4B1a8c4E158E4E3EEa22A62205F1e0CD82d0D5B6"
           - "0x9e09b97dBaDc1D6f3A3C5bA9aF0E47923C34634e"
+      # No app user had a Kuru V2 account before this block; earlier history is out of scope.
+      - name: KuruOrderBook
+        start_block: 70280000
+        address:
+          - "0x9d187971B64505Ac81f12c5FD2ac9c5247Ec62F3" # WETH/USDC
+          - "0x8661cB7c5f4f8ae3ee116B63Aa5a23c69110e357" # WBTC/USDC
+      - name: KuruAccountCore
+        start_block: 70280000
+        address:
+          - "0xdbaaDe7B42c95399bb1E9614D51B5B9e2cf78038"

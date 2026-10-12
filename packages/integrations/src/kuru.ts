@@ -25,6 +25,7 @@ export const orderBookAbi = parseAbi([
   "struct BuilderConfig { address builder; uint32 feePps; }",
   "struct SwapResult { uint128 amountInUsed; uint128 amountOut; }",
   "function swap(uint40 userId, bool isBuy, uint128 amountIn, uint128 minAmountOut, uint64 deadline, BuilderConfig builderConfig) returns (SwapResult result)",
+  "event SpotSwap(uint40 indexed userId, address indexed executor, bool indexed isBuy, uint128 amountInUsed, uint128 amountOut, uint128 minAmountOut)",
 ]);
 
 type Token = { symbol: string; address: Address; decimals: number };
