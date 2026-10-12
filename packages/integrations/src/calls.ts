@@ -1,3 +1,4 @@
+import type { PostAvailability } from "@call-my-bluff/domain";
 import { z } from "zod";
 
 /**
@@ -216,4 +217,21 @@ export function firstNansenCandle(raw: string, timestamp: number) {
       return { start, open: row.open };
   }
   return undefined;
+}
+
+/** Check only public reachability. A missing embed cannot prove a deletion. */
+export async function checkPostAvailability(
+  postId: string,
+  fetcher: typeof fetch = fetch,
+): Promise<PostAvailability> {
+  if (!/^[0-9]{1,20}$/.test(postId)) throw new Error("Invalid post ID");
+  let status: PostAvailability["status"];
+  try {
+    status = (await fetchPublicPost(postId, fetcher))
+      ? "available"
+      : "not-publicly-available";
+  } catch {
+    status = "unavailable";
+  }
+  return { status, source: "x-oembed", checkedAt: new Date().toISOString() };
 }

@@ -1,9 +1,12 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { heuristicSignal } from "../../../packages/integrations/src/signals";
-import { openDrawer } from "./drawer";
+import { loadInsights, openDrawer } from "./drawer";
 
-vi.mock("./drawer", () => ({ openDrawer: vi.fn() }));
+vi.mock("./drawer", () => ({
+  openDrawer: vi.fn(),
+  loadInsights: vi.fn().mockResolvedValue(null),
+}));
 
 const response = (text: string) => ({
   signal: heuristicSignal({
@@ -22,6 +25,8 @@ const flush = async () => {
 
 beforeEach(() => {
   vi.resetModules();
+  vi.useFakeTimers();
+  vi.stubGlobal("CMB_APP_ORIGIN", "https://tradepostapp.vercel.app");
   vi.clearAllMocks();
   window.history.replaceState(null, "", "/home");
   document.body.innerHTML = `<article data-testid="tweet">
@@ -53,6 +58,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.clearAllTimers();
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   document.body.replaceChildren();
@@ -86,13 +93,16 @@ it("opens a detected call's drawer only after clicking its entry point", async (
   );
 });
 
-it("does not inject a profile card on profile pages", async () => {
+it("shows one honest creator card on profile pages without adding feed panels", async () => {
   window.history.replaceState(null, "", "/alice");
   document.body.innerHTML =
     '<div data-testid="primaryColumn"><div data-testid="UserName">Alice</div></div>';
   await import("./content");
   await flush();
-  expect(document.querySelector('[class^="cmb-"]')).toBeNull();
+  expect(document.querySelectorAll(".cmb-profile-host")).toHaveLength(1);
+  expect(
+    document.querySelector(".cmb-profile-host")?.shadowRoot?.textContent,
+  ).toContain("Creator evidence unavailable");
   expect(sendMessage).not.toHaveBeenCalled();
 });
 
@@ -120,4 +130,23 @@ it("does not attach a delayed trade signal to a recycled post", async () => {
   resolveSignal(response("buy $ETH"));
   await flush();
   expect(document.querySelector(".cmb-signal-host")).toBeNull();
+});
+
+it("discards profile evidence if navigation changes before the response", async () => {
+  window.history.replaceState(null, "", "/alice");
+  document.body.innerHTML =
+    '<div data-testid="primaryColumn"><div data-testid="UserName">Alice</div></div>';
+  let resolveInsights: (value: null) => void = () => {};
+  vi.mocked(loadInsights).mockReturnValueOnce(
+    new Promise((resolve) => {
+      resolveInsights = resolve;
+    }),
+  );
+  await import("./content");
+  window.history.replaceState(null, "", "/bob");
+  resolveInsights(null);
+  await flush();
+  expect(
+    document.querySelector(".cmb-profile-host")?.shadowRoot?.textContent,
+  ).not.toContain("Creator evidence unavailable");
 });

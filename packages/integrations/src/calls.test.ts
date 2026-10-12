@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  checkPostAvailability,
   decimalToUnits,
   fetchPublicPost,
   firstNansenCandle,
@@ -99,5 +100,51 @@ describe("observePrice", () => {
       start: 1_700_000_040,
       open: "0.024790290931010199",
     });
+  });
+});
+
+describe("public post availability", () => {
+  it("reports a valid public post as available", async () => {
+    const value = await checkPostAvailability("123", async () =>
+      json({ author_url: "https://x.com/alice", html: "<p>buy ETH</p>" }),
+    );
+    expect(value.status).toBe("available");
+    expect(value.source).toBe("x-oembed");
+  });
+  it("never calls a missing embed a confirmed deletion", async () => {
+    expect(
+      (await checkPostAvailability("123", async () => json({}, 404))).status,
+    ).toBe("not-publicly-available");
+  });
+  it.each([401, 403, 429, 500])(
+    "keeps HTTP %i failures inconclusive",
+    async (status) => {
+      expect(
+        (await checkPostAvailability("123", async () => json({}, status)))
+          .status,
+      ).toBe("unavailable");
+    },
+  );
+  it("keeps network and malformed response failures inconclusive", async () => {
+    expect(
+      (
+        await checkPostAvailability("123", async () => {
+          throw new Error("offline");
+        })
+      ).status,
+    ).toBe("unavailable");
+    expect(
+      (await checkPostAvailability("123", async () => json({}))).status,
+    ).toBe("unavailable");
+  });
+  it("rejects arbitrary URL input before fetching", async () => {
+    let requested = false;
+    await expect(
+      checkPostAvailability("https://example.com", async () => {
+        requested = true;
+        return json({});
+      }),
+    ).rejects.toThrow("Invalid post ID");
+    expect(requested).toBe(false);
   });
 });

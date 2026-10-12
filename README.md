@@ -2,7 +2,7 @@
 
 Creator evidence and spot/perp trading from X, built on Monad. The product includes a landing page, creator studio, user dashboard, Chrome extension and planned MCP server.
 
-Identity binding works. Both stake contracts and mUSDC are deployed and verified on testnet. A wallet-approved 500 mUSDC deposit is confirmed and indexed by Envio; the authenticated stake page now reads indexed history. The X extension adds verified-creator badges, trade-call detection (Groq, or rules without a key), a call-check drawer with the creator record and a Nansen wallet check, and reviewed Kuru spot / Perpl perp trades; providers without keys run in labelled demo mode. Confirmed Kuru fills, a live Perpl order, a keyed Nansen run, CRE workflow and MCP remain pending.
+Identity binding works. Both stake contracts and mUSDC are deployed and verified on testnet. A wallet-approved 500 mUSDC deposit is confirmed and indexed by Envio; the authenticated stake page now reads indexed history. The X extension adds creator records on profile headers, trade-call detection (Groq, or rules without a key), a call-check drawer with the creator record and a Nansen wallet check, and reviewed Kuru spot / Perpl perp trades; providers without keys run in labelled demo mode. Confirmed Kuru fills, a live Perpl order, a keyed Nansen run, CRE workflow and MCP remain pending.
 
 Live withdrawal request and cancellation were confirmed and indexed; the 500 mUSDC stake is active again. The extension implements separate binding/stake indicators, evidence details and spot trade review links. Chrome installation and real-X validation are pending. Its public evidence endpoint exposes recorded stable-X-ID bindings and requires fresh matching RPC/Envio data before showing active stake.
 
@@ -103,6 +103,7 @@ Checks include formatting, TypeScript, application tests, local identity integra
 - [Required sponsors](SPONSORS.md)
 - [X extension](docs/x-extension.md)
 - [Component references](docs/references.md)
+- [Kollateral review and accountability roadmap](docs/kollateral-reference-review.md)
 - [Identity binding](docs/identity-binding.md)
 - [Stake transactions](docs/stake-transactions.md)
 - [Mock USDC](docs/mock-usdc.md)

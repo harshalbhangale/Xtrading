@@ -4,6 +4,7 @@ import {
 } from "@call-my-bluff/domain";
 import { el, send, shadowHost } from "./dom";
 import { openDrawer } from "./drawer";
+import { scanProfile } from "./profile";
 
 function postIdentity(article: HTMLElement) {
   const postLink = Array.from(
@@ -124,6 +125,7 @@ function schedule() {
   requestAnimationFrame(() => {
     queued = false;
     scanPosts();
+    void scanProfile();
   });
 }
 new MutationObserver(schedule).observe(document.body, {
@@ -131,3 +133,7 @@ new MutationObserver(schedule).observe(document.body, {
   subtree: true,
 });
 schedule();
+
+setInterval(() => {
+  if (document.visibilityState === "visible") void scanProfile();
+}, 60_000);

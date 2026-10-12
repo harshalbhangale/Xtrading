@@ -15,7 +15,7 @@ Updated 12 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added tar
 - [x] Live stake RPC reads and separate wallet reviews for approval, deposit and withdrawal actions.
 - [x] Original six-decimal mUSDC contract and faucet; deployed with 10,000 mUSDC in the project wallet.
 - [x] Envio schema, event handlers, contract configuration and generated bindings.
-- [x] Latest local checks: 65 application tests, 29 Foundry tests, web/extension builds; six database integration tests skipped in this run.
+- [x] Latest local checks: 74 application tests, 29 Foundry tests, web/extension builds; six database integration tests skipped in this run.
 
 ## Phase 1: Finish stake and indexing
 
@@ -36,8 +36,8 @@ Exit: a deposit updates current stake evidence; requesting withdrawal removes ac
 - [ ] Resolve handles through verified stable-X-ID mappings.
 - [x] Implement separate recorded-binding and current indexed stake indicators plus evidence details. Validate on real X after installation approval.
 - [x] Handle missing/stale data, withdrawal pending, feed navigation and duplicate injection (shadow-DOM UI, recycled-node keys, visibility-gated requests).
-- [x] Discard delayed classifications for recycled posts; six DOM regression cases cover call-only inserts, click-only drawers, quiet profiles and invalid responses. Production real-X validation remains pending Chrome reload.
-- [x] Signal bars for detected calls and a user-opened call-check drawer. Ordinary posts and profiles remain untouched; creator evidence appears inside the drawer. Real-X validation pending.
+- [x] Discard delayed classifications for recycled posts; seven DOM regression cases cover call-only inserts, click-only drawers, profile records, stale navigation and invalid responses. Production real-X validation remains pending Chrome reload.
+- [x] Signal bars for detected calls and a user-opened call-check drawer. Ordinary posts remain untouched; profile headers show creator records and call drawers show evidence. Real-X validation pending.
 - [x] Validate message sender origins and implement unsigned spot Buy/Sell handoffs with source post ID. Real-X end-to-end validation remains pending.
 
 Exit: detected calls open current creator evidence and a safe trade handoff; ordinary posts remain untouched.
@@ -114,3 +114,12 @@ Exit: an expired bonded call produces one verified settlement, paying its reserv
 - [ ] Demonstrate Nansen evidence and MCP; prepare sponsor evidence and submission video.
 
 Commit verified features separately and update this checklist as they land.
+
+## Post accountability follow-up
+
+- [x] Restore profile-header creator evidence while retaining call-only UI on feed posts.
+- [x] Registered-call tables retain archived text/timestamps and offer on-demand public post availability checks. A missing public embed is not a confirmed deletion.
+- [x] Review Kollateral source and record adaptations in [reference review](kollateral-reference-review.md); no source imported.
+- [ ] Archive extension-detected post text as append-only versions with capture provenance.
+- [ ] Persist availability observations and run resumable scheduled checks with provider backoff.
+- [ ] Add evidence timeline, edit/missing-post filters and evaluated-call performance breakdowns.

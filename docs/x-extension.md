@@ -3,9 +3,10 @@
 The extension is the primary product surface. On x.com it adds:
 
 1. **Signal bars** only under posts classified as trading calls: asset, direction, spot/perp and venue, with **Trade ▸** (routable) or **Details ▸** (no testnet market).
-2. **A call-check drawer**, opened only when the user clicks: the post, separate creator identity/stake/call evidence, Nansen wallet observations and the venue route, with **Review trade in app ↗**.
+2. **A profile-header card** on X profile pages with separate recorded binding, refundable stake, detected-call count and pending score; it links to the creator dashboard. Untracked accounts show missing evidence honestly.
+3. **A call-check drawer**, opened only when the user clicks: the post, separate creator identity/stake/call evidence, Nansen wallet observations and the venue route, with **Review trade in app ↗**.
 
-Ordinary posts remain untouched. Profile pages have no automatically inserted cards, and author names have no automatically inserted badges. Creator evidence is fetched when the call drawer opens.
+Ordinary posts remain untouched and author names have no automatically inserted badges. Profile evidence refreshes every minute while the tab is visible; drawer evidence loads when opened.
 
 Signing never happens in the extension. The drawer opens `/dashboard/trade` with the route prefilled; the user sets amounts and approves in the app.
 
@@ -44,7 +45,7 @@ Trade ▸ → GET /api/creators/:handle/insights?asset&direction → evidence + 
 - Untrusted post text is rendered with `textContent` only and isolated in shadow roots.
 - Delayed classification responses are discarded if X has recycled the post. Missing or invalid classification produces no injected UI.
 
-Six DOM regression cases cover ordinary posts, click-only drawers, quiet profiles, invalid responses and recycled posts. Production validation on real X is still pending.
+Seven DOM regression cases cover ordinary posts, click-only drawers, profile records, navigation during evidence reads, invalid responses and recycled posts. Production validation on real X is still pending.
 
 ## Build and install
 

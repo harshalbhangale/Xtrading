@@ -322,3 +322,11 @@ export const recordTradeSchema = z
     sourcePostId: z.string().regex(/^[0-9]{1,30}$/),
   })
   .strict();
+
+// Public reachability is not a deletion verdict or a settlement signal.
+export const postAvailabilitySchema = z.object({
+  status: z.enum(["available", "not-publicly-available", "unavailable"]),
+  source: z.literal("x-oembed"),
+  checkedAt: z.iso.datetime(),
+});
+export type PostAvailability = z.infer<typeof postAvailabilitySchema>;

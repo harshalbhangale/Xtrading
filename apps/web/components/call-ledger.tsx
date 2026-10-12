@@ -1,5 +1,6 @@
 import type { PublicCall } from "@call-my-bluff/domain";
 import { formatUnits } from "viem";
+import { PostAvailabilityCheck } from "./post-availability";
 
 function price(value: string, decimals: number) {
   const [whole, fraction = ""] = formatUnits(BigInt(value), decimals).split(
@@ -80,6 +81,10 @@ export function CallLedger({ calls }: { calls: PublicCall[] }) {
                     {date(call.publishedAt)} ↗
                   </a>
                   <p>{post.text || "(no text)"}</p>
+                  <p className="small-note">
+                    Archived at registration · {date(call.registeredAt)}
+                  </p>
+                  <PostAvailabilityCheck callId={call.id} />
                 </td>
                 <td>
                   <strong>
