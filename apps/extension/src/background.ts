@@ -1,8 +1,10 @@
 import {
   creatorOverviewSchema,
   normalizeHandle,
+  postAvailabilitySchema,
   postSignalRequestSchema,
   postSignalResponseSchema,
+  publicCallLedgerSchema,
   publicCreatorEvidenceSchema,
 } from "@call-my-bluff/domain";
 import { appOrigin } from "./config";
@@ -91,6 +93,30 @@ function handleMessage(
       if (value.handle !== handle) throw new Error("mismatched_handle");
       return value;
     });
+  }
+  if (message.type === "creator-ledger" && typeof message.handle === "string") {
+    const handle = normalizeHandle(message.handle);
+    if (!handle) return Promise.resolve({ error: "invalid_handle" });
+    return cached(`ledger:${handle}`, 30000, async () => {
+      const value = publicCallLedgerSchema.parse(
+        await getJson(`/api/creators/${encodeURIComponent(handle)}/calls`),
+      );
+      if (value.handle !== handle) throw new Error("mismatched_handle");
+      return value;
+    });
+  }
+  if (
+    message.type === "post-availability" &&
+    typeof message.postId === "string" &&
+    /^[0-9]{1,20}$/.test(message.postId)
+  ) {
+    const postId = message.postId;
+    // The server rate-limits post checks; a short cache lets a deletion show up quickly.
+    return cached(`availability:${postId}`, 120000, async () =>
+      postAvailabilitySchema.parse(
+        await getJson(`/api/posts/${postId}/availability`),
+      ),
+    );
   }
   if (message.type === "classify-post") {
     const input = postSignalRequestSchema.safeParse(message.payload);

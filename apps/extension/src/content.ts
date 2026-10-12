@@ -80,12 +80,20 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
     ),
   );
   const bar = el(
-    "details",
-    { class: "feed-actions" },
-    el("summary", {}, "Post actions"),
+    "div",
+    { class: "feed-actions-row" },
     safeLink(`https://x.com/${handle}/status/${postId}`, "View post ↗"),
   );
-  root.querySelector(".bar")?.append(bar);
+  root
+    .querySelector(".bar")
+    ?.append(
+      el(
+        "details",
+        { class: "feed-actions" },
+        el("summary", {}, "Post actions"),
+        bar,
+      ),
+    );
   for (const side of ["buy", "sell"] as const) {
     const path = tradeReviewPath(signal, route, side);
     const label =

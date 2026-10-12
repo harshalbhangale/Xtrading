@@ -1,8 +1,17 @@
-import { normalizeHandle } from "@call-my-bluff/domain";
+import { normalizeHandle, publicCallLedgerSchema } from "@call-my-bluff/domain";
+import { callStats, formatUnits6, statTiles } from "./card-metrics";
 import { appOrigin } from "./config";
 import { addProfileBadge } from "./creator-badge";
-import { el, safeLink, shadowHost, shortAddress } from "./dom";
-import { loadInsights } from "./drawer";
+import {
+  el,
+  type Metric,
+  metricPanel,
+  safeLink,
+  send,
+  shadowHost,
+  shortAddress,
+} from "./dom";
+import { type Insights, loadInsights } from "./drawer";
 import { renderOverview } from "./overview";
 
 const reserved = new Set([
@@ -64,40 +73,33 @@ export async function scanProfile() {
   const card = el(
     "div",
     { class: "card" },
-    el("div", { class: "title" }, "Xtrading · creator record"),
+    el("div", { class: "title" }, "Xtrading"),
   );
   const details = el(
     "div",
     {},
     el("p", { class: "note" }, "Checking recorded evidence…"),
   );
-  card.append(
-    details,
-    safeLink(
-      new URL(`/creators/${handle}`, appOrigin).href,
-      "Open creator dashboard ↗",
-      "cta",
-    ),
-  );
   const expand = el(
     "button",
     {
       type: "button",
-      class: "btn secondary",
+      class: "card-toggle",
       "aria-expanded": "false",
       "aria-controls": "creator-overview",
     },
-    "Expand calls & wallet activity",
+    "Show details",
   );
-  const overview = el("div", { id: "creator-overview" });
+  const overview = el("div", {
+    id: "creator-overview",
+    class: "card-overview",
+  });
   overview.hidden = true;
   const toggle = () => {
     overview.hidden = !overview.hidden;
     host.dataset.expanded = String(!overview.hidden);
     expand.setAttribute("aria-expanded", String(!overview.hidden));
-    expand.textContent = overview.hidden
-      ? "Expand calls & wallet activity"
-      : "Collapse";
+    expand.textContent = overview.hidden ? "Show details" : "Hide details";
     if (!overview.hidden)
       void renderOverview(
         handle,
@@ -106,64 +108,124 @@ export async function scanProfile() {
       );
   };
   expand.addEventListener("click", toggle);
-  card.append(expand, overview);
+  card.append(
+    details,
+    el(
+      "div",
+      { class: "card-actions" },
+      safeLink(
+        new URL(`/creators/${handle}`, appOrigin).href,
+        "Open record ↗",
+        "cta",
+      ),
+      expand,
+    ),
+    overview,
+  );
   root.append(card);
   anchor.after(host);
   if (expanded) toggle();
   const insights = await loadInsights(handle, null, null).catch(() => null);
   if (!host.isConnected || profileHandle() !== handle) return;
   details.replaceChildren();
+  const panel = metricPanel();
+  details.append(panel.root);
   if (!insights) {
-    details.append(
-      el(
-        "p",
-        { class: "note" },
-        "Creator evidence unavailable. No identity, stake or performance claim.",
-      ),
-    );
+    panel.set("all", {
+      label: "Creator record",
+      value: null,
+      reason: "service unavailable",
+    });
     return;
   }
   const evidence = insights.evidence;
-  const row = (label: string, value: string) =>
-    el("div", { class: "row" }, el("span", {}, label), el("span", {}, value));
-  details.append(
-    row(
-      "Identity",
-      evidence?.identity.status === "bound"
-        ? `Recorded binding · ${shortAddress(evidence.identity.wallet ?? "")}`
-        : "No binding evidence available",
-    ),
-    row(
-      "Refundable stake",
-      evidence?.stake.status === "active"
-        ? `Active · ${evidence.stake.symbol ?? "token"}`
-        : evidence?.stake.status === "withdrawal-pending"
-          ? "Withdrawal pending"
-          : evidence?.stake.status === "inactive"
-            ? "Inactive"
-            : "Unavailable",
-    ),
-    row(
-      "Detected calls",
-      insights.reputation.status === "ready"
-        ? String(insights.reputation.trackedCalls)
-        : "Unavailable",
-    ),
-    row(
-      "Call score",
-      insights.reputation.score === null
-        ? "Pending evaluation"
-        : String(insights.reputation.score),
-    ),
-    el(
-      "p",
-      { class: "note" },
-      "Identity, stake and call performance are separate. Detected calls cover posts seen by extension users; they are not wallet returns.",
-    ),
-    el(
-      "p",
-      { class: "note" },
-      `Checked ${new Date().toISOString()} · handle is a lookup hint, not a fresh ownership proof.`,
-    ),
+  panel.set(
+    "wallet",
+    evidence?.identity.status === "bound"
+      ? {
+          label: "Wallet linked",
+          value: shortAddress(evidence.identity.wallet ?? ""),
+        }
+      : { label: "Wallet", value: null, reason: "not linked" },
   );
+  const stake = evidence?.stake;
+  panel.set(
+    "stake",
+    stake?.status === "active" && stake.balance
+      ? {
+          label: "Stake",
+          value:
+            `${formatUnits6(stake.balance)} ${stake.symbol ?? ""} staked`.trim(),
+        }
+      : stake?.status === "withdrawal-pending"
+        ? { label: "Stake", value: "Withdrawing" }
+        : {
+            label: "Stake",
+            value: null,
+            reason:
+              stake?.status === "inactive" ? "none" : "indexer not current",
+          },
+  );
+  const [ledgerRaw, checked] = await Promise.all([
+    send<unknown>({ type: "creator-ledger", handle }),
+    sayDid(handle, insights),
+  ]);
+  if (!host.isConnected || profileHandle() !== handle) return;
+  const ledger = publicCallLedgerSchema.safeParse(ledgerRaw);
+  const tiles = statTiles(callStats(ledger.success ? ledger.data.calls : []));
+  tiles.forEach((tile, index) => {
+    panel.set(`tile${index}`, { ...tile, kind: "stat", group: "" });
+  });
+  if (!tiles.length)
+    panel.set("calls", {
+      label: "Calls",
+      value: null,
+      reason: !ledger.success
+        ? "ledger unavailable"
+        : insights.reputation.status === "ready" &&
+            insights.reputation.trackedCalls
+          ? `${insights.reputation.trackedCalls} detected, none scored`
+          : "none yet",
+    });
+  panel.set("saiddid", checked);
+}
+
+/** Said versus did for the creator's latest classified call, from the Nansen wallet check. */
+async function sayDid(handle: string, insights: Insights): Promise<Metric> {
+  const label = "Said / did";
+  const none = (reason: string): Metric => ({ label, value: null, reason });
+  const latest = insights.reputation.recent[0];
+  if (!latest?.asset || !latest.direction) return none("no directional call");
+  const checked = await loadInsights(handle, latest.asset, latest.direction);
+  const check = checked?.nansen;
+  if (!check || check.mode === "unavailable" || check.verdict === "unavailable")
+    return none("Nansen unavailable");
+  // Demo results are fixtures, never evidence.
+  if (check.mode === "demo") return none("Nansen demo mode");
+  if (check.verdict === "not-applicable")
+    return none(`n/a for ${latest.asset}`);
+  if (check.verdict === "no-activity")
+    return { label, value: `No ${latest.asset} wallet activity` };
+  const bad = check.verdict === "contradiction";
+  const text = bad
+    ? `Wallet contradicts ${latest.asset} call`
+    : `Wallet matches ${latest.asset} call`;
+  const tx = check.findings.find((finding) => finding.transactionHash);
+  const hasTx =
+    tx?.transactionHash && /^0x[0-9a-fA-F]{64}$/.test(tx.transactionHash);
+  return {
+    label,
+    tone: bad ? "bad" : "good",
+    value: hasTx
+      ? el(
+          "span",
+          {},
+          `${text} `,
+          safeLink(
+            `https://testnet.monadvision.com/tx/${tx.transactionHash}`,
+            "↗",
+          ),
+        )
+      : text,
+  };
 }

@@ -87,3 +87,117 @@ export function send<T>(message: Record<string, unknown>): Promise<T | null> {
     return Promise.resolve(null);
   }
 }
+
+export type Metric = {
+  label: string;
+  /** null = no data; it moves into the collapsed "No data" dropdown with `reason`. */
+  value: string | Node | null;
+  reason?: string;
+  /** stat = big number tile, chip = compact pill (default), row = label and value line. */
+  kind?: "stat" | "chip" | "row";
+  tone?: "bad" | "good";
+  group?: string;
+};
+
+/** Compact metrics: stat tiles, chips and rows. Empty ones collapse into one dropdown. */
+export function metricPanel() {
+  const root = el("div", { class: "metrics" });
+  const entries = new Map<string, Metric>();
+  let openState = false;
+  const render = () => {
+    const all = [...entries.values()];
+    const missing = all.filter((m) => m.value === null);
+    const groups = new Map<string, Metric[]>();
+    for (const metric of all.filter((m) => m.value !== null))
+      groups.set(metric.group ?? "", [
+        ...(groups.get(metric.group ?? "") ?? []),
+        metric,
+      ]);
+    root.replaceChildren();
+    for (const [group, items] of groups) {
+      const of = (kind: string) =>
+        items.filter((m) => (m.kind ?? "chip") === kind);
+      const stats = of("stat");
+      const chips = of("chip");
+      const rows = of("row");
+      root.append(
+        ...(group ? [el("div", { class: "metric-group" }, group)] : []),
+        ...(stats.length
+          ? [
+              el(
+                "div",
+                { class: "stat-grid" },
+                ...stats.map((m) =>
+                  el(
+                    "div",
+                    { class: `stat-tile${m.tone ? ` ${m.tone}` : ""}` },
+                    el("span", { class: "stat-value" }, m.value),
+                    el("span", { class: "stat-label" }, m.label),
+                  ),
+                ),
+              ),
+            ]
+          : []),
+        ...(chips.length
+          ? [
+              el(
+                "div",
+                { class: "chip-row" },
+                ...chips.map((m) =>
+                  el(
+                    "span",
+                    {
+                      class: `pill-chip${m.tone ? ` ${m.tone}` : ""}`,
+                      title: m.label,
+                    },
+                    el("i", { class: "dot" }),
+                    m.value,
+                  ),
+                ),
+              ),
+            ]
+          : []),
+        ...rows.map((m) =>
+          el(
+            "div",
+            { class: "metric-row" },
+            el("span", { class: "metric-row-label" }, m.label),
+            el("span", {}, m.value),
+          ),
+        ),
+      );
+    }
+    if (missing.length) {
+      const details = el(
+        "details",
+        { class: "unavailable" },
+        el("summary", {}, `No data · ${missing.length}`),
+        ...missing.map((m) =>
+          el(
+            "div",
+            { class: "unavailable-row" },
+            el("span", {}, m.label),
+            el("span", {}, m.reason ?? "—"),
+          ),
+        ),
+      );
+      const disclosure = details as HTMLDetailsElement;
+      disclosure.open = openState;
+      disclosure.addEventListener("toggle", () => {
+        openState = disclosure.open;
+      });
+      root.append(details);
+    }
+  };
+  return {
+    root,
+    set(id: string, metric: Metric) {
+      entries.set(id, metric);
+      render();
+    },
+    remove(id: string) {
+      entries.delete(id);
+      render();
+    },
+  };
+}
