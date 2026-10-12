@@ -286,7 +286,7 @@ export const kuruActivitySchema = z.object({
     .array(
       z.object({
         id: indexedIdSchema,
-        market: z.enum(["WETH", "WBTC"]),
+        market: z.enum(["WETH", "WBTC", "MON"]),
         side: z.enum(["buy", "sell"]),
         amountIn: amountSchema,
         amountOut: amountSchema,
@@ -307,7 +307,7 @@ export const kuruActivitySchema = z.object({
       z.object({
         id: indexedIdSchema,
         kind: z.enum(["deposit", "withdrawal"]),
-        token: z.enum(["USDC", "WETH", "WBTC"]),
+        token: z.enum(["USDC", "WETH", "WBTC", "MON"]),
         amount: amountSchema,
         blockNumber: amountSchema,
         timestamp: amountSchema,

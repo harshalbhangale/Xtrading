@@ -1,13 +1,42 @@
+import { kuruMarketKeys } from "@call-my-bluff/integrations/kuru";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { formatUnits } from "viem";
 import { SourceCall } from "../../../components/dashboard/source-call";
 import { PageHeading, Panel } from "../../../components/dashboard/ui";
 import { PerpTradeControl } from "../../../components/perp-trade-control";
 import { TradeControl } from "../../../components/trade-control";
+import { kuruMarketSnapshot } from "../../../lib/markets";
 export const metadata: Metadata = { title: "Trade" };
 
 function one(value: string | string[] | undefined) {
   return typeof value === "string" ? value : null;
+}
+
+function bookPrice(raw: string | null, precision: string) {
+  if (!raw) return "none";
+  return `${formatUnits(BigInt(raw), precision.length - 1)} USDC`;
+}
+
+async function liveBooks() {
+  const rows = await Promise.allSettled(
+    kuruMarketKeys.map(async (key) => {
+      const { state } = await kuruMarketSnapshot(key);
+      return state;
+    }),
+  );
+  return kuruMarketKeys.map((key, index) => {
+    const row = rows[index];
+    return row?.status === "fulfilled"
+      ? row.value
+      : {
+          key,
+          bestBid: null,
+          bestAsk: null,
+          pricePrecision: "1",
+          unavailable: true,
+        };
+  });
 }
 
 export default async function TradePage({
@@ -44,7 +73,7 @@ export default async function TradePage({
               ? "Monad mainnet · real funds. Trading is unavailable until the mainnet integration is validated."
               : perp
                 ? "Perpl perpetuals on Monad testnet. Check market, size, leverage and caps before confirming. Perp positions can be liquidated."
-                : "Kuru spot on Monad testnet. Every swap is simulated against the live market, with a minimum output and onchain deadline set before your wallet opens."
+                : "Kuru spot on Monad testnet. MON/USDC is the market with both bids and asks. Every swap is simulated, with a minimum output and onchain deadline, before your wallet opens."
         }
       />
       <nav className="preview-selector" aria-label="Network">
@@ -107,12 +136,38 @@ export default async function TradePage({
         </Panel>
       ) : (
         <Panel
-          title="WETH and WBTC against USDC"
-          description="First trade: approve, deposit into your Kuru account, then swap. Each is a separate wallet confirmation."
+          title="MON, WETH and WBTC against USDC"
+          description="Selling MON deposits native MON, then swaps. Buying spends Kuru test USDC. Each step is a separate wallet confirmation. Minimum size is 10 USDC."
         >
+          <BookStrip />
           <TradeControl />
         </Panel>
       )}
     </>
+  );
+}
+
+async function BookStrip() {
+  let books: Awaited<ReturnType<typeof liveBooks>> = [];
+  try {
+    books = await liveBooks();
+  } catch {
+    books = [];
+  }
+  if (books.length === 0)
+    return <p className="small-note">Live book unavailable.</p>;
+  return (
+    <p className="small-note">
+      Live book, unfinalized.{" "}
+      {books.map((book) => (
+        <span key={book.key}>
+          {book.key} bid {bookPrice(book.bestBid, book.pricePrecision)}
+          {" · "}
+          ask {bookPrice(book.bestAsk, book.pricePrecision)}
+          {". "}
+        </span>
+      ))}
+      An empty ask means a buy cannot fill.
+    </p>
   );
 }

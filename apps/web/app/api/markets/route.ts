@@ -1,20 +1,20 @@
+import { kuruMarketKeys } from "@call-my-bluff/integrations/kuru";
 import { reply } from "../../../lib/identity-http";
 import { kuruMarketSnapshot, perplSnapshot } from "../../../lib/markets";
 export const dynamic = "force-dynamic";
 export async function GET() {
-  const [weth, wbtc, perpl] = await Promise.allSettled([
-    kuruMarketSnapshot("WETH"),
-    kuruMarketSnapshot("WBTC"),
+  const [perpl, ...books] = await Promise.allSettled([
     perplSnapshot(),
+    ...kuruMarketKeys.map((key) => kuruMarketSnapshot(key)),
   ]);
   return reply({
     chainId: 10143,
-    kuru: [weth, wbtc].map((result, index) =>
+    kuru: books.map((result, index) =>
       result.status === "fulfilled"
         ? result.value.state
         : {
             venue: "Kuru",
-            key: index === 0 ? "WETH" : "WBTC",
+            key: kuruMarketKeys[index],
             status: "unavailable",
           },
     ),

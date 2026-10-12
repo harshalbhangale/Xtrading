@@ -65,12 +65,17 @@ describe("deriveTradeRoute", () => {
       marketId: "WETH",
     });
   });
-  it("has no Kuru spot route for MON (V2 MON/USDC has no bids)", () => {
+  it("routes bullish MON spot to the native MON/USDC book", () => {
     const r = deriveTradeRoute(
       heuristicSignal({ ...base, text: "buy $MON" }),
       perpl,
     );
-    expect(r.status).toBe("unavailable");
+    expect(r).toMatchObject({
+      status: "available",
+      venue: "Kuru",
+      side: "buy",
+      marketId: "MON",
+    });
   });
   it("routes bearish spot to a sale, never a short", () => {
     const r = deriveTradeRoute(

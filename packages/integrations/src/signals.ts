@@ -7,11 +7,12 @@ import {
 import { hasTokenMention, tokenReferences } from "./token-references";
 
 /** Kuru testnet spot markets, keyed by base asset symbol. Configure explicitly; no fallback. */
-// Kuru Spot V2 testnet markets with two-sided books; marketId is the trade page's market key.
+// marketId is the trade page's market key. MON/USDC is the liquid native book.
 export const kuruSpotAssets: Record<string, { market: string; label: string }> =
   {
     ETH: { market: "WETH", label: "WETH / USDC" },
     BTC: { market: "WBTC", label: "WBTC / USDC" },
+    MON: { market: "MON", label: "MON / USDC" },
   };
 
 const names: Record<string, string> = {

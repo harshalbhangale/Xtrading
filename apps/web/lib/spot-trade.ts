@@ -24,6 +24,7 @@ import {
   erc20Abi,
   getAddress,
   type Hex,
+  zeroAddress,
 } from "viem";
 import { identityContext } from "./identity-http";
 import { kuruMarketSnapshot, testnetClient } from "./markets";
@@ -95,7 +96,8 @@ export async function prepareSpot(request: Request, body: unknown) {
   );
   const at = { blockNumber: block.number };
   const tokens = tradeTokens(input.market, input.side);
-  const [rootAccountId, walletBalance, allowance, nativeBalance] =
+  const nativeInput = tokens.input.address === zeroAddress;
+  const [rootAccountId, tokenBalance, allowance, nativeBalance] =
     await Promise.all([
       client.readContract({
         address: kuruV2.accountCore,
@@ -104,22 +106,27 @@ export async function prepareSpot(request: Request, body: unknown) {
         args: [wallet],
         ...at,
       }),
-      client.readContract({
-        address: tokens.input.address,
-        abi: erc20Abi,
-        functionName: "balanceOf",
-        args: [wallet],
-        ...at,
-      }),
-      client.readContract({
-        address: tokens.input.address,
-        abi: erc20Abi,
-        functionName: "allowance",
-        args: [wallet, kuruV2.accountCore],
-        ...at,
-      }),
+      nativeInput
+        ? 0n
+        : client.readContract({
+            address: tokens.input.address,
+            abi: erc20Abi,
+            functionName: "balanceOf",
+            args: [wallet],
+            ...at,
+          }),
+      nativeInput
+        ? 0n
+        : client.readContract({
+            address: tokens.input.address,
+            abi: erc20Abi,
+            functionName: "allowance",
+            args: [wallet, kuruV2.accountCore],
+            ...at,
+          }),
       client.getBalance({ address: wallet, ...at }),
     ]);
+  const walletBalance = nativeInput ? nativeBalance : tokenBalance;
   const accountBalance =
     rootAccountId > 0
       ? await client.readContract({
@@ -214,6 +221,7 @@ export async function prepareSpot(request: Request, body: unknown) {
 }
 
 const accountTokens = [
+  kuruV2.markets.MON.base,
   kuruUsdc,
   kuruV2.markets.WETH.base,
   kuruV2.markets.WBTC.base,
@@ -248,13 +256,15 @@ export async function kuruAccount(request: Request) {
               ...at,
             })
           : 0n,
-        client.readContract({
-          address: token.address,
-          abi: erc20Abi,
-          functionName: "balanceOf",
-          args: [wallet],
-          ...at,
-        }),
+        token.address === zeroAddress
+          ? nativeBalance
+          : client.readContract({
+              address: token.address,
+              abi: erc20Abi,
+              functionName: "balanceOf",
+              args: [wallet],
+              ...at,
+            }),
       ]);
       return {
         token,

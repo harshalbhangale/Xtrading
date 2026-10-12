@@ -30,7 +30,7 @@ const token = z.object({
   address,
   decimals: uint.max(36),
 });
-export const kuruMarketSchema = z.enum(["WETH", "WBTC"]);
+export const kuruMarketSchema = z.enum(["WETH", "WBTC", "MON"]);
 export const prepareSpotSchema = z
   .object({
     instrument: z.literal("spot"),
@@ -50,7 +50,7 @@ export const prepareSpotSchema = z
 export const prepareWithdrawSchema = z
   .object({
     chainId: z.literal(10143),
-    token: z.enum(["USDC", "WETH", "WBTC"]),
+    token: z.enum(["USDC", "WETH", "WBTC", "MON"]),
     amount: positive,
   })
   .strict();

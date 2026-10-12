@@ -73,6 +73,26 @@ describe("nextTradeStep", () => {
       ],
     });
   });
+  it("deposits native MON as payable value, without an approval", () => {
+    const amount = 10n ** 18n;
+    const step = nextTradeStep({
+      ...base,
+      key: "MON",
+      side: "sell",
+      amount,
+      walletBalance: 2n * amount,
+      accountBalance: 0n,
+      allowance: 0n,
+    });
+    expect(step).toMatchObject({
+      action: "deposit",
+      to: kuruV2.accountCore,
+      value: amount,
+    });
+    expect(
+      decodeFunctionData({ abi: accountCoreAbi, data: step.data }).args,
+    ).toEqual([wallet, "0x0000000000000000000000000000000000000000", amount]);
+  });
   it("sells base from the account", () => {
     const step = nextTradeStep({
       ...base,

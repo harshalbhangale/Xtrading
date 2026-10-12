@@ -14,7 +14,7 @@ import { monadTestnet } from "viem/chains";
 type Review = ReturnType<typeof spotReviewSchema.parse>;
 type Withdrawal = ReturnType<typeof withdrawReviewSchema.parse>;
 type Account = ReturnType<typeof kuruAccountSchema.parse>;
-type Market = "WETH" | "WBTC";
+type Market = "MON" | "WETH" | "WBTC";
 const errors: Record<string, string> = {
   insufficient_market_token:
     "Not enough of the input token in your wallet or Kuru account.",
@@ -30,9 +30,9 @@ const errors: Record<string, string> = {
   insufficient_balance: "Not enough balance in your Kuru account.",
 };
 const stepTitle = {
-  approve: "Step 1 of 3 · Approve exact amount",
-  deposit: "Step 2 of 3 · Deposit into your Kuru account",
-  swap: "Step 3 of 3 · Swap",
+  approve: "Approve the exact shortfall",
+  deposit: "Deposit the shortfall into your Kuru account",
+  swap: "Swap",
 } as const;
 const units = (value: string | null, decimals: number, symbol: string) =>
   value === null ? "—" : `${formatUnits(BigInt(value), decimals)} ${symbol}`;
@@ -41,7 +41,7 @@ export default function ConfiguredTrade() {
   const { ready, authenticated, user, login, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const { sendTransaction } = useSendTransaction();
-  const [market, setMarket] = useState<Market>("WETH");
+  const [market, setMarket] = useState<Market>("MON");
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [amount, setAmount] = useState("");
   const [postId, setPostId] = useState("");
@@ -61,7 +61,11 @@ export default function ConfiguredTrade() {
       source = params.get("postId"),
       requestedMarket = params.get("market");
     if (requested === "buy" || requested === "sell") setSide(requested);
-    if (requestedMarket === "WETH" || requestedMarket === "WBTC")
+    if (
+      requestedMarket === "MON" ||
+      requestedMarket === "WETH" ||
+      requestedMarket === "WBTC"
+    )
       setMarket(requestedMarket);
     if (source && /^[0-9]{1,30}$/.test(source)) setPostId(source);
   }, []);
@@ -287,7 +291,7 @@ export default function ConfiguredTrade() {
         aria-label="Market"
         disabled={busy}
       >
-        {(["WETH", "WBTC"] as const).map((choice) => (
+        {(["MON", "WETH", "WBTC"] as const).map((choice) => (
           <button
             key={choice}
             type="button"
@@ -325,7 +329,7 @@ export default function ConfiguredTrade() {
         maxLength={40}
         disabled={busy}
         value={amount}
-        placeholder={side === "buy" ? "10" : "0.004"}
+        placeholder={side === "buy" ? "10" : market === "MON" ? "400" : "0.004"}
         onChange={(e) => {
           setAmount(e.target.value);
           setReview(null);
@@ -453,7 +457,9 @@ export default function ConfiguredTrade() {
                     )}{" "}
                     {review.action === "approve"
                       ? "to Kuru AccountCore, exact amount"
-                      : "from your wallet into your Kuru account"}
+                      : review.input.symbol === "MON"
+                        ? "native MON, sent as the transaction value. Leave enough MON for gas."
+                        : "from your wallet into your Kuru account"}
                   </dd>
                 </div>
               </>
@@ -600,12 +606,13 @@ export default function ConfiguredTrade() {
         <p className="small-note">Balances unavailable.</p>
       )}
       <p className="small-note">
-        Kuru test tokens on Monad testnet; no monetary value. Kuru test USDC is{" "}
-        <code>{kuruV2.quote.address}</code>, not the staking token. Gas:{" "}
+        Kuru test tokens on Monad testnet; no monetary value. Minimum order is
+        10 USDC. Kuru test USDC is <code>{kuruV2.quote.address}</code>, not the
+        staking token. Wallet MON pays gas
         {account
-          ? `${formatUnits(BigInt(account.nativeBalance), 18)} MON`
-          : "—"}
-        .
+          ? ` (${formatUnits(BigInt(account.nativeBalance), 18)} MON)`
+          : ""}
+        . A MON deposit uses that same balance.
       </p>
     </div>
   );

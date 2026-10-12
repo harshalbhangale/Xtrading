@@ -44,6 +44,7 @@ chains:
         address:
           - "0x9d187971B64505Ac81f12c5FD2ac9c5247Ec62F3" # WETH/USDC
           - "0x8661cB7c5f4f8ae3ee116B63Aa5a23c69110e357" # WBTC/USDC
+          - "0x26cd68436B6A4AEB3ec52abC20A4d121f8B4BAc9" # MON/USDC
       - name: KuruAccountCore
         start_block: 70280000
         address:

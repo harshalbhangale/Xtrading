@@ -25,10 +25,11 @@ const marketKeys = new Map<string, KuruMarketKey>(
     key,
   ]),
 );
-const tokenSymbols = new Map<string, "USDC" | "WETH" | "WBTC">([
+const tokenSymbols = new Map<string, "USDC" | "WETH" | "WBTC" | "MON">([
   [kuruUsdc.address.toLowerCase(), "USDC"],
   [kuruV2.markets.WETH.base.address.toLowerCase(), "WETH"],
   [kuruV2.markets.WBTC.base.address.toLowerCase(), "WBTC"],
+  [kuruV2.markets.MON.base.address.toLowerCase(), "MON"],
 ]);
 
 async function boundWallet(request: Request) {

@@ -59,6 +59,17 @@ export const kuruV2 = {
       pricePrecision: 100n,
       sizePrecision: 100_000_000n,
     },
+    // Only market with a two-sided book on 12 Oct 2026. Base is native MON.
+    MON: {
+      market: "0x26cd68436B6A4AEB3ec52abC20A4d121f8B4BAc9" as Address,
+      base: {
+        symbol: "MON",
+        address: zeroAddress,
+        decimals: 18,
+      },
+      pricePrecision: 1_000_000n,
+      sizePrecision: 1_000_000n,
+    },
   },
 } as const;
 export type KuruMarketKey = keyof typeof kuruV2.markets;
@@ -181,8 +192,18 @@ export function nextTradeStep(input: {
       : input.amount - input.accountBalance;
   if (shortfall > 0n) {
     if (input.walletBalance < shortfall) throw new Error("Insufficient funds");
+    // Native MON: AccountCore.deposit is payable and the value is the amount.
     if (token.address === zeroAddress)
-      throw new Error("Native deposits are not supported");
+      return {
+        action: "deposit",
+        to: kuruV2.accountCore,
+        data: encodeFunctionData({
+          abi: accountCoreAbi,
+          functionName: "deposit",
+          args: [input.wallet, zeroAddress, shortfall],
+        }),
+        value: shortfall,
+      };
     if (input.allowance < shortfall)
       return {
         action: "approve",

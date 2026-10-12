@@ -35,6 +35,8 @@ export async function kuruMarketSnapshot(key: KuruMarketKey) {
   const config = kuruV2.markets[key];
   const block = await client.getBlock();
   const at = { blockNumber: block.number };
+  const native =
+    config.base.address === "0x0000000000000000000000000000000000000000";
   const [code, params, top, book, decimals] = await Promise.all([
     client.getCode({ address: config.market, ...at }),
     client.readContract({
@@ -56,12 +58,14 @@ export async function kuruMarketSnapshot(key: KuruMarketKey) {
       args: [20n],
       ...at,
     }),
-    client.readContract({
-      address: config.base.address,
-      abi: erc20Abi,
-      functionName: "decimals",
-      ...at,
-    }),
+    native
+      ? config.base.decimals
+      : client.readContract({
+          address: config.base.address,
+          abi: erc20Abi,
+          functionName: "decimals",
+          ...at,
+        }),
   ]);
   if (
     !code ||

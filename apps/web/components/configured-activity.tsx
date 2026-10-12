@@ -6,7 +6,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
 
-const decimals = { USDC: kuruUsdc.decimals, WETH: 18, WBTC: 8 } as const;
+const decimals = {
+  USDC: kuruUsdc.decimals,
+  WETH: 18,
+  WBTC: 8,
+  MON: 18,
+} as const;
 const explorer = "https://testnet.monadvision.com/tx/";
 const amount = (value: string, symbol: keyof typeof decimals) =>
   `${formatUnits(BigInt(value), decimals[symbol])} ${symbol}`;

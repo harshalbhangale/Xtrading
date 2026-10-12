@@ -1,33 +1,34 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ExtensionPreview } from "../../components/extension-preview";
+import { LiveXDemo } from "../../components/live-x-demo";
 
 export const metadata: Metadata = { title: "X extension" };
 export default function ExtensionPage() {
   return (
-    <div className="page extension-page">
-      <div className="extension-hero">
+    <div className="xp-page xp-detail">
+      <div className="xp-detail-hero">
         <div>
+          <p className="xp-eyebrow">YOUR FEED, WITH MORE CONTEXT</p>
           <h1>
             The record,
             <br />
-            <span className="highlight">under the post.</span>
+            <span className="xp-highlight">under the post.</span>
           </h1>
-          <p className="hero-copy">
-            A Chrome extension for X. Under each post it shows whether the
-            author has bound their account and whether their stake is active,
-            with Buy and Sell links that open a Kuru trade review here.
+          <p className="xp-lead">
+            A Chrome extension for X. Inspect creator records on profiles and
+            open the call drawer on detected trade calls, with identity, stake
+            and wallet-reviewed Kuru spot or Perpl perp trade links.
           </p>
-          <div className="button-row">
-            <a className="button" href="#install">
+          <div className="xp-actions">
+            <a className="xp-button" href="#install">
               Install ↗
             </a>
-            <Link className="text-link" href="/creators">
+            <Link className="xp-text-link" href="/creators">
               Browse creators ↗
             </Link>
           </div>
         </div>
-        <ExtensionPreview />
+        <LiveXDemo />
       </div>
       <section className="extension-install" id="install">
         <div>
@@ -37,7 +38,7 @@ export default function ExtensionPage() {
             it only talks to this site.
           </p>
           <a
-            className="button"
+            className="xp-button"
             href="/downloads/xtrading-extension.zip"
             download
           >
@@ -67,9 +68,9 @@ export default function ExtensionPage() {
             <div>
               <strong>Open X</strong>
               <p>
-                Posts by bound creators show identity and stake badges. When a
-                post contains a call, the drawer offers a Kuru spot or Perpl
-                perp review; nothing is signed outside your wallet.
+                Profiles expose the creator record. Detected trade calls open an
+                evidence drawer and a Kuru spot or Perpl perp review; signing
+                stays with your wallet.
               </p>
             </div>
           </li>

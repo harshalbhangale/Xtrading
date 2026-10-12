@@ -18,7 +18,7 @@ const handle = z
   .regex(/^@?[A-Za-z0-9_]{1,15}$/)
   .describe("X handle, with or without @");
 const market = z
-  .enum(["WETH", "WBTC"])
+  .enum(["MON", "WETH", "WBTC"])
   .describe("Kuru Spot V2 testnet market against USDC");
 const side = z.enum(["buy", "sell"]);
 const amount = z
@@ -135,18 +135,19 @@ export function xtradingMcp(request: Request) {
     {
       title: "Tradable markets",
       description:
-        "Kuru Spot V2 testnet markets (WETH/USDC, WBTC/USDC) with top of book, and open Perpl perpetual markets.",
+        "Kuru Spot V2 testnet markets (MON/USDC, WETH/USDC, WBTC/USDC) with top of book, and open Perpl perpetual markets.",
       annotations: { readOnlyHint: true },
     },
     () =>
       run(async () => {
-        const [weth, wbtc, perpl] = await Promise.allSettled([
+        const [perpl, ...books] = await Promise.allSettled([
+          perplSnapshot(),
+          kuruMarketSnapshot("MON"),
           kuruMarketSnapshot("WETH"),
           kuruMarketSnapshot("WBTC"),
-          perplSnapshot(),
         ]);
         return {
-          kuru: [weth, wbtc].map((r) =>
+          kuru: books.map((r) =>
             r.status === "fulfilled"
               ? r.value.state
               : { status: "unavailable" },
