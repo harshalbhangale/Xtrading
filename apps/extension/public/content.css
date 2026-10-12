@@ -1,6 +1,8 @@
 /* Extension UI renders inside shadow roots; see src/styles.ts. */
 .cmb-profile-host {
   display: block;
+  width: 100%;
+  box-sizing: border-box;
 }
 .cmb-badge-host,
 .cmb-profile-badge-host {

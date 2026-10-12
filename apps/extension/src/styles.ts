@@ -136,12 +136,16 @@ a { color: inherit; }
 .network-switch { display: flex; gap: 8px; }
 .network-switch [aria-pressed="true"] { background: #e7e9ea; color: #0f1419; border-color: #e7e9ea; }
 .evidence-details summary { cursor: pointer; padding: 14px 16px; font-weight: 600; }
-/* Profile card: two equal-height actions side by side, details below a divider. */
-.card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.card .title { font: 800 14px system-ui; margin-bottom: 10px; }
-.card-actions .cta { flex: 1 1 180px; margin: 0; padding: 10px 14px; }
-.card-toggle { flex: 0 0 auto; appearance: none; padding: 10px 16px; border-radius: 10px; cursor: pointer;
-  font: 700 13px system-ui; background: transparent; color: var(--foreground); border: 1px solid var(--line); }
+/* Profile card: quiet module above the tabs, two matched actions. */
+.card { margin: 8px 16px 12px; }
+.card .title { font: 700 14px system-ui; margin-bottom: 8px; }
+.card-actions { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-start; gap: 8px; margin-top: 12px; }
+.card-actions .cta, .card-toggle { display: inline-flex; flex: 1 1 0; align-items: center; justify-content: center;
+  box-sizing: border-box; max-width: 11.5rem; min-width: 0; min-height: 32px; margin: 0; padding: 0 12px;
+  border-radius: 999px; font: 700 12px/1 system-ui, sans-serif; white-space: nowrap; text-align: center; }
+.card-actions .cta { background: #d6f58a; color: #17210c; }
+.card-actions .cta:hover { background: #e7fea8; }
+.card-toggle { appearance: none; cursor: pointer; background: transparent; color: var(--foreground); border: 1px solid var(--line); }
 .card-toggle:hover { background: var(--raised); }
 .card-toggle::after { content: " ▾"; }
 .card-toggle[aria-expanded="true"]::after { content: " ▴"; }

@@ -245,6 +245,24 @@ it("discards profile evidence if navigation changes before the response", async 
   ).not.toContain("Creator evidence unavailable");
 });
 
+it("places the creator card above the profile tabs", async () => {
+  window.history.replaceState(null, "", "/alice");
+  document.body.innerHTML = `<div data-testid="primaryColumn">
+    <div data-testid="UserName">Alice</div>
+    <div data-testid="UserDescription">Bio</div>
+    <div role="tablist"><div role="tab">Posts</div></div>
+  </div>`;
+  await import("./content");
+  await flush();
+  const host = document.querySelector(".cmb-profile-host");
+  expect(host?.nextElementSibling?.getAttribute("role")).toBe("tablist");
+  const actions = host?.shadowRoot?.querySelector(".card-actions");
+  expect(actions?.querySelector(".cta")?.textContent).toBe("Open record ↗");
+  expect(actions?.querySelector(".card-toggle")?.textContent).toBe(
+    "Show details",
+  );
+});
+
 it("loads expanded creator evidence only after the Expand button is clicked", async () => {
   window.history.replaceState(null, "", "/alice");
   document.body.innerHTML =

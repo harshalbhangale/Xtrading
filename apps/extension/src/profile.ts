@@ -49,6 +49,28 @@ function profileHandle() {
   return normalizeHandle(first);
 }
 
+/** Below the bio and follower row, above Posts. Falls back to the name. */
+function mountProfileCard(anchor: HTMLElement, host: HTMLElement) {
+  const column =
+    anchor.closest<HTMLElement>('[data-testid="primaryColumn"]') ??
+    anchor.parentElement ??
+    document.body;
+  const tabs = column.querySelector<HTMLElement>('[role="tablist"]');
+  if (tabs) {
+    tabs.before(host);
+    return;
+  }
+  const meta =
+    column.querySelector<HTMLElement>(
+      '[data-testid="UserProfileHeader_Items"]',
+    ) ?? column.querySelector<HTMLElement>('[data-testid="UserDescription"]');
+  if (meta) {
+    meta.after(host);
+    return;
+  }
+  anchor.after(host);
+}
+
 /** Profile header only; ordinary posts never receive creator panels. */
 export async function scanProfile() {
   const handle = profileHandle();
@@ -70,6 +92,7 @@ export async function scanProfile() {
   host.dataset.handle = handle;
   host.dataset.refreshAt = String(Date.now() + 60_000);
   host.style.display = "block";
+  host.style.width = "100%";
   const card = el(
     "div",
     { class: "card" },
@@ -123,7 +146,7 @@ export async function scanProfile() {
     overview,
   );
   root.append(card);
-  anchor.after(host);
+  mountProfileCard(anchor, host);
   if (expanded) toggle();
   const insights = await loadInsights(handle, null, null).catch(() => null);
   if (!host.isConnected || profileHandle() !== handle) return;
