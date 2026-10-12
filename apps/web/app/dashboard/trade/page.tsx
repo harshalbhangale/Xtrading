@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SourceCall } from "../../../components/dashboard/source-call";
 import { PageHeading, Panel } from "../../../components/dashboard/ui";
 import { PerpTradeControl } from "../../../components/perp-trade-control";
@@ -30,6 +31,17 @@ export default async function TradePage({
             : "Kuru spot on Monad testnet. Every swap is simulated against the live market, with a minimum output and onchain deadline set before your wallet opens."
         }
       />
+      <nav className="preview-selector" aria-label="Instrument">
+        <Link href="/dashboard/trade" aria-current={perp ? undefined : "page"}>
+          Spot · Kuru
+        </Link>
+        <Link
+          href="/dashboard/trade?instrument=perp"
+          aria-current={perp ? "page" : undefined}
+        >
+          Perps · Perpl
+        </Link>
+      </nav>
       {handle && postId && (
         <SourceCall
           handle={handle}

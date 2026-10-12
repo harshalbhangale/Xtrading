@@ -729,12 +729,14 @@ textarea:focus-visible {
   gap: 8px;
   margin-bottom: 22px;
 }
-.preview-selector button {
+.preview-selector button,
+.preview-selector a {
   border: 1px solid var(--line);
   background: var(--paper);
   padding: 9px 14px;
   font: 9px var(--mono);
 }
+.preview-selector a[aria-current="page"],
 .preview-selector button[aria-pressed="true"] {
   background: var(--ink);
   color: var(--paper);

@@ -18,7 +18,11 @@ export const perpRequestSchema = z
     size: z.string().min(1).max(40),
     leverage: z.number().int().min(1).max(50),
     slippageBps: z.number().int().min(1).max(500),
-    sourcePostId: z.string().regex(/^[0-9]{1,30}$/),
+    // User-supplied attribution; optional, never verified against the post.
+    sourcePostId: z
+      .string()
+      .regex(/^[0-9]{1,30}$/)
+      .nullable(),
     confirm: z.literal(true).optional(),
   })
   .strict();
@@ -141,7 +145,11 @@ export async function submitPerp(
   );
   // One submission per user, post and side per minute; protects against double clicks and replays.
   if (
-    !allow(`perp:${privyUserId}:${input.sourcePostId}:${input.side}`, 1, 60_000)
+    !allow(
+      `perp:${privyUserId}:${input.marketId}:${input.sourcePostId ?? "none"}:${input.side}`,
+      1,
+      60_000,
+    )
   )
     throw new IdentityError("duplicate_order", 409);
   const requestId = Date.now();
@@ -208,5 +216,135 @@ export async function submitPerp(
     message: accepted
       ? "Accepted by Perpl for forwarding. Submitted is not filled; check positions for the outcome."
       : `Perpl rejected the order${status?.error ? `: ${status.error.slice(0, 200)}` : ` (HTTP ${response.status})`}.`,
+  };
+}
+
+const orderStatuses = [
+  "unspecified",
+  "pending",
+  "open",
+  "partially-filled",
+  "filled",
+  "canceled",
+  "expired",
+  "failed",
+  "untriggered",
+  "triggered",
+  "executed",
+] as const;
+const stamp = z
+  .object({
+    b: z.number().optional(),
+    t: z.number().optional(),
+    txid: z.string().optional(),
+  })
+  .partial();
+const historySchema = z.object({
+  d: z.array(
+    z
+      .object({
+        at: stamp.optional(),
+        rq: z.number(),
+        mkt: z.number(),
+        oid: z.number(),
+        st: z.number(),
+        os: z.number(),
+        fp: z.number(),
+        fs: z.number(),
+        f: z.union([z.string(), z.number()]),
+        lv: z.number(),
+      })
+      .passthrough(),
+  ),
+});
+const positionsSchema = z.object({
+  d: z.array(
+    z
+      .object({
+        at: stamp.optional(),
+        mkt: z.number(),
+        rq: z.number(),
+        st: z.number(),
+        sd: z.number(),
+        c: z.union([z.string(), z.number()]),
+        ep: z.number(),
+        s: z.number(),
+        lv: z.number(),
+      })
+      .passthrough(),
+  ),
+});
+
+async function signedGet(c: ReturnType<typeof config>, target: string) {
+  const { headers } = signPerplRequest({
+    chainId: 10143,
+    method: "GET",
+    target,
+    body: "",
+    apiKey: c.apiKey,
+    secretHex: c.secret,
+  });
+  const response = await fetch(`${c.apiUrl}${target}`, {
+    headers,
+    redirect: "error",
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  }).catch(() => {
+    throw new IdentityError("perpl_unavailable", 503);
+  });
+  if (!response.ok) throw new IdentityError("perpl_unavailable", 503);
+  return response.json() as Promise<unknown>;
+}
+
+/**
+ * Outcome of a live order, read back from Perpl: forwarding is not execution,
+ * so the order's status, fill and resulting position come from Perpl's history.
+ */
+export async function perpStatus(request: Request, requestId: number) {
+  const { user, service } = await identityContext(request);
+  const binding = await service.current(user.privyUserId);
+  if (!binding || perplMode(binding.xUserId) !== "live")
+    throw new IdentityError("perpl_operator_only", 403);
+  if (!Number.isSafeInteger(requestId) || requestId <= 0)
+    throw new IdentityError("invalid_request_id");
+  const c = config();
+  const [history, positions] = await Promise.all([
+    signedGet(c, "/v1/trading/order-history?count=50"),
+    signedGet(c, "/v1/trading/positions"),
+  ]);
+  const order = historySchema
+    .parse(history)
+    .d.filter((o) => o.rq === requestId)
+    .sort((a, b) => (b.at?.b ?? 0) - (a.at?.b ?? 0))[0];
+  const position = positionsSchema
+    .parse(positions)
+    .d.find((p) => p.rq === requestId);
+  return {
+    requestId,
+    order: order
+      ? {
+          marketId: order.mkt,
+          status: orderStatuses[order.st] ?? "unspecified",
+          originalSize: String(order.os),
+          filledSize: String(order.fs),
+          fillPrice: String(order.fp),
+          fee: String(order.f),
+          leverage: order.lv,
+          block: order.at?.b ?? null,
+          transactionHash: order.at?.txid ?? null,
+        }
+      : null,
+    position: position
+      ? {
+          marketId: position.mkt,
+          side: position.sd === 1 ? "long" : "short",
+          size: String(position.s),
+          entryPrice: String(position.ep),
+          collateral: String(position.c),
+          leverage: position.lv,
+          transactionHash: position.at?.txid ?? null,
+        }
+      : null,
+    observedAt: new Date().toISOString(),
   };
 }

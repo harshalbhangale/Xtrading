@@ -21,6 +21,38 @@ type Review = {
   expiresAt: string;
   observedAt: string;
 };
+type Status = {
+  requestId: number;
+  order: {
+    status: string;
+    originalSize: string;
+    filledSize: string;
+    fillPrice: string;
+    fee: string;
+    block: number | null;
+    transactionHash: string | null;
+  } | null;
+  position: {
+    side: string;
+    size: string;
+    entryPrice: string;
+    collateral: string;
+    leverage: number;
+  } | null;
+};
+type Market = {
+  marketId: number;
+  symbol: string;
+  sizeDecimals: number;
+  priceDecimals: number;
+  open: boolean;
+};
+const scaled = (value: string, decimals: number) => {
+  const n = BigInt(value);
+  const base = 10n ** BigInt(decimals);
+  const frac = (n % base).toString().padStart(decimals, "0").replace(/0+$/, "");
+  return frac ? `${n / base}.${frac}` : `${n / base}`;
+};
 type Result = {
   status: "demo" | "submitted" | "rejected";
   mode: "live" | "demo";
@@ -42,6 +74,8 @@ export default function ConfiguredPerpTrade() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [now, setNow] = useState(Date.now());
+  const [markets, setMarkets] = useState<Market[]>([]);
+  const [status, setStatus] = useState<Status | null>(null);
   const owner = useRef(user?.id);
   owner.current = user?.id;
   useEffect(() => {
@@ -54,6 +88,14 @@ export default function ConfiguredPerpTrade() {
     if (requested === "long" || requested === "short") setSide(requested);
     if (source && /^[0-9]{1,30}$/.test(source)) setPostId(source);
     if (lev && /^[0-9]{1,2}$/.test(lev)) setLeverage(lev);
+  }, []);
+  useEffect(() => {
+    fetch("/api/markets", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((value: { perpl?: { markets?: Market[] } }) =>
+        setMarkets((value.perpl?.markets ?? []).filter((m) => m.open)),
+      )
+      .catch(() => setMarkets([]));
   }, []);
   // biome-ignore lint/correctness/useExhaustiveDependencies: Clear private state on account change.
   useEffect(() => {
@@ -69,15 +111,15 @@ export default function ConfiguredPerpTrade() {
   function body(confirm: boolean) {
     if (!/^[0-9]{1,6}$/.test(marketId))
       throw new Error("Choose a Perpl market ID.");
-    if (!/^[0-9]{1,30}$/.test(postId))
-      throw new Error("Enter the source X post ID.");
+    if (postId && !/^[0-9]{1,30}$/.test(postId))
+      throw new Error("Source post ID must be digits.");
     return {
       marketId: Number(marketId),
       side,
       size: size.trim(),
       leverage: Number(leverage),
       slippageBps: Number(slippage),
-      sourcePostId: postId,
+      sourcePostId: postId || null,
       ...(confirm ? { confirm: true } : {}),
     };
   }
@@ -138,6 +180,8 @@ export default function ConfiguredPerpTrade() {
       if (account !== owner.current) return;
       setResult(value);
       setReview(null);
+      setStatus(null);
+      if (value.status === "submitted") void track(value.requestId);
     } catch (error) {
       if (account === owner.current)
         setNotice(
@@ -147,6 +191,32 @@ export default function ConfiguredPerpTrade() {
       setBusy(false);
     }
   }
+  // Forwarding is not execution: read the order, fill and position back.
+  async function track(requestId: number) {
+    const account = owner.current;
+    for (let attempt = 0; attempt < 15; attempt++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      if (account !== owner.current) return;
+      try {
+        const token = await getAccessToken();
+        const response = await fetch(
+          `/api/trades/perp/status?rq=${requestId}`,
+          { cache: "no-store", headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!response.ok) continue;
+        const value = (await response.json()) as Status;
+        setStatus(value);
+        if (
+          value.order &&
+          !["pending", "open", "partially-filled"].includes(value.order.status)
+        )
+          return;
+      } catch {
+        // Retry on the next tick; the order outcome does not depend on polling.
+      }
+    }
+  }
+  const selected = markets.find((m) => String(m.marketId) === marketId);
   if (!ready) return <p>Loading wallet session…</p>;
   if (!authenticated)
     return (
@@ -172,23 +242,35 @@ export default function ConfiguredPerpTrade() {
           </button>
         ))}
       </fieldset>
-      <label htmlFor="perp-market">Perpl market ID</label>
-      <input
+      <label htmlFor="perp-market">Market</label>
+      <select
         id="perp-market"
-        inputMode="numeric"
         value={marketId}
         disabled={busy}
         onChange={(e) => {
           setMarketId(e.target.value);
           setReview(null);
         }}
-      />
+      >
+        <option value="">
+          {markets.length ? "Choose a market" : "Loading Perpl markets…"}
+        </option>
+        {markets.map((m) => (
+          <option key={m.marketId} value={m.marketId}>
+            {m.symbol}-PERP (#{m.marketId})
+          </option>
+        ))}
+      </select>
       <label htmlFor="perp-size">Position size (base asset units)</label>
       <input
         id="perp-size"
         inputMode="decimal"
         maxLength={40}
-        placeholder="0.001"
+        placeholder={
+          selected
+            ? `min step ${scaled("1", selected.sizeDecimals)} ${selected.symbol}`
+            : "0.01"
+        }
         value={size}
         disabled={busy}
         onChange={(e) => {
@@ -222,7 +304,7 @@ export default function ConfiguredPerpTrade() {
           setReview(null);
         }}
       />
-      <label htmlFor="perp-source">Source X post ID</label>
+      <label htmlFor="perp-source">Source X post ID (optional)</label>
       <input
         id="perp-source"
         inputMode="numeric"
@@ -294,7 +376,11 @@ export default function ConfiguredPerpTrade() {
             </div>
             <div>
               <dt>Source post</dt>
-              <dd>{review.sourcePostId} · unverified</dd>
+              <dd>
+                {review.sourcePostId
+                  ? `${review.sourcePostId} · unverified`
+                  : "None"}
+              </dd>
             </div>
             <div>
               <dt>Review expires</dt>
@@ -336,6 +422,62 @@ export default function ConfiguredPerpTrade() {
           <p className="small-note">
             Request {result.requestId} · {result.market}
           </p>
+          {result.status === "submitted" && (
+            <dl className="quote-review">
+              <div>
+                <dt>Order status</dt>
+                <dd>{status?.order?.status ?? "Waiting for Perpl…"}</dd>
+              </div>
+              {status?.order && selected && (
+                <>
+                  <div>
+                    <dt>Filled</dt>
+                    <dd>
+                      {scaled(status.order.filledSize, selected.sizeDecimals)}{" "}
+                      of{" "}
+                      {scaled(status.order.originalSize, selected.sizeDecimals)}{" "}
+                      {selected.symbol}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Average fill price</dt>
+                    <dd>
+                      {status.order.fillPrice === "0"
+                        ? "—"
+                        : `$${scaled(status.order.fillPrice, selected.priceDecimals)}`}
+                    </dd>
+                  </div>
+                </>
+              )}
+              {status?.position && selected && (
+                <div>
+                  <dt>Open position</dt>
+                  <dd>
+                    {status.position.side}{" "}
+                    {scaled(status.position.size, selected.sizeDecimals)}{" "}
+                    {selected.symbol} at $
+                    {scaled(status.position.entryPrice, selected.priceDecimals)}
+                    , {status.position.leverage / 100}x
+                  </dd>
+                </div>
+              )}
+              {status?.order?.transactionHash && (
+                <div>
+                  <dt>Onchain</dt>
+                  <dd>
+                    <a
+                      className="text-link"
+                      href={`https://testnet.monadvision.com/tx/${status.order.transactionHash}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Block {status.order.block} ↗
+                    </a>
+                  </dd>
+                </div>
+              )}
+            </dl>
+          )}
           {result.mode === "live" && (
             <a
               className="text-link"
