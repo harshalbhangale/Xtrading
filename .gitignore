@@ -17,3 +17,4 @@ services/indexer/persisted_state.envio.json
 *.log
 __pycache__/
 package-lock.json
+.vercel

@@ -1,0 +1,13 @@
+# Local secrets and build output never leave this machine.
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/.next
+**/dist
+contracts/out
+contracts/cache
+contracts/broadcast
+services/indexer/generated
+services/indexer/.envio
+infrastructure/aws/__pycache__
