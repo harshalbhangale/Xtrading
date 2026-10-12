@@ -2,6 +2,7 @@ import {
   normalizeHandle,
   postSignalResponseSchema,
 } from "@call-my-bluff/domain";
+import { addPostBadge } from "./creator-badge";
 import { el, send, shadowHost } from "./dom";
 import { openDrawer } from "./drawer";
 import { observeFollowing } from "./follow-observer";
@@ -95,6 +96,7 @@ const visible = new IntersectionObserver(
       visible.unobserve(article);
       const id = postIdentity(article);
       if (!id) continue;
+      void addPostBadge(article, id.handle);
       void addSignal(article, id.handle, id.postId);
     }
   },

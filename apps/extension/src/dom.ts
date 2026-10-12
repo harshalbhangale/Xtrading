@@ -19,6 +19,18 @@ export function el(
   return node;
 }
 
+export function svg(
+  tag: string,
+  attrs: Record<string, string> = {},
+  ...children: Node[]
+) {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [key, value] of Object.entries(attrs))
+    node.setAttribute(key, value);
+  node.append(...children);
+  return node;
+}
+
 export function shadowHost(className: string) {
   const host = document.createElement("span");
   host.className = className;

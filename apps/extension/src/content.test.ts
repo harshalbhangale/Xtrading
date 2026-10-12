@@ -65,16 +65,17 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-it("leaves ordinary posts untouched without creator evidence requests", async () => {
+it("leaves ordinary posts by unverified authors untouched", async () => {
   const textNode = document.querySelector('[data-testid="tweetText"]');
   if (textNode) textNode.textContent = "Good morning everyone";
   sendMessage.mockResolvedValue(response("Good morning everyone"));
   await import("./content");
   await flush();
   expect(document.querySelector('[class^="cmb-"]')).toBeNull();
-  expect(sendMessage.mock.calls.map(([message]) => message.type)).toEqual([
-    "classify-post",
-  ]);
+  // One cached identity lookup for the author's badge, plus classification. No panels.
+  expect(
+    sendMessage.mock.calls.map(([message]) => message.type).sort(),
+  ).toEqual(["classify-post", "creator-evidence"]);
   expect(openDrawer).not.toHaveBeenCalled();
 });
 
@@ -103,7 +104,50 @@ it("shows one honest creator card on profile pages without adding feed panels", 
   expect(
     document.querySelector(".cmb-profile-host")?.shadowRoot?.textContent,
   ).toContain("Creator evidence unavailable");
-  expect(sendMessage).not.toHaveBeenCalled();
+  // Only the header badge's identity lookup; an unverified creator gets no badge.
+  expect(sendMessage.mock.calls.map(([message]) => message.type)).toEqual([
+    "creator-evidence",
+  ]);
+  expect(document.querySelector(".cmb-profile-badge-host")).toBeNull();
+});
+
+const bound = {
+  handle: "alice",
+  identity: {
+    status: "bound",
+    xUserId: "1",
+    wallet: "0x716ae38ccd2c044d33b9aa040a2a6901f6ffd964",
+    linkedAt: "2026-10-11T19:55:35.699Z",
+  },
+  stake: { status: "unavailable", chainId: 10143 },
+  observedAt: "2026-10-12T08:00:00.000Z",
+};
+const byType = (signal: unknown) => async (message: { type: string }) =>
+  message.type === "creator-evidence" ? bound : signal;
+
+it("badges a verified author's post quietly, without a tooltip", async () => {
+  sendMessage.mockImplementation(byType(response("buy $ETH")));
+  await import("./content");
+  await flush();
+  const root = document.querySelector(".cmb-badge-host")?.shadowRoot;
+  expect(root?.querySelector(".tp-badge.tp-static")).not.toBeNull();
+  expect(root?.querySelector(".tp-tooltip")).toBeNull();
+  expect(root?.querySelector(".tp-badge")?.hasAttribute("tabindex")).toBe(
+    false,
+  );
+});
+
+it("puts an explained badge beside a verified creator's profile name", async () => {
+  window.history.replaceState(null, "", "/alice");
+  document.body.innerHTML =
+    '<div data-testid="primaryColumn"><div data-testid="UserName"><span>Alice</span></div></div>';
+  sendMessage.mockImplementation(byType(null));
+  await import("./content");
+  await flush();
+  const hosts = document.querySelectorAll(".cmb-profile-badge-host");
+  expect(hosts).toHaveLength(1);
+  expect(hosts[0]?.previousElementSibling?.textContent).toBe("Alice");
+  expect(hosts[0]?.shadowRoot?.textContent).toContain("Tradepost Verified");
 });
 
 it.each([null, { signal: { isCall: true } }])(

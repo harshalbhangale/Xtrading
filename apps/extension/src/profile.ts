@@ -1,5 +1,6 @@
 import { normalizeHandle } from "@call-my-bluff/domain";
 import { appOrigin } from "./config";
+import { addProfileBadge } from "./creator-badge";
 import { el, safeLink, shadowHost, shortAddress } from "./dom";
 import { loadInsights } from "./drawer";
 import { renderOverview } from "./overview";
@@ -42,6 +43,7 @@ function profileHandle() {
 /** Profile header only; ordinary posts never receive creator panels. */
 export async function scanProfile() {
   const handle = profileHandle();
+  void addProfileBadge(handle);
   let existing = document.querySelector<HTMLElement>(".cmb-profile-host");
   if (existing && existing.dataset.handle !== handle) {
     existing.remove();
