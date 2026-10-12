@@ -34,6 +34,15 @@ export function svg(
 export function shadowHost(className: string) {
   const host = document.createElement("span");
   host.className = className;
+  const background = getComputedStyle(document.body).backgroundColor;
+  const channels = background.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  const dark = channels
+    ? Number(channels[1]) * 0.2126 +
+        Number(channels[2]) * 0.7152 +
+        Number(channels[3]) * 0.0722 <
+      128
+    : window.matchMedia("(prefers-color-scheme: dark)").matches;
+  host.dataset.theme = dark ? "dark" : "light";
   const root = host.attachShadow({ mode: "open" });
   root.append(el("style", {}, css));
   return { host, root };

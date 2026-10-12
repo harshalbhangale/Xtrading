@@ -40,9 +40,13 @@ export function tradeUrl(
   postId: string,
   signal: PostSignal,
   route: TradeRoute,
+  chainId: 10143 | 143 = 10143,
 ) {
   const path = tradeReviewPath({ ...signal, postId }, route);
-  return path ? new URL(path, appOrigin).href : null;
+  if (!path) return null;
+  const url = new URL(path, appOrigin);
+  url.searchParams.set("chainId", String(chainId));
+  return url.href;
 }
 
 export function postActions(signal: PostSignal, route: TradeRoute) {
@@ -247,7 +251,10 @@ export async function openDrawer(
     row("Horizon", signal.horizon ?? "Not stated"),
     row("Confidence", signal.confidence),
     postAttachments(signal),
-    postActions(signal, route),
+    safeLink(
+      `https://x.com/${signal.handle}/status/${signal.postId}`,
+      "View post ↗",
+    ),
     row(
       "Extracted by",
       signal.source === "llm"
@@ -277,6 +284,7 @@ export async function openDrawer(
           "cta",
         )
       : el("span", { class: "cta disabled" }, "No testnet market"),
+    postActions(signal, route),
     el(
       "p",
       { class: "note" },
@@ -288,7 +296,51 @@ export async function openDrawer(
     { class: "section" },
     el("p", { class: "note" }, "Loading creator record and Nansen check…"),
   );
-  body.append(call, loading, trade);
+  const network = el("div", { class: "section" });
+  const choices = el("div", {
+    class: "network-switch",
+    role: "group",
+    "aria-label": "Trading network",
+  });
+  const note = el("p", { class: "note" });
+  const buttons: HTMLElement[] = [];
+  for (const [chainId, label] of [
+    [10143, "Testnet"],
+    [143, "Mainnet"],
+  ] as const) {
+    const button = el(
+      "button",
+      {
+        type: "button",
+        class: "btn secondary",
+        "aria-pressed": String(chainId === 10143),
+      },
+      label,
+    );
+    button.addEventListener("click", () => {
+      for (const item of buttons)
+        item.setAttribute("aria-pressed", String(item === button));
+      trade.hidden = chainId === 143;
+      note.textContent =
+        chainId === 143
+          ? "Monad mainnet · real funds. Execution is not ready; no testnet fallback."
+          : "Monad testnet · test tokens only. Signing happens in your app wallet.";
+      network.querySelector("a")?.remove();
+      if (chainId === 143)
+        network.append(
+          safeLink(
+            new URL("/dashboard/trade?chainId=143", appOrigin).href,
+            "View mainnet status ↗",
+          ),
+        );
+    });
+    buttons.push(button);
+    choices.append(button);
+  }
+  note.textContent =
+    "Monad testnet · test tokens only. Signing happens in your app wallet.";
+  network.append(choices, note);
+  body.append(network, trade, call, loading);
 
   const insights = await loadInsights(
     signal.handle,
@@ -299,8 +351,9 @@ export async function openDrawer(
   loading.replaceWith(
     insights
       ? el(
-          "div",
-          {},
+          "details",
+          { class: "evidence-details" },
+          el("summary", {}, "Creator record and Nansen evidence"),
           reputationSection(insights.reputation, insights),
           nansenSection(insights.nansen),
         )

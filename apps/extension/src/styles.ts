@@ -116,4 +116,22 @@ a { color: inherit; }
   .row span:first-child, .note, .stat small { color: #a79fc7; }
   .btn.secondary { color: #cfc2ff; border-color: #5a4aa3; }
 }
+
+/* Match X's page theme rather than the operating system's preference. */
+:host { --surface: #fff; --foreground: #0f1419; --line: #cfd9de; --muted: #536471; --raised: #f7f9f9; }
+:host([data-theme="dark"]) { --surface: #000; --foreground: #e7e9ea; --line: #2f3336; --muted: #71767b; --raised: #16181c; }
+.bar, .bar.unrouted, .drawer, .card { background: var(--surface); color: var(--foreground); border-color: var(--line); }
+.bar { padding: 8px 10px; border-radius: 8px; }
+.bar .meta, .note, .row span:first-child, .section h3, .stat small { color: var(--muted); }
+.drawer header { background: var(--surface); color: var(--foreground); border-bottom: 1px solid var(--line); }
+.drawer header button { color: var(--foreground); }
+.section, .finding, .stat { border-color: var(--line); }
+.finding, .stat { background: var(--raised); }
+.btn.secondary { color: var(--foreground); border-color: var(--line); }
+.network-switch { display: flex; gap: 8px; }
+.network-switch [aria-pressed="true"] { background: #e7e9ea; color: #0f1419; border-color: #e7e9ea; }
+.evidence-details summary { cursor: pointer; padding: 14px 16px; font-weight: 600; }
+@media (max-width: 720px) {
+  .drawer { top: auto; bottom: 0; width: 100vw; height: 88dvh; border: 1px solid var(--line); border-radius: 18px 18px 0 0; }
+}
 `;
