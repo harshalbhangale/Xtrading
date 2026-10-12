@@ -2,7 +2,7 @@
 
 The extension is the primary product surface. On x.com it adds:
 
-1. **Signal bars** only under posts classified as trading calls: asset, direction, spot/perp and venue, with **Trade ▸** (routable) or **Details ▸** (no testnet market).
+1. **Signal bars** under detected trading calls or explicit token-address mentions: asset, direction, spot/perp and venue, with **View post** and separate buy/sell review links. Address-only mentions are not scored calls.
 2. **A profile-header card** on X profile pages with separate recorded binding, refundable stake, detected-call count and pending score; it links to the creator dashboard. Untracked accounts show missing evidence honestly.
 3. **A call-check drawer**, opened only when the user clicks: the post, separate creator identity/stake/call evidence, Nansen wallet observations and the venue route, with **Review trade in app ↗**.
 4. **Expand calls & wallet activity** on the profile card: ongoing registered calls and indexed Kuru swaps. Creator-specific Perpl positions remain unavailable until the creator links their own account.
@@ -42,12 +42,20 @@ Trade ▸ → GET /api/creators/:handle/insights?asset&direction → evidence + 
 
 ## Limits and protections
 
-- `POST /api/signals/classify`: public, 90 requests/min per client, body ≤ 4 KB, text ≤ 2000 chars, global LLM budget 120 calls/min (overflow falls back to rules), cached by post ID + text hash.
+- `POST /api/signals/classify`: public, 90 requests/min per client, body ≤ 8 KB, text ≤ 2000 chars, up to four validated X media URLs, global LLM budget 120 calls/min (overflow falls back to rules), cached by post ID + text hash.
 - Provider requests accept messages only from x.com/twitter.com tabs, cap concurrency at 4, deduplicate requests and send no cookies or tokens. The local following bridge accepts only the configured app origin's Watchlist page.
 - Untrusted post text is rendered with `textContent` only and isolated in shadow roots.
 - Delayed classification responses are discarded if X has recycled the post. Missing or invalid classification produces no injected UI.
 
-Eight extension UI cases cover ordinary posts, click-only drawers and expansion, profile records, navigation during evidence reads, invalid responses and recycled posts. Five follow-observation and three storage tests cover scoping, opt-in, isolation and clearing. Extension 0.4.0 profile expansion and opt-in following-list sync were verified on real X against the production backend on 12 October 2026. Wider feed/navigation coverage, live account switching and unfollow checks remain.
+Eleven extension UI cases cover ordinary posts, click-only drawers and expansion, profile records, navigation during evidence reads, invalid/mismatched responses, recycled posts, address-only references and separate trade review links. Two media tests exclude quoted-post images and avatars. Five follow-observation and three storage tests cover scoping, opt-in, isolation and clearing. Extension 0.4.0 profile expansion and opt-in following-list sync were verified on real X against the production backend on 12 October 2026. Wider feed/navigation coverage, live account switching and unfollow checks remain.
+
+## Post images and token references (0.5.0)
+
+The extension captures original-post photo URLs when it observes a detected call or an explicit address mention. The drawer and expanded creator dashboard show those attachments, full address references and a canonical **View post** link. These are browser-submitted observations, not authenticated X evidence. Old records acquire attachments only when observed again; changed text cannot overwrite a previous text-hash record.
+
+The dashboard's optional **Read image text** uses Tesseract.js in the browser. It downloads the OCR engine/language data on first use and requires no paid image API. Results remain unverified text; possible addresses must be checked against the original. OCR does not set entry/target/expiry, modify routes, or submit trades. Completely image-only posts are not automatically classified.
+
+Buy/sell links open review for explicitly configured Monad testnet markets; perp routes use long/short labels. Address-bearing posts require verified network/token mapping before execution and show unavailable trade buttons, including Solana/Pump.fun references. A ticker never substitutes for a different token address. Detected posts have no evaluated outcomes yet and do not represent a creator's actual positions.
 
 ## Build and install
 

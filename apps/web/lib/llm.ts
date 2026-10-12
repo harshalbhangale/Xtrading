@@ -5,6 +5,10 @@ import {
   signalMethodologyVersion,
 } from "@call-my-bluff/domain";
 import { mentionsPerp } from "@call-my-bluff/integrations/signals";
+import {
+  hasTokenMention,
+  tokenReferences,
+} from "@call-my-bluff/integrations/token-references";
 import Groq from "groq-sdk";
 import { z } from "zod";
 
@@ -130,6 +134,10 @@ export async function classifyWithLlm(
       model: (response.model || model).slice(0, 64),
       methodologyVersion: signalMethodologyVersion,
       classifiedAt: new Date().toISOString(),
+      images: input.images,
+      tokenReferences: tokenReferences(input.text),
+      tokenMention:
+        hasTokenMention(input.text) && tokenReferences(input.text).length > 0,
     };
   } catch (error) {
     if (error instanceof Groq.APIError)

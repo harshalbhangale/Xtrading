@@ -45,7 +45,7 @@ export function requireX(user: Awaited<ReturnType<typeof authenticatedUser>>) {
     wallets: user.wallets,
   };
 }
-export async function jsonBody(request: Request) {
+export async function jsonBody(request: Request, maxBytes = 4096) {
   if (request.headers.get("content-type")?.split(";")[0] !== "application/json")
     throw new IdentityError("json_required", 415);
   const reader = request.body?.getReader();
@@ -57,7 +57,7 @@ export async function jsonBody(request: Request) {
     const { value, done } = await reader.read();
     if (done) break;
     bytes += value.byteLength;
-    if (bytes > 4096) {
+    if (bytes > maxBytes) {
       await reader.cancel();
       throw new IdentityError("body_too_large", 413);
     }

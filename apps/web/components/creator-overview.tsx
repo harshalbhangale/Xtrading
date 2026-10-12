@@ -4,6 +4,7 @@ import {
   creatorOverviewSchema,
 } from "@call-my-bluff/domain";
 import { useState } from "react";
+import { DetectedPostCard } from "./detected-post-card";
 export function CreatorOverviewPanel({ handle }: { handle: string }) {
   const [expanded, setExpanded] = useState(false);
   const [data, setData] = useState<CreatorOverview | null>(null);
@@ -47,6 +48,16 @@ export function CreatorOverviewPanel({ handle }: { handle: string }) {
           {error && <p>{error}</p>}
           {data && (
             <>
+              <h3>Posts detected on X · not evaluated</h3>
+              {data.detectedPostsStatus !== "ready" ? (
+                <p>Detected posts unavailable.</p>
+              ) : !data.detectedPosts.length ? (
+                <p>No captured trade calls or token references yet.</p>
+              ) : (
+                data.detectedPosts.map((post) => (
+                  <DetectedPostCard key={post.signal.postId} post={post} />
+                ))
+              )}
               <h3>Ongoing registered calls</h3>
               <p className="small-note">
                 Calls are predictions, not open trades. This view covers the

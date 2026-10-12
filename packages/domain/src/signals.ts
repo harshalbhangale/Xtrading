@@ -7,12 +7,38 @@ const postIdSchema = z.string().regex(/^[0-9]{1,30}$/);
 const handleSchema = z.string().regex(/^[a-z0-9_]{1,15}$/);
 const symbolSchema = z.string().regex(/^[A-Z0-9]{1,12}$/);
 
+export const postImageSchema = z.object({
+  url: z
+    .string()
+    .max(300)
+    .url()
+    .refine((value) => {
+      const url = new URL(value);
+      return (
+        url.protocol === "https:" &&
+        url.hostname === "pbs.twimg.com" &&
+        !url.username &&
+        !url.password &&
+        !url.port &&
+        /^\/media\/[A-Za-z0-9_-]+(?:\.(?:jpg|jpeg|png|webp))?$/.test(
+          url.pathname,
+        )
+      );
+    }, "Only X post images are accepted"),
+  alt: z.string().max(120),
+});
+export const tokenReferenceSchema = z.object({
+  address: z.string().max(44),
+  kind: z.enum(["evm", "solana"]),
+});
+
 export const postSignalRequestSchema = z
   .object({
     postId: postIdSchema,
     handle: z.string().regex(/^[A-Za-z0-9_]{1,15}$/),
     // X caps posts well below this; longer input is rejected rather than truncated.
     text: z.string().min(1).max(2000),
+    images: z.array(postImageSchema).max(4).default([]),
   })
   .strict();
 export type PostSignalRequest = z.infer<typeof postSignalRequestSchema>;
@@ -34,6 +60,9 @@ export const postSignalSchema = z.object({
   model: z.string().max(64).nullable(),
   methodologyVersion: z.literal(signalMethodologyVersion),
   classifiedAt: z.iso.datetime(),
+  images: z.array(postImageSchema).max(4).default([]),
+  tokenReferences: z.array(tokenReferenceSchema).max(4).default([]),
+  tokenMention: z.boolean().default(false),
 });
 export type PostSignal = z.infer<typeof postSignalSchema>;
 
@@ -54,6 +83,42 @@ export const tradeRouteSchema = z.discriminatedUnion("status", [
   }),
 ]);
 export type TradeRoute = z.infer<typeof tradeRouteSchema>;
+
+export const detectedPostSchema = z.object({
+  signal: postSignalSchema,
+  route: tradeRouteSchema,
+});
+export type DetectedPost = z.infer<typeof detectedPostSchema>;
+
+/** A review link only. It cannot sign or submit an order. */
+export function tradeReviewPath(
+  signal: PostSignal,
+  route: TradeRoute,
+  side?: "buy" | "sell",
+) {
+  if (route.status !== "available" || signal.tokenReferences.length)
+    return null;
+  const params = new URLSearchParams({
+    instrument: route.instrument,
+    chainId: "10143",
+    postId: signal.postId,
+    handle: signal.handle,
+  });
+  const chosen = side
+    ? route.instrument === "perp"
+      ? side === "buy"
+        ? "long"
+        : "short"
+      : side
+    : route.side;
+  if (chosen) params.set("side", chosen);
+  if (signal.asset) params.set("asset", signal.asset);
+  if (signal.direction) params.set("direction", signal.direction);
+  params.set(route.venue === "Kuru" ? "market" : "marketId", route.marketId);
+  if (route.venue === "Perpl" && signal.leverage)
+    params.set("leverage", String(Math.min(signal.leverage, 50)));
+  return `/dashboard/trade?${params}`;
+}
 
 export const providerModeSchema = z.enum(["live", "demo", "unavailable"]);
 

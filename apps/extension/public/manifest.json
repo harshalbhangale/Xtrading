@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Tradepost",
   "description": "Creator records, trade-call detection, reviewed Kuru/Perpl trades and opt-in viewed-follow sync on X.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "permissions": ["storage"],
   "background": {
     "service_worker": "background.js"
