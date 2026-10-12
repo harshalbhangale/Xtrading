@@ -215,22 +215,47 @@ export default function ConfiguredStake() {
         Sign in to inspect your stake
       </button>
     );
+  const short = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`;
+  const locked = state?.contract ? BigInt(state.balance) : 0n;
+  const minimum = state ? BigInt(state.minimum) : 0n;
+  const isActive =
+    !!state?.contract && locked >= minimum && state.withdrawableAt === "0";
+  const pending = !!state?.contract && state.withdrawableAt !== "0";
+  const status = !state?.contract
+    ? "Not configured"
+    : pending
+      ? "Withdrawal pending"
+      : isActive
+        ? "Active"
+        : "Inactive";
+  const progress =
+    minimum > 0n ? Math.min(100, Number((locked * 100n) / minimum)) : 0;
+  const indexer =
+    state?.indexing?.status === "current"
+      ? "Indexer live"
+      : state?.indexing?.status === "lagging"
+        ? "Indexer catching up"
+        : "Indexer unavailable";
   return (
-    <div className="stake-form">
-      <p>
-        Monad testnet · Test USDC has no monetary value. Identity, active stake
-        and performance are separate signals.
-      </p>
-      <button
-        className="button secondary-button"
-        type="button"
-        disabled={busy}
-        onClick={() => void refresh()}
-      >
-        Refresh contract state
-      </button>
+    <div className="sk">
+      <div className="sk-head">
+        <span
+          className={`sk-status ${isActive ? "on" : pending ? "wait" : "off"}`}
+        >
+          <i /> {state ? status : "Checking…"}
+        </span>
+        <span className="sk-meta">Monad testnet · test tokens, no value</span>
+        <button
+          className="button secondary-button sk-refresh"
+          type="button"
+          disabled={busy}
+          onClick={() => void refresh()}
+        >
+          Refresh
+        </button>
+      </div>
       {(notice || busy) && (
-        <p role="status" className="stake-notice">
+        <p role="status" className="sk-notice">
           {notice}
           {busy ? " Working…" : ""}
         </p>
@@ -254,69 +279,166 @@ export default function ConfiguredStake() {
       )}
       {state && (
         <>
-          <dl>
-            <dt>Bound wallet</dt>
-            <dd>{state.wallet}</dd>
-            <dt>Stake contract</dt>
-            <dd>{state.contract ?? "Not deployed/configured"}</dd>
-            <dt>Token balance ({state.symbol})</dt>
-            <dd>{formatUnits(BigInt(state.tokenBalance), 6)}</dd>
-            <dt>Test MON for gas</dt>
-            <dd>{formatUnits(BigInt(state.nativeBalance), 18)}</dd>
-            <dt>Locked {state.symbol}</dt>
-            <dd>
-              {state.contract
-                ? formatUnits(BigInt(state.balance), 6)
-                : "Unavailable"}
-            </dd>
-            <dt>Active stake</dt>
-            <dd>
-              {state.contract
-                ? BigInt(state.balance) >= BigInt(state.minimum) &&
-                  state.withdrawableAt === "0"
-                  ? "Active"
-                  : "Inactive"
-                : "Unavailable"}
-            </dd>
-            <dt>Withdrawal unlock (chain timestamp)</dt>
-            <dd>
-              {!state.contract
-                ? "Unavailable"
-                : state.withdrawableAt === "0"
-                  ? "No pending withdrawal"
-                  : state.withdrawableAt}
-            </dd>
-          </dl>
-          <p>
-            Minimum: 500 {state.symbol} · Cooldown: 7 days · Block{" "}
-            {state.blockNumber} · Observed {state.observedAt} · Latest,
-            unfinalized RPC snapshot.
+          <div className="sk-tiles">
+            <div className="sk-tile">
+              <span>Locked</span>
+              <strong>
+                {state.contract ? formatUnits(locked, 6) : "—"}
+                <small> {state.symbol}</small>
+              </strong>
+            </div>
+            <div className="sk-tile">
+              <span>Wallet balance</span>
+              <strong>
+                {formatUnits(BigInt(state.tokenBalance), 6)}
+                <small> {state.symbol}</small>
+              </strong>
+            </div>
+            <div className="sk-tile">
+              <span>Gas</span>
+              <strong>
+                {Number(formatUnits(BigInt(state.nativeBalance), 18)).toFixed(
+                  3,
+                )}
+                <small> MON</small>
+              </strong>
+            </div>
+            <div className="sk-tile">
+              <span>Withdrawal</span>
+              <strong>
+                {!state.contract
+                  ? "—"
+                  : state.withdrawableAt === "0"
+                    ? "None"
+                    : new Date(
+                        Number(BigInt(state.withdrawableAt) * 1000n),
+                      ).toLocaleDateString()}
+              </strong>
+            </div>
+          </div>
+          {state.contract && (
+            <div
+              className="sk-progress"
+              role="img"
+              aria-label={`Locked ${formatUnits(locked, 6)} of ${formatUnits(minimum, 6)} ${state.symbol} minimum`}
+            >
+              <div>
+                <i style={{ width: `${progress}%` }} />
+              </div>
+              <span>
+                {formatUnits(locked, 6)} / {formatUnits(minimum, 6)}{" "}
+                {state.symbol} minimum · 7-day cooldown
+              </span>
+            </div>
+          )}
+          <p className="sk-addresses">
+            <span title={state.wallet}>Wallet {short(state.wallet)}</span>
+            {state.contract && (
+              <span title={state.contract}>
+                Contract {short(state.contract)}
+              </span>
+            )}
           </p>
-          <section aria-label="Indexed stake history">
-            <h3>Envio stake evidence</h3>
-            <p>
-              {state.indexing?.status === "current"
-                ? "Indexer caught up"
-                : state.indexing?.status === "lagging"
-                  ? "Indexer catching up — history may be incomplete"
-                  : "Indexer unavailable"}
-              {state.indexing?.progressBlock && (
-                <>
-                  {" "}
-                  · Block {state.indexing.progressBlock} · Chain time{" "}
-                  {state.indexing.progressBlockTime}
-                </>
-              )}
-              . Reorg rollback enabled; indexed events are not a claim of
-              finality.
+
+          {state.faucetClaimed === false && (
+            <div className="sk-banner">
+              <span>Need test {state.symbol}? Claim 1,000 once.</span>
+              <button
+                className="button secondary-button"
+                type="button"
+                disabled={busy}
+                onClick={() => void prepare("faucet")}
+              >
+                Review faucet claim
+              </button>
+            </div>
+          )}
+          {state.symbol === "USDC" && (
+            <div className="sk-banner">
+              <span>
+                Demo token needed: deploy mUSDC (10,000 minted to your wallet).
+              </span>
+              <button
+                className="button secondary-button"
+                type="button"
+                disabled={busy}
+                onClick={() => void prepare("deployMockUSDC")}
+              >
+                Prepare mUSDC deployment
+              </button>
+            </div>
+          )}
+
+          {!state.contract ? (
+            <button
+              className="button"
+              type="button"
+              disabled={busy}
+              onClick={() => void prepare("deploy")}
+            >
+              Prepare testnet deployment
+            </button>
+          ) : (
+            <div className="sk-actions">
+              <div className="sk-deposit">
+                <label htmlFor="stake-amount">Deposit {state.symbol}</label>
+                <div>
+                  <input
+                    id="stake-amount"
+                    value={amount}
+                    inputMode="decimal"
+                    disabled={busy}
+                    onChange={(e) => {
+                      setAmount(e.target.value);
+                      setPrepared(null);
+                    }}
+                  />
+                  <button
+                    className="button"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void prepare("deposit")}
+                  >
+                    Review deposit
+                  </button>
+                </div>
+              </div>
+              <div className="sk-withdraw">
+                {[
+                  ["requestWithdrawal", "Request withdrawal"],
+                  ["cancelWithdrawal", "Cancel withdrawal"],
+                  ["withdraw", "Withdraw"],
+                ].map(([action, label]) => (
+                  <button
+                    key={action}
+                    className="button secondary-button"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void prepare(action as string)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <details className="sk-evidence">
+            <summary>
+              Evidence <span>{indexer}</span>
+            </summary>
+            <p className="sk-meta">
+              RPC block {state.blockNumber} · {state.observedAt} · latest,
+              unfinalized
+              {state.indexing?.progressBlock &&
+                ` · Envio block ${state.indexing.progressBlock}`}
             </p>
             {state.indexing?.events.length ? (
               <table>
                 <thead>
                   <tr>
-                    <th>Event</th>
-                    <th>Locked balance ({state.symbol})</th>
-                    <th>Withdrawal unlock</th>
+                    <th>Locked ({state.symbol})</th>
+                    <th>Unlock</th>
                     <th>Chain time</th>
                     <th>Block</th>
                   </tr>
@@ -324,19 +446,18 @@ export default function ConfiguredStake() {
                 <tbody>
                   {state.indexing.events.map((event) => (
                     <tr key={event.id}>
-                      <td>Stake updated</td>
                       <td>{formatUnits(BigInt(event.balance), 6)}</td>
                       <td>
                         {event.withdrawableAt === "0"
-                          ? "No pending withdrawal"
+                          ? "None"
                           : new Date(
                               Number(BigInt(event.withdrawableAt) * 1000n),
-                            ).toISOString()}
+                            ).toLocaleString()}
                       </td>
                       <td>
                         {new Date(
                           Number(BigInt(event.timestamp) * 1000n),
-                        ).toISOString()}
+                        ).toLocaleString()}
                       </td>
                       <td>
                         <a
@@ -352,120 +473,37 @@ export default function ConfiguredStake() {
                 </tbody>
               </table>
             ) : (
-              <p>
+              <p className="sk-meta">
                 {state.indexing?.status === "current"
-                  ? "No stake events indexed for this wallet and contract."
-                  : "Stake history unavailable until the indexer catches up."}
+                  ? "No stake events indexed for this wallet."
+                  : "History unavailable until the indexer catches up."}
               </p>
             )}
-            <p>
-              Each event records the resulting locked balance, not a deposit
-              amount or trading return.
-            </p>
-          </section>
-          {state.faucetClaimed === false && (
-            <>
-              <p>
-                Claim 1,000 demo mUSDC once from the token faucet; that covers
-                the 500 mUSDC minimum. Demo-only tokens with no monetary value.
-              </p>
-              <button
-                className="button secondary-button"
-                type="button"
-                disabled={busy}
-                onClick={() => void prepare("faucet")}
-              >
-                Review mUSDC faucet claim
-              </button>
-            </>
-          )}
-          {state.symbol === "USDC" && (
-            <>
-              <p>
-                For the hackathon demo, deploy our six-decimal mUSDC. It mints
-                10,000 demo tokens to your bound wallet and has no monetary
-                value or Circle affiliation. A new stake contract will be needed
-                for this token.
-              </p>
-              <button
-                className="button secondary-button"
-                type="button"
-                disabled={busy}
-                onClick={() => void prepare("deployMockUSDC")}
-              >
-                Prepare mock USDC deployment
-              </button>
-            </>
-          )}
-          {!state.contract ? (
-            <button
-              className="button"
-              type="button"
-              disabled={busy}
-              onClick={() => void prepare("deploy")}
-            >
-              Prepare testnet deployment
-            </button>
-          ) : (
-            <>
-              <label htmlFor="stake-amount">Deposit {state.symbol}</label>
-              <input
-                id="stake-amount"
-                value={amount}
-                inputMode="decimal"
-                disabled={busy}
-                onChange={(e) => {
-                  setAmount(e.target.value);
-                  setPrepared(null);
-                }}
-              />
-              <button
-                className="button"
-                type="button"
-                disabled={busy}
-                onClick={() => void prepare("deposit")}
-              >
-                Review next deposit step
-              </button>
-              <div className="button-row">
-                {["requestWithdrawal", "cancelWithdrawal", "withdraw"].map(
-                  (action) => (
-                    <button
-                      key={action}
-                      className="button secondary-button"
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void prepare(action)}
-                    >
-                      Review {action}
-                    </button>
-                  ),
-                )}
-              </div>
-            </>
-          )}
+          </details>
         </>
       )}
       {prepared && (
-        <section aria-label="Transaction review">
+        <section className="sk-review" aria-label="Transaction review">
           <h3>Review {prepared.action}</h3>
-          <p>
-            Wallet: {prepared.wallet}
-            <br />
-            Chain: 10143
-            <br />
-            To:{" "}
-            {prepared.to ??
-              (prepared.action === "deployMockUSDC"
-                ? "New MockUSDC demo token"
-                : "New CreatorStake contract")}
-            <br />
-            Native value: 0<br />
-            Estimated gas: {prepared.gas} (wallet gas limit includes a 20%
-            buffer)
-            <br />
-            Expires: {prepared.expiresAt}
-          </p>
+          <dl>
+            <dt>Wallet</dt>
+            <dd>{prepared.wallet}</dd>
+            <dt>Chain</dt>
+            <dd>10143</dd>
+            <dt>To</dt>
+            <dd>
+              {prepared.to ??
+                (prepared.action === "deployMockUSDC"
+                  ? "New MockUSDC demo token"
+                  : "New CreatorStake contract")}
+            </dd>
+            <dt>Value</dt>
+            <dd>0</dd>
+            <dt>Gas</dt>
+            <dd>{prepared.gas} (limit includes a 20% buffer)</dd>
+            <dt>Expires</dt>
+            <dd>{prepared.expiresAt}</dd>
+          </dl>
           {prepared.action === "faucet" ? (
             <p>
               Mint 1,000 demo mUSDC to {prepared.wallet}. One claim per address,
@@ -498,22 +536,24 @@ export default function ConfiguredStake() {
             <summary>Unsigned transaction data</summary>
             <pre className="ownership-message">{prepared.data}</pre>
           </details>
-          <button
-            className="button"
-            type="button"
-            disabled={busy}
-            onClick={() => void submit()}
-          >
-            Continue to wallet approval
-          </button>
-          <button
-            className="button secondary-button"
-            type="button"
-            disabled={busy}
-            onClick={() => setPrepared(null)}
-          >
-            Discard review
-          </button>
+          <div className="sk-review-actions">
+            <button
+              className="button"
+              type="button"
+              disabled={busy}
+              onClick={() => void submit()}
+            >
+              Continue to wallet approval
+            </button>
+            <button
+              className="button secondary-button"
+              type="button"
+              disabled={busy}
+              onClick={() => setPrepared(null)}
+            >
+              Discard
+            </button>
+          </div>
         </section>
       )}
       {hash && (
