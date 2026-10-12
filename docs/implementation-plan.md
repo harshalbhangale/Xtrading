@@ -71,13 +71,9 @@ Exit: X → review → approval → Kuru fill → dashboard with actual amounts.
 - [x] Publish deterministic evaluation rules, price sources and methodology version (`/methodology`, directional-return-v1). Binance 1m spot for BTC/ETH/SOL, Nansen 1m OHLCV for WMON on Monad mainnet; integer prices only.
 - [x] Show sample size, coverage, open calls and hypothetical outcomes separately from wallet returns (`GET /api/creators/:handle/calls`, creator record and studio). Expired calls resolve lazily on read, at most four per request.
 - [ ] Verify a live registration from the bound account and a resolved outcome.
-- [ ] Add an actual Nansen-backed wallet/token insight with source and timestamp.
-- [ ] Connect dossiers, call ledgers, reputation pages and extension popovers.
-- [ ] Confirm authorized X ingestion and Nansen access/coverage.
 - [x] Store extracted calls (`post_signals`) with handle, asset symbol, direction, instrument, horizon, text hash and methodology version. Stable-ID linkage and asset addresses remain.
-- [ ] Publish deterministic evaluation rules, price sources and methodology version.
-- [ ] Show sample size, coverage, unresolved calls and hypothetical outcomes separately from wallet returns.
-- [x] Nansen DEX-trade consistency check for the bound wallet with timestamps and coverage notes; labelled demo findings without a key. A live keyed run is pending.
+- [x] Nansen DEX-trade consistency check for the bound wallet with timestamps and coverage notes, cached 15 minutes; unavailable (never invented) without a key.
+- [ ] Show a live Nansen wallet finding for a creator whose bound wallet trades on Monad mainnet (the demo wallet has no mainnet history).
 - [x] Connect call ledgers, reputation counts and extension drawers/profile cards. Scores remain pending evaluation.
 
 Exit: each scored call is traceable to its source and inputs; Nansen adds a useful real insight.
