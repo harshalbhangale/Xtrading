@@ -1,7 +1,7 @@
 {
   "schedule": "0 0 * * * *",
   "chainSelectorName": "monad-testnet",
-  "settlementAddress": "0x0000000000000000000000000000000000000000",
+  "settlementAddress": "0x260264E74028d498a1A10f90dDC4f4b91F3395DF",
   "gasLimit": "1500000",
   "scanLimit": 50,
   "maxSettlementsPerRun": 5,
