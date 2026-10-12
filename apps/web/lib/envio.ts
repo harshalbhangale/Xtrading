@@ -7,6 +7,11 @@ import "server-only";
 const TTL_MS = 15_000;
 const cache = new Map<string, { expires: number; body: unknown }>();
 
+/** Test hook: drop cached responses. */
+export function clearEnvioCache() {
+  cache.clear();
+}
+
 /** POSTs a fixed GraphQL query to the configured Envio endpoint; null when unavailable. */
 export async function envioQuery(
   query: string,
@@ -14,7 +19,7 @@ export async function envioQuery(
 ): Promise<{ data?: Record<string, unknown>; errors?: unknown } | null> {
   const endpoint = process.env.ENVIO_GRAPHQL_URL;
   if (!endpoint) return null;
-  const key = JSON.stringify([query, variables]);
+  const key = JSON.stringify([endpoint, query, variables]);
   const hit = cache.get(key);
   if (hit && hit.expires > Date.now())
     return hit.body as { data?: Record<string, unknown> };

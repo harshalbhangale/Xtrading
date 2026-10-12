@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../../apps/web/node_modules/server-only/index.js", () => ({}));
 
+import { clearEnvioCache } from "../../../apps/web/lib/envio";
 import { indexedStake } from "../../../apps/web/lib/stake-indexing";
 
 const state = {
@@ -54,6 +55,7 @@ function provider(value: unknown) {
   );
 }
 afterEach(() => {
+  clearEnvioCache();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
