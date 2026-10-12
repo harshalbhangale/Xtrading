@@ -4,6 +4,7 @@ import {
   tradeReviewPath,
 } from "@call-my-bluff/domain";
 import { appOrigin } from "./config";
+import { addPostBadge } from "./creator-badge";
 import { el, safeLink, send, shadowHost } from "./dom";
 import { openDrawer } from "./drawer";
 import { observeFollowing } from "./follow-observer";
@@ -135,6 +136,7 @@ const visible = new IntersectionObserver(
       visible.unobserve(article);
       const id = postIdentity(article);
       if (!id) continue;
+      void addPostBadge(article, id.handle);
       void addSignal(article, id.handle, id.postId);
     }
   },

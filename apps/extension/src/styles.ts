@@ -3,7 +3,7 @@ export const css = `
 :host { all: initial; }
 * { box-sizing: border-box; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
 a { color: inherit; }
-.badge { display: inline-flex; gap: 4px; margin-left: 6px; vertical-align: middle; }
+.badge { display: inline-flex; gap: 4px; vertical-align: middle; align-items: center; }
 .chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px;
   font: 600 11px/18px system-ui; border: 1px solid; white-space: nowrap; cursor: pointer; }
 .chip.verified { color: #1d6b2a; background: #e3f6dc; border-color: #9fd38e; }
@@ -52,6 +52,60 @@ a { color: inherit; }
 .stat { padding: 8px; border-radius: 10px; background: #fff; border: 1px solid #ebe6fb; }
 .stat b { display: block; font-size: 15px; }
 .stat small { color: #6b6585; }
+
+/* XTrading verified badge. The host lines up with X's blue tick: centred on the name row, 4px gap. */
+:host(.cmb-badge-host), :host(.cmb-profile-badge-host) { display: inline-flex; align-items: center;
+  align-self: flex-start; vertical-align: middle; margin-left: 4px; line-height: 0; }
+.xt-badge { --xt-lime: #c7ff72; position: relative; display: inline-grid; place-items: center;
+  flex-shrink: 0; vertical-align: middle; cursor: pointer; isolation: isolate; outline: none; }
+.xt-badge.xt-static { cursor: default; }
+.xt-badge:focus-visible { outline: 2px solid var(--xt-lime); outline-offset: 4px; border-radius: 6px; }
+.xt-radar { position: absolute; inset: 2%; border: 1px solid #9bc84e; border-radius: 50%; overflow: hidden;
+  pointer-events: none; animation: xt-radar-rotate 2.4s linear infinite; }
+.xt-radar::after { content: ""; position: absolute; inset: -30%;
+  background: conic-gradient(from 0deg, transparent 0deg 265deg, #c7ff7210 300deg, #c7ff7260 335deg, #c7ff72 360deg); }
+.xt-corners { position: absolute; inset: 10%; pointer-events: none;
+  background:
+    linear-gradient(var(--xt-lime), var(--xt-lime)) left top / 7px 1.5px no-repeat,
+    linear-gradient(var(--xt-lime), var(--xt-lime)) left top / 1.5px 7px no-repeat,
+    linear-gradient(var(--xt-lime), var(--xt-lime)) right top / 7px 1.5px no-repeat,
+    linear-gradient(var(--xt-lime), var(--xt-lime)) right top / 1.5px 7px no-repeat,
+    linear-gradient(var(--xt-lime), var(--xt-lime)) left bottom / 7px 1.5px no-repeat,
+    linear-gradient(var(--xt-lime), var(--xt-lime)) left bottom / 1.5px 7px no-repeat,
+    linear-gradient(var(--xt-lime), var(--xt-lime)) right bottom / 7px 1.5px no-repeat,
+    linear-gradient(var(--xt-lime), var(--xt-lime)) right bottom / 1.5px 7px no-repeat;
+  animation: xt-bracket-pulse 2s ease-in-out infinite; }
+.xt-mark { position: relative; z-index: 2; width: 67%; height: 67%; display: grid; place-items: center;
+  color: #fff; transition: transform 180ms ease; }
+.xt-mark svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 0 3px #ffffff35); }
+.xt-badge:hover .xt-mark { transform: scale(1.08); }
+.xt-tooltip { position: absolute; bottom: calc(100% + 12px); left: 50%; z-index: 1000; display: flex;
+  flex-direction: column; gap: 5px; width: max-content; max-width: min(260px, 80vw); padding: 11px 13px;
+  color: #f5f5f5; background: #171717; border: 1px solid #3e4931; border-radius: 9px; box-shadow: 0 8px 28px #0008;
+  opacity: 0; visibility: hidden; pointer-events: none; transform: translate(-50%, 5px);
+  transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease; }
+.xt-tooltip::after { content: ""; position: absolute; top: 100%; left: 50%; width: 8px; height: 8px;
+  background: #171717; border-right: 1px solid #3e4931; border-bottom: 1px solid #3e4931;
+  transform: translate(-50%, -4px) rotate(45deg); }
+/* Flipped when there is no room above, e.g. a profile header near the viewport top. */
+.xt-badge.xt-flip .xt-tooltip { bottom: auto; top: calc(100% + 12px); }
+.xt-badge.xt-flip .xt-tooltip::after { top: auto; bottom: 100%; border: 0;
+  border-left: 1px solid #3e4931; border-top: 1px solid #3e4931; transform: translate(-50%, 4px) rotate(45deg); }
+.xt-badge:hover .xt-tooltip, .xt-badge:focus-visible .xt-tooltip {
+  opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+.xt-tooltip-title { display: flex; align-items: center; gap: 7px; font: 750 12px/1.4 Inter, system-ui, sans-serif;
+  white-space: nowrap; }
+.xt-tooltip-dot { width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; background: var(--xt-lime);
+  box-shadow: 0 0 7px #c7ff7280; }
+.xt-tooltip-sub { color: #a5a5a5; font: 400 10px/1.5 Inter, system-ui, sans-serif; white-space: nowrap; }
+@keyframes xt-radar-rotate { to { transform: rotate(360deg); } }
+@keyframes xt-bracket-pulse { 0%, 100% { opacity: .7; filter: drop-shadow(0 0 0 transparent); }
+  50% { opacity: 1; filter: drop-shadow(0 0 4px #c7ff72aa); } }
+@media (prefers-reduced-motion: reduce) {
+  .xt-radar, .xt-corners { animation: none; }
+  .xt-mark, .xt-tooltip { transition: none; }
+}
+
 @media (prefers-color-scheme: dark) {
   .bar { background: #1c1730; color: #ece6ff; border-color: #4b3d86; }
   .bar .meta { color: #b3a8d9; }

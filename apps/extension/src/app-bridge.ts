@@ -1,5 +1,6 @@
 import { normalizeHandle } from "@call-my-bluff/domain";
 import { appOrigin } from "./config";
+import { send } from "./dom";
 
 // App-only watchlist bridge. No Privy tokens, X cookies or provider keys cross it.
 window.addEventListener("message", (event: MessageEvent) => {
@@ -24,13 +25,12 @@ window.addEventListener("message", (event: MessageEvent) => {
   if (!viewer || !["read", "configure"].includes(message.action)) return;
   if (message.action === "configure" && typeof message.enabled !== "boolean")
     return;
-  void chrome.runtime
-    .sendMessage({
-      type: "app-following",
-      viewer,
-      action: message.action,
-      enabled: message.enabled,
-    })
+  void send<unknown>({
+    type: "app-following",
+    viewer,
+    action: message.action,
+    enabled: message.enabled,
+  })
     .then((value: unknown) => {
       window.postMessage(
         { type: "tradepost-follow-response", nonce: message.nonce, value },

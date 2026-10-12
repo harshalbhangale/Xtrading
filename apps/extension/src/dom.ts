@@ -19,6 +19,18 @@ export function el(
   return node;
 }
 
+export function svg(
+  tag: string,
+  attrs: Record<string, string> = {},
+  ...children: Node[]
+) {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [key, value] of Object.entries(attrs))
+    node.setAttribute(key, value);
+  node.append(...children);
+  return node;
+}
+
 export function shadowHost(className: string) {
   const host = document.createElement("span");
   host.className = className;
@@ -47,12 +59,22 @@ export function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
+/**
+ * Message the worker. After the extension reloads, the old content script keeps running in open
+ * tabs and `chrome.runtime.sendMessage` throws "Extension context invalidated" synchronously, so
+ * a promise `.catch` alone is not enough: treat a dead context as "no answer".
+ */
 export function send<T>(message: Record<string, unknown>): Promise<T | null> {
-  return chrome.runtime
-    .sendMessage(message)
-    .then((value: unknown) => {
-      if (value && typeof value === "object" && "error" in value) return null;
-      return value as T;
-    })
-    .catch(() => null);
+  try {
+    if (!chrome.runtime?.id) return Promise.resolve(null);
+    return chrome.runtime
+      .sendMessage(message)
+      .then((value: unknown) => {
+        if (value && typeof value === "object" && "error" in value) return null;
+        return value as T;
+      })
+      .catch(() => null);
+  } catch {
+    return Promise.resolve(null);
+  }
 }
