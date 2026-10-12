@@ -2,7 +2,7 @@
 import { preparedStakeSchema, stakeStateSchema } from "@call-my-bluff/domain";
 import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPublicClient, formatUnits, http } from "viem";
+import { createPublicClient, formatUnits, http, parseUnits } from "viem";
 import { monadTestnet } from "viem/chains";
 
 type State = ReturnType<typeof stakeStateSchema.parse>;
@@ -228,6 +228,21 @@ export default function ConfiguredStake() {
       : isActive
         ? "Active"
         : "Inactive";
+  // Exact integer math only; an invalid amount simply disables the stepper.
+  let units = 0n;
+  try {
+    units = parseUnits(amount.trim(), 6);
+  } catch {
+    units = 0n;
+  }
+  const allowance = state ? BigInt(state.allowance) : 0n;
+  const approved = units > 0n && allowance >= units;
+  const needsReset = units > 0n && allowance > 0n && allowance < units;
+  const stepLabel = approved
+    ? "Deposit"
+    : needsReset
+      ? "Reset allowance"
+      : "Approve";
   const progress =
     minimum > 0n ? Math.min(100, Number((locked * 100n) / minimum)) : 0;
   const indexer =
@@ -381,7 +396,17 @@ export default function ConfiguredStake() {
           ) : (
             <div className="sk-actions">
               <div className="sk-deposit">
-                <label htmlFor="stake-amount">Deposit {state.symbol}</label>
+                <label htmlFor="stake-amount">Amount ({state.symbol})</label>
+                <ol className="sk-steps" aria-label="Deposit steps">
+                  <li className={approved ? "done" : "now"}>
+                    <i>{approved ? "✓" : "1"}</i>
+                    {needsReset ? "Reset old allowance" : "Approve"}
+                  </li>
+                  <li className={approved ? "now" : ""}>
+                    <i>2</i>
+                    Deposit
+                  </li>
+                </ol>
                 <div>
                   <input
                     id="stake-amount"
@@ -396,12 +421,18 @@ export default function ConfiguredStake() {
                   <button
                     className="button"
                     type="button"
-                    disabled={busy}
+                    disabled={busy || units === 0n}
                     onClick={() => void prepare("deposit")}
                   >
-                    Review deposit
+                    {stepLabel}
+                    {units > 0n && !needsReset ? ` ${amount.trim()}` : ""}
                   </button>
                 </div>
+                <p className="sk-meta">
+                  {approved
+                    ? `Approved ${formatUnits(allowance, 6)} ${state.symbol}. Deposit is the last step.`
+                    : "Two wallet approvals: an exact-amount allowance, then the deposit."}
+                </p>
               </div>
               <div className="sk-withdraw">
                 {[

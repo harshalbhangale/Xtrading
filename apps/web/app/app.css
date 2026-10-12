@@ -1399,3 +1399,48 @@
     grid-template-columns: 1fr;
   }
 }
+.sk-steps {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.sk-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--radius-small);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.sk-steps i {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font: 700 11px var(--mono);
+  font-style: normal;
+}
+.sk-steps li.now {
+  border-color: var(--lime);
+  color: var(--ink);
+}
+.sk-steps li.now i {
+  background: var(--lime);
+  border-color: var(--lime);
+  color: var(--on-lime);
+}
+.sk-steps li.done {
+  color: var(--positive);
+  border-color: var(--positive);
+}
+.sk-deposit .sk-meta {
+  margin-top: 10px;
+}
