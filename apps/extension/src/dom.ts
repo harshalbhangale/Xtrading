@@ -142,18 +142,19 @@ export function metricPanel() {
           ? [
               el(
                 "div",
-                { class: "chip-row" },
-                ...chips.map((m) =>
-                  el(
-                    "span",
+                { class: "box-grid" },
+                ...chips.map((m) => {
+                  const long =
+                    typeof m.value !== "string" || m.value.length > 20;
+                  return el(
+                    "div",
                     {
-                      class: `pill-chip${m.tone ? ` ${m.tone}` : ""}`,
-                      title: m.label,
+                      class: `metric-box${m.tone ? ` ${m.tone}` : ""}${long ? " wide" : ""}`,
                     },
-                    el("i", { class: "dot" }),
-                    m.value,
-                  ),
-                ),
+                    el("span", { class: "metric-label" }, m.label),
+                    el("span", { class: "metric-value" }, m.value),
+                  );
+                }),
               ),
             ]
           : []),

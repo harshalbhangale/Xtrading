@@ -51,7 +51,7 @@ export async function renderOverview(
     return result;
   };
   const ledger = publicCallLedgerSchema.safeParse(ledgerRaw);
-  renderPerformance(
+  const panel = renderPerformance(
     container,
     handle,
     ledger.success ? ledger.data.calls : null,
@@ -66,24 +66,25 @@ export async function renderOverview(
         .map((postId) => ({ postId, check: () => check(postId) }));
     },
   );
-  container.append(el("h3", {}, "Posts detected on X · not evaluated"));
   if (value.detectedPostsStatus !== "ready")
-    container.append(el("p", { class: "note" }, "Detected posts unavailable."));
+    panel.set("detected", {
+      label: "Detected posts",
+      value: null,
+      reason: "unavailable",
+    });
   else if (!value.detectedPosts.length)
-    container.append(
-      el(
-        "p",
-        { class: "note" },
-        "No captured trade calls or token references yet.",
-      ),
-    );
+    panel.set("detected", {
+      label: "Detected posts",
+      value: null,
+      reason: "none captured",
+    });
+  else container.append(el("h3", {}, "Detected on X · unscored"));
   for (const { signal, route } of shown) {
     const flag = el("p", { class: "note reach-flag" });
     flag.hidden = true;
     void check(signal.postId).then((reach) => {
       if (reach !== "gone" || !current() || !flag.isConnected) return;
-      flag.textContent =
-        "⚠ Post not publicly reachable now (possibly deleted).";
+      flag.textContent = "⚠ No longer publicly reachable";
       flag.hidden = false;
     });
     container.append(
@@ -93,63 +94,45 @@ export async function renderOverview(
         el(
           "strong",
           {},
-          `${signal.asset ?? "Token reference"} · ${signal.direction ?? "No direction stated"}`,
+          `${signal.asset ?? "Token"} · ${signal.direction ?? "no direction"}`,
         ),
-        el("p", { class: "note" }, signal.summary),
         flag,
         postAttachments(signal),
         postActions(signal, route),
-        route.status === "unavailable"
-          ? el("p", { class: "note" }, route.reason)
-          : null,
       ),
     );
   }
   if (value.expiredUnresolved)
-    container.append(
-      el(
-        "p",
-        { class: "note" },
-        `${value.expiredUnresolved} expired calls still awaiting resolution.`,
-      ),
-    );
-  container.append(el("h3", {}, "Recent confirmed Kuru swaps · testnet"));
-  if (!value.activity || value.activity.status === "unavailable")
-    container.append(
-      el("p", { class: "note" }, "Indexed wallet activity unavailable."),
-    );
-  else {
-    container.append(
-      el(
-        "p",
-        { class: "note" },
-        `${value.activity.status} index · block ${value.activity.progressBlock ?? "unknown"} · unfinalized`,
-      ),
-    );
-    if (!value.activity.swaps.length)
-      container.append(
-        el("p", { class: "note" }, "No indexed swaps in this view."),
-      );
-    for (const swap of value.activity.swaps.slice(0, 5))
-      container.append(
-        el(
-          "div",
-          { class: "finding" },
-          safeLink(
-            `https://testnet.monadvision.com/tx/${swap.transactionHash}`,
-            `${swap.side} ${swap.market} · ${swap.transactionHash.slice(0, 10)}…`,
-          ),
+    panel.set("expired", {
+      label: "Expired calls",
+      group: "Calls",
+      value: `${value.expiredUnresolved} awaiting result`,
+    });
+  const activity = value.activity;
+  if (!activity || activity.status === "unavailable")
+    panel.set("swaps", {
+      label: "Kuru swaps",
+      value: null,
+      reason: "indexer unavailable",
+    });
+  else if (!activity.swaps.length)
+    panel.set("swaps", {
+      label: "Kuru swaps",
+      value: null,
+      reason:
+        activity.status === "lagging" ? "none yet · index lagging" : "none yet",
+    });
+  else
+    for (const [index, swap] of activity.swaps.slice(0, 5).entries())
+      panel.set(`swap${index}`, {
+        label: `${swap.side} ${swap.market}`,
+        kind: "row",
+        group: "Kuru swaps",
+        value: safeLink(
+          `https://testnet.monadvision.com/tx/${swap.transactionHash}`,
+          `${swap.transactionHash.slice(0, 8)}… ↗`,
         ),
-      );
-  }
-  container.append(
-    el("p", { class: "note" }, value.positionsNote),
-    el(
-      "p",
-      { class: "note" },
-      `Observed ${value.observedAt}. Calls are predictions, not open trades or wallet returns.`,
-    ),
-  );
+      });
 }
 
 type Reach = "available" | "gone" | "unknown";
@@ -313,4 +296,5 @@ function renderPerformance(
         `All ${list.length} calls ↗`,
       ),
     );
+  return panel;
 }
