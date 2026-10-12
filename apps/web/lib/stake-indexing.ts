@@ -3,6 +3,7 @@ import {
   indexedStakeSchema,
   type stakeStateSchema,
 } from "@call-my-bluff/domain";
+import { envioQuery } from "./envio";
 
 type State = Pick<
   ReturnType<typeof stakeStateSchema.parse>,
@@ -21,32 +22,19 @@ export async function indexedStake(state: State) {
     observedAt,
     events: [],
   });
-  const endpoint = process.env.ENVIO_GRAPHQL_URL;
-  if (!endpoint || !state.contract) return unavailable;
+  if (!process.env.ENVIO_GRAPHQL_URL || !state.contract) return unavailable;
   const positionId = `${state.chainId}:${state.contract.toLowerCase()}:${state.wallet.toLowerCase()}`;
   try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      cache: "no-store",
-      signal: AbortSignal.timeout(5000),
-      headers: {
-        "Content-Type": "application/json",
-        ...(process.env.ENVIO_HASURA_ADMIN_SECRET
-          ? { "X-Hasura-Admin-Secret": process.env.ENVIO_HASURA_ADMIN_SECRET }
-          : {}),
-      },
-      body: JSON.stringify({
-        query: `query StakeEvidence($id: String!) {
+    const result = await envioQuery(
+      `query StakeEvidence($id: String!) {
           _meta(where: {chainId: {_eq: 10143}}) {progressBlock progressBlockTime isReady}
           StakeEvent(where: {positionId: {_eq: $id}}, order_by: [{blockNumber: desc}, {id: desc}], limit: 20) {
             id positionId balance withdrawableAt blockNumber timestamp
           }
         }`,
-        variables: { id: positionId },
-      }),
-    });
-    if (!response.ok) return unavailable;
-    const result = await response.json();
+      { id: positionId },
+    );
+    if (!result) return unavailable;
     if (
       result.errors ||
       !Array.isArray(result.data?._meta) ||

@@ -15,6 +15,7 @@ import {
 import { and, eq, inArray } from "drizzle-orm";
 import { type Address, decodeEventLog, getAddress, type Hex } from "viem";
 import { getDatabase } from "./database";
+import { envioQuery } from "./envio";
 import { identityContext } from "./identity-http";
 import { testnetClient } from "./markets";
 
@@ -44,26 +45,10 @@ async function boundWallet(request: Request) {
 
 type Row = Record<string, unknown>;
 async function hasura(query: string, variables: Record<string, unknown>) {
-  const endpoint = process.env.ENVIO_GRAPHQL_URL;
-  if (!endpoint) return null;
-  const response = await fetch(endpoint, {
-    method: "POST",
-    cache: "no-store",
-    signal: AbortSignal.timeout(5000),
-    headers: {
-      "Content-Type": "application/json",
-      ...(process.env.ENVIO_HASURA_ADMIN_SECRET
-        ? { "X-Hasura-Admin-Secret": process.env.ENVIO_HASURA_ADMIN_SECRET }
-        : {}),
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-  if (!response.ok) return null;
-  const result = (await response.json()) as {
-    data?: Record<string, Row[]>;
-    errors?: unknown;
-  };
-  return result.errors || !result.data ? null : result.data;
+  const result = await envioQuery(query, variables);
+  return !result || result.errors || !result.data
+    ? null
+    : (result.data as Record<string, Row[]>);
 }
 
 /** Confirmed Kuru V2 swaps and custody movements for one wallet's accounts. */
