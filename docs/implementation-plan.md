@@ -140,6 +140,6 @@ Commit verified features separately and update this checklist as they land.
 - [x] Add separate buy/sell review links for configured Kuru spot markets and long/short links for configured Perpl markets; unknown token/network routes stay unavailable.
 - [x] Add optional browser OCR with unverified text and address candidates; no paid image API or automatic trade terms.
 - [x] Verify dashboard media, address-only classification, original-post links and browser OCR on a real X attachment.
-- [ ] Verify extension 0.5.0 after Chrome reload.
+- [x] Verify extension 0.5.0 after Chrome reload: a real Apex Calls address-only post showed its original image, full address, View post and unavailable trade buttons in the X drawer; the same post appeared in the production dashboard on 12 October 2026.
 - [ ] Extract explicit target/stop/timeframe from observed calls and evaluate historical price paths; publish the default observation-window policy for calls without a deadline.
 - [ ] Add confirmed token/network mappings for address-bearing posts. Solana execution is outside the current Monad MVP.
