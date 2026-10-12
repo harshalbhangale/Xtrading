@@ -1,8 +1,9 @@
-import { normalizeHandle } from "@call-my-bluff/domain";
+import { normalizeHandle, publicCallLedgerSchema } from "@call-my-bluff/domain";
+import { callStats, callsLine, formatUnits6 } from "./card-metrics";
 import { appOrigin } from "./config";
 import { addProfileBadge } from "./creator-badge";
-import { el, safeLink, shadowHost, shortAddress } from "./dom";
-import { loadInsights } from "./drawer";
+import { el, safeLink, send, shadowHost, shortAddress } from "./dom";
+import { type Insights, loadInsights } from "./drawer";
 import { renderOverview } from "./overview";
 
 const reserved = new Set([
@@ -75,7 +76,7 @@ export async function scanProfile() {
     details,
     safeLink(
       new URL(`/creators/${handle}`, appOrigin).href,
-      "Open creator dashboard ↗",
+      "Open record ↗",
       "cta",
     ),
   );
@@ -87,7 +88,7 @@ export async function scanProfile() {
       "aria-expanded": "false",
       "aria-controls": "creator-overview",
     },
-    "Expand calls & wallet activity",
+    "Calls, trades & wallet activity",
   );
   const overview = el("div", { id: "creator-overview" });
   overview.hidden = true;
@@ -96,7 +97,7 @@ export async function scanProfile() {
     host.dataset.expanded = String(!overview.hidden);
     expand.setAttribute("aria-expanded", String(!overview.hidden));
     expand.textContent = overview.hidden
-      ? "Expand calls & wallet activity"
+      ? "Calls, trades & wallet activity"
       : "Collapse";
     if (!overview.hidden)
       void renderOverview(
@@ -124,46 +125,80 @@ export async function scanProfile() {
     return;
   }
   const evidence = insights.evidence;
-  const row = (label: string, value: string) =>
-    el("div", { class: "row" }, el("span", {}, label), el("span", {}, value));
-  details.append(
-    row(
-      "Identity",
-      evidence?.identity.status === "bound"
-        ? `Recorded binding · ${shortAddress(evidence.identity.wallet ?? "")}`
-        : "No binding evidence available",
-    ),
-    row(
-      "Refundable stake",
-      evidence?.stake.status === "active"
-        ? `Active · ${evidence.stake.symbol ?? "token"}`
-        : evidence?.stake.status === "withdrawal-pending"
-          ? "Withdrawal pending"
-          : evidence?.stake.status === "inactive"
-            ? "Inactive"
-            : "Unavailable",
-    ),
-    row(
-      "Detected calls",
-      insights.reputation.status === "ready"
-        ? String(insights.reputation.trackedCalls)
-        : "Unavailable",
-    ),
-    row(
-      "Call score",
-      insights.reputation.score === null
-        ? "Pending evaluation"
-        : String(insights.reputation.score),
-    ),
+  const line = (label: string, value: string, tone = "") =>
     el(
-      "p",
-      { class: "note" },
-      "Identity, stake and call performance are separate. Detected calls cover posts seen by extension users; they are not wallet returns.",
-    ),
-    el(
-      "p",
-      { class: "note" },
-      `Checked ${new Date().toISOString()} · handle is a lookup hint, not a fresh ownership proof.`,
-    ),
+      "div",
+      { class: `metric${tone ? ` ${tone}` : ""}` },
+      el("span", { class: "metric-label" }, label),
+      el("span", { class: "metric-value" }, value),
+    );
+  const slot = el("div", {});
+  details.append(slot);
+  const accountability = [
+    evidence?.identity.status === "bound"
+      ? `Wallet linked · ${shortAddress(evidence.identity.wallet ?? "")}`
+      : null,
+    evidence?.stake.status === "active" && evidence.stake.balance
+      ? `${formatUnits6(evidence.stake.balance)} ${evidence.stake.symbol ?? ""} staked`.trim()
+      : evidence?.stake.status === "withdrawal-pending"
+        ? "stake withdrawing"
+        : null,
+  ].filter((part): part is string => part !== null);
+  const [ledgerRaw, checked] = await Promise.all([
+    send<unknown>({ type: "creator-ledger", handle }),
+    sayDid(handle, insights),
+  ]);
+  if (!host.isConnected || profileHandle() !== handle) return;
+  const ledger = publicCallLedgerSchema.safeParse(ledgerRaw);
+  const text = callsLine(
+    callStats(ledger.success ? ledger.data.calls : []),
+    insights.reputation.status === "ready"
+      ? insights.reputation.trackedCalls
+      : 0,
   );
+  slot.replaceChildren(
+    ...[
+      text ? line("Calls", text) : null,
+      checked,
+      accountability.length ? line("Record", accountability.join(" · ")) : null,
+    ].filter((node): node is HTMLElement => node !== null),
+  );
+  if (!slot.childElementCount)
+    slot.append(el("p", { class: "note" }, "No creator record yet."));
+}
+
+/**
+ * Said versus did for the creator's latest classified call, from the Nansen wallet check.
+ * Shown only for live provider data; demo, unavailable and no-activity results stay hidden.
+ */
+async function sayDid(handle: string, insights: Insights) {
+  const latest = insights.reputation.recent[0];
+  if (!latest?.asset || !latest.direction) return null;
+  const checked = await loadInsights(handle, latest.asset, latest.direction);
+  const check = checked?.nansen;
+  if (!check || check.mode !== "live") return null;
+  if (check.verdict !== "contradiction" && check.verdict !== "consistent")
+    return null;
+  const tx = check.findings.find((finding) => finding.transactionHash);
+  const text =
+    check.verdict === "contradiction"
+      ? `⚠ Wallet did the opposite of the latest ${latest.asset} call`
+      : `Wallet matched the latest ${latest.asset} call`;
+  const row = el(
+    "div",
+    { class: `metric ${check.verdict}` },
+    el("span", { class: "metric-label" }, "Said / did"),
+    el("span", { class: "metric-value" }, text),
+  );
+  if (tx?.transactionHash && /^0x[0-9a-fA-F]{64}$/.test(tx.transactionHash))
+    row
+      .querySelector(".metric-value")
+      ?.append(
+        " ",
+        safeLink(
+          `https://testnet.monadvision.com/tx/${tx.transactionHash}`,
+          "↗",
+        ),
+      );
+  return row;
 }

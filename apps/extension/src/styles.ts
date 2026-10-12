@@ -40,6 +40,11 @@ a { color: inherit; }
 .pill.neutral { background: #eef0f4; color: #454b5a; }
 .tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; font: 700 10px/16px ui-monospace, monospace;
   background: #fff1c2; color: #7a5a00; border: 1px solid #f0d27a; }
+.metric { display: flex; flex-direction: column; gap: 1px; padding: 5px 0; }
+.metric-label { color: #6b6585; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.metric-value { font-weight: 650; overflow-wrap: anywhere; }
+.metric.contradiction .metric-value { color: #b3261e; }
+.metric.consistent .metric-value { color: #1d6b2a; }
 .note { color: #6b6585; font-size: 12px; margin: 6px 0 0; }
 .finding { margin: 6px 0 0; padding: 6px 8px; border-radius: 8px; background: #fff; border: 1px solid #ebe6fb; }
 .cta { display: block; text-align: center; text-decoration: none; margin-top: 10px; padding: 11px; border-radius: 10px;

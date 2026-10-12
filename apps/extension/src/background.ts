@@ -3,6 +3,7 @@ import {
   normalizeHandle,
   postSignalRequestSchema,
   postSignalResponseSchema,
+  publicCallLedgerSchema,
   publicCreatorEvidenceSchema,
 } from "@call-my-bluff/domain";
 import { appOrigin } from "./config";
@@ -87,6 +88,17 @@ function handleMessage(
     return cached(`overview:${handle}`, 30000, async () => {
       const value = creatorOverviewSchema.parse(
         await getJson(`/api/creators/${handle}/overview`),
+      );
+      if (value.handle !== handle) throw new Error("mismatched_handle");
+      return value;
+    });
+  }
+  if (message.type === "creator-ledger" && typeof message.handle === "string") {
+    const handle = normalizeHandle(message.handle);
+    if (!handle) return Promise.resolve({ error: "invalid_handle" });
+    return cached(`ledger:${handle}`, 30000, async () => {
+      const value = publicCallLedgerSchema.parse(
+        await getJson(`/api/creators/${encodeURIComponent(handle)}/calls`),
       );
       if (value.handle !== handle) throw new Error("mismatched_handle");
       return value;
