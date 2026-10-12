@@ -129,5 +129,6 @@ Commit verified features separately and update this checklist as they land.
 - [x] Click-to-expand registered ongoing calls and bound-wallet Kuru swaps in the profile card and creator dashboard; separate expired unresolved calls and unavailable creator Perpl positions.
 - [x] Opt-in, browser-only observed-follow sync from X profile headers and the signed-in viewer's following list; dashboard polls local extension observations every 15 seconds.
 - [x] Keep manual handles separate; show partial coverage and capture times, disable/clear control, no paid X following API.
-- [ ] Reload extension 0.4.0 and validate real-X header/list selectors, account switching and the production app bridge.
+- [x] Reload extension 0.4.0 and validate profile expansion, real-X header/list selectors and the production app bridge. On 12 October, 25 observed follows appeared in Watchlist after opt-in.
+- [ ] Validate live account switching and observed unfollows; storage isolation/removal are covered by automated tests.
 - [ ] Creator-owned Perpl account mapping and actual open-position reads.

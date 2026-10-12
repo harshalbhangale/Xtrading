@@ -47,7 +47,7 @@ Trade ▸ → GET /api/creators/:handle/insights?asset&direction → evidence + 
 - Untrusted post text is rendered with `textContent` only and isolated in shadow roots.
 - Delayed classification responses are discarded if X has recycled the post. Missing or invalid classification produces no injected UI.
 
-Eight extension UI cases cover ordinary posts, click-only drawers and expansion, profile records, navigation during evidence reads, invalid responses and recycled posts. Five follow-observation and three storage tests cover scoping, opt-in, isolation and clearing. Production validation on real X is still pending.
+Eight extension UI cases cover ordinary posts, click-only drawers and expansion, profile records, navigation during evidence reads, invalid responses and recycled posts. Five follow-observation and three storage tests cover scoping, opt-in, isolation and clearing. Extension 0.4.0 profile expansion and opt-in following-list sync were verified on real X against the production backend on 12 October 2026. Wider feed/navigation coverage, live account switching and unfollow checks remain.
 
 ## Build and install
 

@@ -18,6 +18,6 @@ The app bridge is injected only on the configured app origin and handles request
 
 ## Verification and remaining limits
 
-DOM tests cover profile-only observation, explicit unfollows, suggestion/feed exclusion, own-list scoping, missing viewer UI, and click-only expansion. Storage tests cover opt-in, account isolation, deduplication, clearing and malformed data. Real-X and production bridge validation still require reloading the installed extension. DOM selectors may change when X updates.
+DOM tests cover profile-only observation, explicit unfollows, suggestion/feed exclusion, own-list scoping, missing viewer UI, and click-only expansion. Storage tests cover opt-in, account isolation, deduplication, clearing and malformed data. On 12 October 2026, extension 0.4.0 was reloaded and tested on real X: profile expansion worked, and 25 observed follows reached the production Watchlist through the app bridge after opt-in. Live account switching and observed unfollow checks remain; no real follow relationships were changed for testing. DOM selectors may change when X updates.
 
 Supported full-list synchronization is separate future work and needs suitable X API access. X prices following/follower reads at $0.010 per returned resource in its [official pricing](https://docs.x.com/x-api/getting-started/pricing), checked 12 October 2026. This feature does not enable that paid path. Existing hosting/database/provider usage retains its own pricing and free-tier limits.
