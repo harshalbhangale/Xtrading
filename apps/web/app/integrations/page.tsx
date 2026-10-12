@@ -29,7 +29,7 @@ const tools = [
 export default function IntegrationsPage() {
   const endpoint = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/mcp`;
   return (
-    <div className="page subpage integrations-page">
+    <>
       <PageHeading
         title="Agent access (MCP)"
         description="A Model Context Protocol server so agents can read the same evidence and prepare trades for you to sign. Agents never sign or submit."
@@ -73,6 +73,6 @@ export default function IntegrationsPage() {
           ))}
         </div>
       </Panel>
-    </div>
+    </>
   );
 }

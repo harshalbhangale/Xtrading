@@ -1,54 +1,52 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { isChromeless } from "./app-routes";
 import { Brand } from "./brand";
-import { Navigation } from "./navigation";
-import { WalletControl } from "./wallet-control";
+import { SignedOutActions } from "./signed-out-actions";
+
+const links = [
+  ["/how-it-works", "How it works"],
+  ["/for-creators", "For creators"],
+  ["/creators", "Creators"],
+  ["/extension", "Extension"],
+] as const;
+
+const ConfiguredActions = dynamic(() => import("./configured-header-actions"), {
+  ssr: false,
+  loading: SignedOutActions,
+});
 
 export function SiteHeader({ testnet }: { testnet: boolean }) {
   const path = usePathname();
-  const marketing = [
-    "/",
-    "/how-it-works",
-    "/for-creators",
-    "/extension",
-  ].includes(path);
+  if (isChromeless(path)) return null;
   return (
-    <header className={`topbar ${marketing ? "xp-header" : ""}`}>
+    <header className="topbar xp-header">
       <Link href="/" className="wordmark" aria-label="Xtrading home">
         <Brand />
       </Link>
-      {marketing ? (
-        <nav aria-label="Main navigation">
-          {[
-            ["/how-it-works", "How it works"],
-            ["/for-creators", "For creators"],
-            ["/extension", "Extension"],
-          ].map(([href, label]) => (
-            <Link
-              key={href}
-              href={href ?? "/"}
-              aria-current={path === href ? "page" : undefined}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
-      ) : (
-        <Navigation />
-      )}
+      <nav aria-label="Main navigation">
+        {links.map(([href, label]) => (
+          <Link
+            key={href}
+            href={href}
+            aria-current={path === href ? "page" : undefined}
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
       <div className="header-actions">
         <span className="network">
           <i />
           Monad {testnet ? "testnet" : "mainnet"}
         </span>
-        {marketing ? (
-          <Link className="xp-button xp-button-small" href="/dashboard">
-            Launch app <span>↗</span>
-          </Link>
+        {process.env.NEXT_PUBLIC_PRIVY_APP_ID ? (
+          <ConfiguredActions />
         ) : (
-          <WalletControl />
+          <SignedOutActions />
         )}
       </div>
     </header>
