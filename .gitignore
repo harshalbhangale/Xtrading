@@ -18,3 +18,4 @@ services/indexer/persisted_state.envio.json
 __pycache__/
 package-lock.json
 .vercel
+release

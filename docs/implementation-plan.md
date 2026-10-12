@@ -107,8 +107,10 @@ Exit: an expired bonded call produces one verified settlement, paying its reserv
 
 ## Phase 6: Deployment and submission
 
-- [ ] Deploy web/API and indexer with HTTPS origins and server secrets.
-- [ ] Package the extension and document installation.
+- [x] Deploy web/API to Vercel: https://nomorebluff.vercel.app (project `nomorebluff`, root `apps/web`, Node 22, functions in `bom1` next to RDS, auto-deploy from `main`). Server secrets are sensitive Vercel env vars; the RDS CA goes in `DATABASE_CA_PEM`.
+- [x] RDS accepts 5432 from anywhere (rule `sgr-05bfbb69a0f7f59a4`, added outside CloudFormation) so Vercel can connect; TLS verify-full and the restricted `cmb_app` role still apply. Revoke the rule after the hackathon.
+- [ ] Deploy the indexer to Envio Hosted Service (root `services/indexer`, config `config.yaml`, env `ENVIO_MONAD_RPC_URL`) and set Vercel `ENVIO_GRAPHQL_URL`.
+- [x] Package the extension for the production origin (`release/no-more-bluff-extension.zip`, built with `CMB_EXTENSION_APP_ORIGIN=https://nomorebluff.vercel.app`).
 - [ ] Test restart recovery, stale data, transaction failures and account isolation.
 - [ ] Record the complete onboarding → stake → X evidence → trade → confirmed-fill demo.
 - [ ] Demonstrate Nansen evidence and MCP; prepare sponsor evidence and submission video.

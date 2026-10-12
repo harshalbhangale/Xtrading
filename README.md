@@ -6,6 +6,8 @@ Identity binding works. Both stake contracts and mUSDC are deployed and verified
 
 Live withdrawal request and cancellation were confirmed and indexed; the 500 mUSDC stake is active again. The extension implements separate binding/stake indicators, evidence details and spot trade review links. Chrome installation and real-X validation are pending. Its public evidence endpoint exposes recorded stable-X-ID bindings and requires fresh matching RPC/Envio data before showing active stake.
 
+Live: https://nomorebluff.vercel.app (Monad testnet). See [Deployment](#deployment).
+
 ## Run locally
 
 Requirements: Node.js 22+, pnpm 11.1.3 and Foundry. Docker is used for local Postgres and the Envio runtime.
@@ -76,6 +78,13 @@ Envio also indexes Kuru V2 swaps, deposits, withdrawals and account registration
 To run locally, copy `services/indexer/.env.example` to `.env`, run `docker compose -p cmb-stake-indexer -f services/indexer/docker-compose.yml up -d`, then `pnpm --filter @call-my-bluff/indexer start`. Hasura is bound to localhost port 8081; its local development admin secret is `testing`. These settings are for local development only. Indexed history remains empty until stake events occur; a block lag is not a claim of chain finality.
 
 Set server-only `ENVIO_GRAPHQL_URL=http://localhost:8081/v1/graphql` and `ENVIO_HASURA_ADMIN_SECRET=testing` for local app access. The authenticated endpoint scopes queries to the current bound wallet and configured contract, validates integer strings and timestamps, and compares indexer freshness and latest balance to the RPC snapshot. Unavailable indexing does not disable direct chain reads or transaction review. Hasura must stringify numeric types; never convert token balances through JavaScript numbers.
+
+## Deployment
+
+- **Web:** Vercel project `nomorebluff`, root directory `apps/web`, Node 22, function region `bom1`. Pushes to `main` deploy to production. Environment variables mirror `apps/web/.env.example`; `NEXT_PUBLIC_APP_URL` must equal the production origin because POST routes check it. Add that origin to the Privy app's allowed domains.
+- **Database:** AWS RDS (ap-south-1). Hosted runtimes pass the regional CA bundle as `DATABASE_CA_PEM`. Run schema changes with the bootstrap in `infrastructure/aws`.
+- **Indexer:** Envio Hosted Service with root `services/indexer` and `config.yaml`; set `ENVIO_MONAD_RPC_URL` there, then set the hosted GraphQL URL as `ENVIO_GRAPHQL_URL` on Vercel (no admin secret needed for a public endpoint).
+- **Extension:** `CMB_EXTENSION_APP_ORIGIN=https://nomorebluff.vercel.app pnpm --filter @call-my-bluff/extension build`, then zip `apps/extension/dist`. A production build only talks to that origin; rebuild without the variable for localhost.
 
 ## Checks
 
