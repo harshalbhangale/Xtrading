@@ -29,9 +29,10 @@ it("does not substitute a ticker market when an address is present", () => {
     text: `buy $ETH CA: ${mint}`,
   });
   expect(deriveTradeRoute(signal, [])).toMatchObject({ status: "unavailable" });
-  expect(
-    heuristicSignal({ postId: "123", handle: "alice", text: `CA:\n${mint}` }),
-  ).toMatchObject({ isCall: false, tokenMention: true });
+  for (const text of [`CA:\n${mint}`, `CA ${mint}`, `Contract address ${mint}`])
+    expect(
+      heuristicSignal({ postId: "123", handle: "alice", text }),
+    ).toMatchObject({ isCall: false, tokenMention: true });
 });
 it("allows only X media metadata and remains compatible with older callers", () => {
   const base = { postId: "123", handle: "alice", text: "buy $ETH" };

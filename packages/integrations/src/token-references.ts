@@ -26,7 +26,7 @@ export function tokenReferences(text: string): PostSignal["tokenReferences"] {
   return refs;
 }
 export function hasTokenMention(text: string) {
-  return /\b(?:CA|contract(?: address)?|token address|mint)\s*[:\n]|\bpump\.fun\b|\b(?:buy|sell|bought|selling|entry|target)\b/i.test(
+  return /\b(?:CA|contract(?: address)?|token address|mint)\b|\bpump\.fun\b|\b(?:buy|sell|bought|selling|entry|target)\b/i.test(
     text,
   );
 }
