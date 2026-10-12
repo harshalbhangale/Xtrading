@@ -1,16 +1,31 @@
 import type { PublicCall } from "@call-my-bluff/domain";
 import { expect, it } from "vitest";
-import { callStats, callsLine, formatBps, formatUnits6 } from "./card-metrics";
+import {
+  byAssetDirection,
+  callStats,
+  callsLine,
+  formatBps,
+  formatUnits6,
+  profitFactor,
+  worstCall,
+} from "./card-metrics";
 
 const call = (
   horizon: "24h" | "7d",
   outcome: "success" | "failure" | null,
   returnBps: string | null,
   status: "open" | "resolved" = "resolved",
+  asset = "ETH",
+  direction: "up" | "down" = "up",
 ) =>
   ({
     status,
-    evidence: { horizon, outcome, returnBps },
+    evidence: {
+      horizon,
+      outcome,
+      returnBps,
+      terms: { assetId: asset, direction },
+    },
   }) as unknown as PublicCall;
 
 it("summarises hit rate and median return per horizon", () => {
@@ -43,4 +58,20 @@ it("formats basis points and six-decimal amounts without floats for amounts", ()
   expect(formatBps(-120)).toBe("−1.2%");
   expect(formatUnits6("500000000")).toBe("500");
   expect(formatUnits6("1250000")).toBe("1.25");
+});
+
+it("finds the worst call, profit factor and per-asset results", () => {
+  const calls = [
+    call("24h", "success", "300"),
+    call("24h", "failure", "-200", "resolved", "BTC", "down"),
+    call("7d", "success", "100"),
+    call("7d", null, null, "open"),
+  ];
+  expect(worstCall(calls)?.evidence.returnBps).toBe("-200");
+  expect(profitFactor(calls)).toBe(2);
+  expect(profitFactor([call("24h", "success", "100")])).toBeNull();
+  expect(byAssetDirection(calls)).toEqual([
+    { asset: "ETH", direction: "up", scored: 2, hits: 2, medianBps: 200 },
+    { asset: "BTC", direction: "down", scored: 1, hits: 0, medianBps: -200 },
+  ]);
 });

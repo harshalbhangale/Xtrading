@@ -87,3 +87,27 @@ export function send<T>(message: Record<string, unknown>): Promise<T | null> {
     return Promise.resolve(null);
   }
 }
+
+/** One labelled metric. A missing value renders as "—" with the reason beside it. */
+export function metricLine(
+  label: string,
+  value: string | Node | null,
+  reason = "",
+  tone = "",
+) {
+  return el(
+    "div",
+    {
+      class: `metric${tone ? ` ${tone}` : ""}${value === null ? " empty" : ""}`,
+    },
+    label ? el("span", { class: "metric-label" }, label) : null,
+    el(
+      "span",
+      { class: "metric-value" },
+      value ?? "—",
+      value === null && reason
+        ? el("span", { class: "metric-reason" }, reason)
+        : null,
+    ),
+  );
+}

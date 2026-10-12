@@ -2,7 +2,14 @@ import { normalizeHandle, publicCallLedgerSchema } from "@call-my-bluff/domain";
 import { callStats, callsLine, formatUnits6 } from "./card-metrics";
 import { appOrigin } from "./config";
 import { addProfileBadge } from "./creator-badge";
-import { el, safeLink, send, shadowHost, shortAddress } from "./dom";
+import {
+  el,
+  metricLine as line,
+  safeLink,
+  send,
+  shadowHost,
+  shortAddress,
+} from "./dom";
 import { type Insights, loadInsights } from "./drawer";
 import { renderOverview } from "./overview";
 
@@ -72,33 +79,26 @@ export async function scanProfile() {
     {},
     el("p", { class: "note" }, "Checking recorded evidence…"),
   );
-  card.append(
-    details,
-    safeLink(
-      new URL(`/creators/${handle}`, appOrigin).href,
-      "Open record ↗",
-      "cta",
-    ),
-  );
   const expand = el(
     "button",
     {
       type: "button",
-      class: "btn secondary",
+      class: "card-toggle",
       "aria-expanded": "false",
       "aria-controls": "creator-overview",
     },
-    "Calls, trades & wallet activity",
+    "Show details",
   );
-  const overview = el("div", { id: "creator-overview" });
+  const overview = el("div", {
+    id: "creator-overview",
+    class: "card-overview",
+  });
   overview.hidden = true;
   const toggle = () => {
     overview.hidden = !overview.hidden;
     host.dataset.expanded = String(!overview.hidden);
     expand.setAttribute("aria-expanded", String(!overview.hidden));
-    expand.textContent = overview.hidden
-      ? "Calls, trades & wallet activity"
-      : "Collapse";
+    expand.textContent = overview.hidden ? "Show details" : "Hide details";
     if (!overview.hidden)
       void renderOverview(
         handle,
@@ -107,7 +107,20 @@ export async function scanProfile() {
       );
   };
   expand.addEventListener("click", toggle);
-  card.append(expand, overview);
+  card.append(
+    details,
+    el(
+      "div",
+      { class: "card-actions" },
+      safeLink(
+        new URL(`/creators/${handle}`, appOrigin).href,
+        "Open record ↗",
+        "cta",
+      ),
+      expand,
+    ),
+    overview,
+  );
   root.append(card);
   anchor.after(host);
   if (expanded) toggle();
@@ -116,6 +129,10 @@ export async function scanProfile() {
   details.replaceChildren();
   if (!insights) {
     details.append(
+      line("Calls", null, "service unavailable"),
+      line("Said / did", null, "service unavailable"),
+      line("Wallet", null, "service unavailable"),
+      line("Stake", null, "service unavailable"),
       el(
         "p",
         { class: "note" },
@@ -125,25 +142,28 @@ export async function scanProfile() {
     return;
   }
   const evidence = insights.evidence;
-  const line = (label: string, value: string, tone = "") =>
-    el(
-      "div",
-      { class: `metric${tone ? ` ${tone}` : ""}` },
-      el("span", { class: "metric-label" }, label),
-      el("span", { class: "metric-value" }, value),
-    );
-  const slot = el("div", {});
-  details.append(slot);
-  const accountability = [
+  const wallet =
     evidence?.identity.status === "bound"
-      ? `Wallet linked · ${shortAddress(evidence.identity.wallet ?? "")}`
-      : null,
-    evidence?.stake.status === "active" && evidence.stake.balance
-      ? `${formatUnits6(evidence.stake.balance)} ${evidence.stake.symbol ?? ""} staked`.trim()
-      : evidence?.stake.status === "withdrawal-pending"
-        ? "stake withdrawing"
-        : null,
-  ].filter((part): part is string => part !== null);
+      ? line(
+          "Wallet",
+          `Linked · ${shortAddress(evidence.identity.wallet ?? "")}`,
+        )
+      : line("Wallet", null, "no linked wallet");
+  const stake = evidence?.stake;
+  const stakeLine =
+    stake?.status === "active" && stake.balance
+      ? line(
+          "Stake",
+          `${formatUnits6(stake.balance)} ${stake.symbol ?? ""} staked`.trim(),
+        )
+      : stake?.status === "withdrawal-pending"
+        ? line("Stake", "Withdrawal pending")
+        : stake?.status === "inactive"
+          ? line("Stake", null, "no active stake")
+          : line("Stake", null, "chain or indexer data not current");
+  const callsSlot = line("Calls", "…");
+  const sayDidSlot = line("Said / did", "…");
+  details.append(callsSlot, sayDidSlot, wallet, stakeLine);
   const [ledgerRaw, checked] = await Promise.all([
     send<unknown>({ type: "creator-ledger", handle }),
     sayDid(handle, insights),
@@ -156,40 +176,43 @@ export async function scanProfile() {
       ? insights.reputation.trackedCalls
       : 0,
   );
-  slot.replaceChildren(
-    ...[
-      text ? line("Calls", text) : null,
-      checked,
-      accountability.length ? line("Record", accountability.join(" · ")) : null,
-    ].filter((node): node is HTMLElement => node !== null),
+  callsSlot.replaceWith(
+    text
+      ? line("Calls", text)
+      : line(
+          "Calls",
+          null,
+          ledger.success ? "no registered calls" : "call ledger unavailable",
+        ),
   );
-  if (!slot.childElementCount)
-    slot.append(el("p", { class: "note" }, "No creator record yet."));
+  sayDidSlot.replaceWith(checked);
 }
 
-/**
- * Said versus did for the creator's latest classified call, from the Nansen wallet check.
- * Shown only for live provider data; demo, unavailable and no-activity results stay hidden.
- */
+/** Said versus did for the creator's latest classified call, from the Nansen wallet check. */
 async function sayDid(handle: string, insights: Insights) {
+  const label = "Said / did";
   const latest = insights.reputation.recent[0];
-  if (!latest?.asset || !latest.direction) return null;
+  if (!latest?.asset || !latest.direction)
+    return line(label, null, "no classified call to check");
   const checked = await loadInsights(handle, latest.asset, latest.direction);
   const check = checked?.nansen;
-  if (!check || check.mode !== "live") return null;
-  if (check.verdict !== "contradiction" && check.verdict !== "consistent")
-    return null;
-  const tx = check.findings.find((finding) => finding.transactionHash);
-  const text =
+  if (!check || check.mode === "unavailable" || check.verdict === "unavailable")
+    return line(label, null, "Nansen unavailable");
+  // Demo results are fixtures, never evidence.
+  if (check.mode === "demo") return line(label, null, "Nansen in demo mode");
+  if (check.verdict === "not-applicable")
+    return line(label, null, `not applicable to ${latest.asset}`);
+  if (check.verdict === "no-activity")
+    return line(label, `No wallet activity in ${latest.asset}`);
+  const row = line(
+    label,
     check.verdict === "contradiction"
       ? `⚠ Wallet did the opposite of the latest ${latest.asset} call`
-      : `Wallet matched the latest ${latest.asset} call`;
-  const row = el(
-    "div",
-    { class: `metric ${check.verdict}` },
-    el("span", { class: "metric-label" }, "Said / did"),
-    el("span", { class: "metric-value" }, text),
+      : `Wallet matched the latest ${latest.asset} call`,
+    "",
+    check.verdict,
   );
+  const tx = check.findings.find((finding) => finding.transactionHash);
   if (tx?.transactionHash && /^0x[0-9a-fA-F]{64}$/.test(tx.transactionHash))
     row
       .querySelector(".metric-value")

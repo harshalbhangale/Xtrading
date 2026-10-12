@@ -1,6 +1,7 @@
 import {
   creatorOverviewSchema,
   normalizeHandle,
+  postAvailabilitySchema,
   postSignalRequestSchema,
   postSignalResponseSchema,
   publicCallLedgerSchema,
@@ -103,6 +104,19 @@ function handleMessage(
       if (value.handle !== handle) throw new Error("mismatched_handle");
       return value;
     });
+  }
+  if (
+    message.type === "call-availability" &&
+    typeof message.id === "string" &&
+    /^[0-9a-f-]{36}$/i.test(message.id)
+  ) {
+    const id = message.id;
+    // The server rate-limits post checks; keep answers for ten minutes.
+    return cached(`availability:${id}`, 600000, async () =>
+      postAvailabilitySchema.parse(
+        await getJson(`/api/calls/${encodeURIComponent(id)}/availability`),
+      ),
+    );
   }
   if (message.type === "classify-post") {
     const input = postSignalRequestSchema.safeParse(message.payload);

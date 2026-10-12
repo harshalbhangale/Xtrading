@@ -136,6 +136,27 @@ a { color: inherit; }
 .network-switch { display: flex; gap: 8px; }
 .network-switch [aria-pressed="true"] { background: #e7e9ea; color: #0f1419; border-color: #e7e9ea; }
 .evidence-details summary { cursor: pointer; padding: 14px 16px; font-weight: 600; }
+/* Profile card: two equal-height actions side by side, details below a divider. */
+.card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.card-actions .cta { flex: 1 1 180px; margin: 0; padding: 10px 14px; }
+.card-toggle { flex: 0 0 auto; appearance: none; padding: 10px 16px; border-radius: 10px; cursor: pointer;
+  font: 700 13px system-ui; background: transparent; color: var(--foreground); border: 1px solid var(--line); }
+.card-toggle:hover { background: var(--raised); }
+.card-toggle::after { content: " ▾"; }
+.card-toggle[aria-expanded="true"]::after { content: " ▴"; }
+.card-toggle:focus-visible { outline: 2px solid #7b61ff; outline-offset: 2px; }
+.card-overview { margin-top: 14px; padding-top: 4px; border-top: 1px solid var(--line); }
+.card-overview h3 { margin: 14px 0 4px; color: var(--muted); font: 700 11px/1.3 system-ui;
+  letter-spacing: .06em; text-transform: uppercase; }
+.card-overview .note { margin-top: 4px; }
+.metric-label { color: var(--muted); }
+.metric.empty .metric-value { color: var(--muted); }
+.metric-reason { margin-left: 8px; font-size: 12px; font-weight: 400; }
+.feed-actions { flex-basis: 100%; }
+.feed-actions summary { cursor: pointer; font-weight: 600; }
+.feed-actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
+.btn[disabled] { background: transparent; color: var(--muted); border: 1px dashed var(--line); cursor: not-allowed; }
+.card-overview .finding .bar { gap: 10px; }
 @media (max-width: 720px) {
   .drawer { top: auto; bottom: 0; width: 100vw; height: 88dvh; border: 1px solid var(--line); border-radius: 18px 18px 0 0; }
 }

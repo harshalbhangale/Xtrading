@@ -1,5 +1,17 @@
-import { creatorOverviewSchema } from "@call-my-bluff/domain";
-import { el, safeLink, send } from "./dom";
+import {
+  creatorOverviewSchema,
+  type PublicCall,
+  postAvailabilitySchema,
+  publicCallLedgerSchema,
+} from "@call-my-bluff/domain";
+import {
+  byAssetDirection,
+  formatBps,
+  profitFactor,
+  worstCall,
+} from "./card-metrics";
+import { appOrigin } from "./config";
+import { el, metricLine, safeLink, send } from "./dom";
 import { postActions, postAttachments } from "./drawer";
 
 export async function renderOverview(
@@ -10,7 +22,10 @@ export async function renderOverview(
   container.replaceChildren(
     el("p", { class: "note" }, "Loading ongoing calls and wallet evidence…"),
   );
-  const raw = await send<unknown>({ type: "creator-overview", handle });
+  const [raw, ledgerRaw] = await Promise.all([
+    send<unknown>({ type: "creator-overview", handle }),
+    send<unknown>({ type: "creator-ledger", handle }),
+  ]);
   if (!current() || !container.isConnected) return;
   const parsed = creatorOverviewSchema.safeParse(raw);
   container.replaceChildren();
@@ -25,6 +40,14 @@ export async function renderOverview(
     return;
   }
   const value = parsed.data;
+  const ledger = publicCallLedgerSchema.safeParse(ledgerRaw);
+  renderPerformance(
+    container,
+    handle,
+    ledger.success ? ledger.data.calls : null,
+    value.followerTrades,
+    current,
+  );
   container.append(el("h3", {}, "Posts detected on X · not evaluated"));
   if (value.detectedPostsStatus !== "ready")
     container.append(el("p", { class: "note" }, "Detected posts unavailable."));
@@ -52,35 +75,6 @@ export async function renderOverview(
         route.status === "unavailable"
           ? el("p", { class: "note" }, route.reason)
           : null,
-      ),
-    );
-  }
-  container.append(el("h3", {}, "Ongoing registered calls"));
-  if (value.callsStatus !== "ready")
-    container.append(
-      el(
-        "p",
-        { class: "note" },
-        "No registered-call evidence available for this account.",
-      ),
-    );
-  else if (!value.ongoingCalls.length)
-    container.append(
-      el(
-        "p",
-        { class: "note" },
-        "No ongoing registered calls in the latest 50-call ledger.",
-      ),
-    );
-  for (const call of value.ongoingCalls.slice(0, 5)) {
-    container.append(
-      el(
-        "div",
-        { class: "finding" },
-        safeLink(
-          call.sourceUrl,
-          `${call.evidence.terms.assetId} ${call.evidence.terms.direction} · expires ${new Date(Number(call.evidence.terms.expiry) * 1000).toISOString()}`,
-        ),
       ),
     );
   }
@@ -129,4 +123,140 @@ export async function renderOverview(
       `Observed ${value.observedAt}. Calls are predictions, not open trades or wallet returns.`,
     ),
   );
+}
+
+const callLabel = (call: PublicCall) =>
+  `${call.evidence.terms.assetId} ${call.evidence.terms.direction} · ${call.evidence.horizon}`;
+
+function renderPerformance(
+  container: HTMLElement,
+  handle: string,
+  calls: PublicCall[] | null,
+  trades: {
+    status: string;
+    recorded: number;
+    submitted: number;
+    posts: number;
+  },
+  current: () => boolean,
+) {
+  const missing =
+    calls === null ? "call ledger unavailable" : "no scored calls";
+  const worst = calls ? worstCall(calls) : null;
+  const factor = calls ? profitFactor(calls) : null;
+  const groups = calls ? byAssetDirection(calls) : [];
+  container.append(
+    el("h3", {}, "Performance"),
+    metricLine(
+      "Worst call",
+      worst
+        ? safeLink(
+            worst.sourceUrl,
+            `${callLabel(worst)} · ${formatBps(Number(worst.evidence.returnBps))}`,
+          )
+        : null,
+      missing,
+    ),
+    metricLine(
+      "Profit factor",
+      factor !== null ? `${factor.toFixed(2)}× gains to losses` : null,
+      worst ? "no losing calls yet" : missing,
+    ),
+    el("h3", {}, "By asset & direction"),
+    ...(groups.length
+      ? groups.map((group) =>
+          metricLine(
+            `${group.asset} ${group.direction}`,
+            `${group.hits}/${group.scored} right · median ${formatBps(group.medianBps)}`,
+          ),
+        )
+      : [metricLine("", null, missing)]),
+  );
+
+  const reach = metricLine("", "Checking…");
+  container.append(el("h3", {}, "Deleted or unreachable posts"), reach);
+  const recent = (calls ?? []).slice(0, 5);
+  if (!recent.length)
+    reach.replaceWith(
+      metricLine("", null, calls ? "no registered calls" : missing),
+    );
+  else
+    void Promise.all(
+      recent.map((call) =>
+        send<unknown>({ type: "call-availability", id: call.id }).then(
+          (raw) => postAvailabilitySchema.safeParse(raw).data ?? null,
+        ),
+      ),
+    ).then((results) => {
+      if (!current() || !reach.isConnected) return;
+      const checked = results.filter(
+        (result) => result && result.status !== "unavailable",
+      );
+      const gone = checked.filter(
+        (result) => result?.status === "not-publicly-available",
+      ).length;
+      reach.replaceWith(
+        checked.length
+          ? metricLine(
+              "",
+              `${gone} of ${checked.length} recent call posts not publicly reachable`,
+              "",
+              gone ? "contradiction" : "",
+            )
+          : metricLine("", null, "post check unavailable"),
+      );
+    });
+
+  container.append(
+    el("h3", {}, "Trades from this creator's posts"),
+    trades.status === "ready" && trades.recorded
+      ? metricLine(
+          "Recorded trades",
+          `${trades.recorded} trades on ${trades.posts} posts · ${trades.submitted} submitted on-chain`,
+        )
+      : metricLine(
+          "Recorded trades",
+          null,
+          trades.status === "ready"
+            ? "none recorded yet"
+            : "trade log unavailable",
+        ),
+    metricLine("Followers' PnL", null, "not computed yet"),
+    el("h3", {}, "All registered calls"),
+  );
+  if (!calls?.length)
+    container.append(
+      metricLine(
+        "",
+        null,
+        missing === "no scored calls" ? "no registered calls" : missing,
+      ),
+    );
+  for (const call of (calls ?? []).slice(0, 10)) {
+    const { outcome, returnBps } = call.evidence;
+    container.append(
+      metricLine(
+        new Date(call.publishedAt).toISOString().slice(0, 10),
+        el(
+          "span",
+          {},
+          safeLink(call.sourceUrl, callLabel(call)),
+          ` · ${
+            outcome
+              ? `${outcome === "success" ? "right" : outcome === "failure" ? "wrong" : "tie"}${
+                  returnBps ? ` ${formatBps(Number(returnBps))}` : ""
+                }`
+              : "open"
+          }`,
+        ),
+      ),
+    );
+  }
+  if ((calls?.length ?? 0) > 10)
+    container.append(
+      safeLink(
+        new URL(`/creators/${handle}`, appOrigin).href,
+        `All ${calls?.length} calls on the record ↗`,
+      ),
+    );
 }

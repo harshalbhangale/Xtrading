@@ -70,3 +70,62 @@ export function formatUnits6(raw: string) {
   const fraction = (value % 1_000_000n).toString().padStart(6, "0").slice(0, 2);
   return fraction === "00" ? whole.toString() : `${whole}.${fraction}`;
 }
+
+const settledCalls = (calls: PublicCall[]) =>
+  calls.filter(
+    (call) =>
+      call.evidence.outcome !== null && call.evidence.returnBps !== null,
+  );
+
+/** Sum of gains over sum of losses. Null when there are no losing calls to divide by. */
+export function profitFactor(calls: PublicCall[]) {
+  let gains = 0;
+  let losses = 0;
+  for (const call of settledCalls(calls)) {
+    const bps = Number(call.evidence.returnBps);
+    if (bps > 0) gains += bps;
+    else losses -= bps;
+  }
+  return losses ? gains / losses : null;
+}
+
+export function worstCall(calls: PublicCall[]) {
+  return settledCalls(calls).reduce<PublicCall | null>(
+    (worst, call) =>
+      !worst ||
+      Number(call.evidence.returnBps) < Number(worst.evidence.returnBps)
+        ? call
+        : worst,
+    null,
+  );
+}
+
+export type GroupStats = {
+  asset: string;
+  direction: "up" | "down";
+  scored: number;
+  hits: number;
+  medianBps: number;
+};
+
+/** Settled calls grouped by asset and direction, most-called first. */
+export function byAssetDirection(calls: PublicCall[]): GroupStats[] {
+  const groups = new Map<string, PublicCall[]>();
+  for (const call of settledCalls(calls)) {
+    const key = `${call.evidence.terms.assetId}:${call.evidence.terms.direction}`;
+    groups.set(key, [...(groups.get(key) ?? []), call]);
+  }
+  return [...groups.values()]
+    .map((group) => {
+      const first = group[0] as PublicCall;
+      return {
+        asset: first.evidence.terms.assetId,
+        direction: first.evidence.terms.direction,
+        scored: group.length,
+        hits: group.filter((call) => call.evidence.outcome === "success")
+          .length,
+        medianBps: median(group.map((call) => Number(call.evidence.returnBps))),
+      };
+    })
+    .sort((a, b) => b.scored - a.scored);
+}

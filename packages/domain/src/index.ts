@@ -342,6 +342,16 @@ export const creatorOverviewSchema = z.object({
   positionsNote: z.string(),
   detectedPosts: z.array(detectedPostSchema).max(10).default([]),
   detectedPostsStatus: z.enum(["ready", "unavailable"]).default("unavailable"),
+  // Trades users recorded against this creator's posts. The post link is user-supplied;
+  // no profit or loss is computed from it.
+  followerTrades: z
+    .object({
+      status: z.enum(["ready", "unavailable"]),
+      recorded: z.number().int().nonnegative(),
+      submitted: z.number().int().nonnegative(),
+      posts: z.number().int().nonnegative(),
+    })
+    .default({ status: "unavailable", recorded: 0, submitted: 0, posts: 0 }),
 });
 export type CreatorOverview = z.infer<typeof creatorOverviewSchema>;
 
