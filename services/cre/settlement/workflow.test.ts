@@ -77,8 +77,7 @@ function setup(
     written.push(input.report.rawReport);
     return { txStatus: TxStatus.SUCCESS, txHash: new Uint8Array(32).fill(7) };
   };
-  const runtime = newTestRuntime();
-  (runtime as any).config = config;
+  const runtime = newTestRuntime(null, undefined, config);
   return { runtime, written };
 }
 
@@ -122,7 +121,7 @@ describe("onCronTrigger", () => {
     const { runtime, written } = setup([
       { callId: id(1), asset: ETH, start, expiry },
     ]);
-    const result = onCronTrigger(runtime as any);
+    const result = onCronTrigger(runtime);
     expect(result).toContain("Settled 1");
     expect(urls.every((u) => u.includes("symbol=ETHUSDT&interval=1m"))).toBe(
       true,
@@ -144,7 +143,7 @@ describe("onCronTrigger", () => {
       { callId: id(1), asset: ETH, start, expiry: start + 3600n },
       { callId: id(2), asset: DOGE, start, expiry: start + 3600n },
     ]);
-    expect(onCronTrigger(runtime as any)).toBe("Nothing to settle");
+    expect(onCronTrigger(runtime)).toBe("Nothing to settle");
     expect(written).toHaveLength(0);
   });
 
@@ -162,7 +161,7 @@ describe("onCronTrigger", () => {
       expiry,
     }));
     const { runtime, written } = setup(due);
-    expect(onCronTrigger(runtime as any)).toContain("Settled 5");
+    expect(onCronTrigger(runtime)).toContain("Settled 5");
     expect(decodeReport(written[0] as Uint8Array)).toHaveLength(5);
   });
 });

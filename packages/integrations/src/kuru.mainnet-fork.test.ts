@@ -26,7 +26,10 @@ const account = privateKeyToAccount(
 );
 
 describe.skipIf(!rpc)("Kuru mainnet on a fork", () => {
-  const chain = { ...monad, rpcUrls: { default: { http: [rpc as string] } } };
+  // Vitest still runs this callback when the suite is skipped, and viem
+  // throws while building the transport if the URL is missing.
+  if (!rpc) return;
+  const chain = { ...monad, rpcUrls: { default: { http: [rpc] } } };
   const client = createPublicClient({ chain, transport: http(rpc) });
   const wallet = createWalletClient({ account, chain, transport: http(rpc) });
   const usdc = kuruMainnet.quote.address;
