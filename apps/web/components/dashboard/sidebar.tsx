@@ -3,9 +3,10 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Brand } from "../brand";
 import { Icon, type IconName } from "./icons";
+import { NetworkSwitch } from "./network-switch";
 
 type Item = { href: string; label: string; icon: IconName };
 
@@ -50,7 +51,6 @@ export function Sidebar({ audience }: { audience: "user" | "creator" }) {
   const [open, setOpen] = useState(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: Close the mobile drawer after navigation.
   useEffect(() => setOpen(false), [pathname]);
-  const testnet = process.env.NEXT_PUBLIC_MONAD_CHAIN_ID !== "143";
   return (
     <>
       <div className="workspace-mobilebar">
@@ -119,10 +119,10 @@ export function Sidebar({ audience }: { audience: "user" | "creator" }) {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <p className="sidebar-network">
-            <i aria-hidden="true" />
-            Monad {testnet ? "testnet · 10143" : "mainnet · 143"}
-          </p>
+          <p className="sidebar-label">Network</p>
+          <Suspense fallback={null}>
+            <NetworkSwitch compact />
+          </Suspense>
           {process.env.NEXT_PUBLIC_PRIVY_APP_ID ? (
             <SidebarAccount />
           ) : (

@@ -225,7 +225,7 @@ export function xtradingMcp(request: Request) {
     () =>
       run(async () => {
         const [balances, activity] = await Promise.all([
-          kuruAccount(request),
+          kuruAccount(request, 10143),
           myActivity(request),
         ]);
         return { balances, activity };

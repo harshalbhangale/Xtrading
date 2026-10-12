@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
+import { Suspense } from "react";
+import { NetworkSwitch } from "../../../components/dashboard/network-switch";
 import { SourceCall } from "../../../components/dashboard/source-call";
 import { PageHeading, Panel } from "../../../components/dashboard/ui";
 import { MarketBooks } from "../../../components/market-books";
@@ -17,8 +20,15 @@ export default async function TradePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  // An explicit URL choice wins; otherwise the dashboard switch; else testnet.
+  const saved = (await cookies()).get("xt_network")?.value;
   const network =
-    params.chainId === undefined ? "10143" : (one(params.chainId) ?? "invalid");
+    params.chainId === undefined
+      ? saved === "143"
+        ? "143"
+        : "10143"
+      : (one(params.chainId) ?? "invalid");
+  const mainnetEnabled = process.env.KURU_MAINNET_ENABLED === "true";
   const supportedNetwork = network === "10143" || network === "143";
   const mainnet = network === "143";
   const href = (changes: Record<string, string>) => {
@@ -42,26 +52,17 @@ export default async function TradePage({
           !supportedNetwork
             ? "Unsupported network. Select Monad testnet or mainnet."
             : mainnet
-              ? "Monad mainnet · real funds. Trading is unavailable until the mainnet integration is validated."
+              ? perp
+                ? "Monad mainnet · real funds. Perpl mainnet trading is not wired yet."
+                : "Kuru spot on Monad mainnet · real funds. Market orders spend straight from your wallet with a simulated minimum output; there is no minimum size."
               : perp
                 ? "Perpl perpetuals on Monad testnet. Check market, size, leverage and caps before confirming. Perp positions can be liquidated."
                 : "Kuru spot on Monad testnet. MON/USDC is the market with both bids and asks. Every swap is simulated, with a minimum output and onchain deadline, before your wallet opens."
         }
       />
-      <nav className="preview-selector" aria-label="Network">
-        <Link
-          href={href({ chainId: "10143" })}
-          aria-current={network === "10143" ? "page" : undefined}
-        >
-          Testnet · 10143
-        </Link>
-        <Link
-          href={href({ chainId: "143" })}
-          aria-current={mainnet ? "page" : undefined}
-        >
-          Mainnet · 143
-        </Link>
-      </nav>
+      <Suspense fallback={null}>
+        <NetworkSwitch />
+      </Suspense>
       <nav className="preview-selector" aria-label="Instrument">
         <Link
           href={href({ instrument: "spot" })}
@@ -88,16 +89,31 @@ export default async function TradePage({
           }
         />
       )}
-      {!supportedNetwork || mainnet ? (
+      {!supportedNetwork || (mainnet && (perp || !mainnetEnabled)) ? (
         <Panel
-          title={mainnet ? "Mainnet trading not ready" : "Unsupported network"}
-          description="No wallet approval or transaction is available on this network."
+          title={
+            !supportedNetwork
+              ? "Unsupported network"
+              : perp
+                ? "Perpl mainnet not available"
+                : "Mainnet trading is switched off"
+          }
+          description="No wallet approval or transaction is available here."
         >
           <p>
-            {mainnet
-              ? "The current Kuru and Perpl adapters use Monad testnet contracts. Mainnet requires separate market configuration and execution validation. Your selection will never fall back to testnet."
-              : "Choose a supported network above to continue."}
+            {!supportedNetwork
+              ? "Choose a supported network above to continue."
+              : perp
+                ? "Perpl perps run on Monad testnet only in this app. Your selection never falls back to testnet; switch networks above to trade testnet perps."
+                : "This server has not enabled Kuru mainnet trading. Your selection never falls back to testnet."}
           </p>
+        </Panel>
+      ) : mainnet ? (
+        <Panel
+          title="MON, WETH and cbBTC against USDC · mainnet"
+          description="Buying spends USDC (one exact approval, then the order). Selling MON sends native MON with the order. Each step is a separate wallet confirmation."
+        >
+          <TradeControl chainId={143} />
         </Panel>
       ) : perp ? (
         <Panel
@@ -112,7 +128,7 @@ export default async function TradePage({
           description="Selling MON deposits native MON, then swaps. Buying spends Kuru test USDC. Each step is a separate wallet confirmation. Minimum size is 10 USDC."
         >
           <MarketBooks />
-          <TradeControl />
+          <TradeControl chainId={10143} />
         </Panel>
       )}
     </>

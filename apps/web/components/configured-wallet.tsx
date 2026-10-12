@@ -4,6 +4,7 @@ import { getMonadChain } from "@call-my-bluff/integrations";
 import { PrivyProvider } from "@privy-io/react-auth";
 import type { ReactNode } from "react";
 import { StyleSheetManager } from "styled-components";
+import { monad, monadTestnet } from "viem/chains";
 
 // Privy uses this styling prop internally; keep it off native DOM elements.
 const forwardWalletProp = (prop: string, target: unknown) =>
@@ -24,7 +25,8 @@ export default function ConfiguredWallet({
         config={{
           loginMethods: ["twitter", "email", "wallet"],
           defaultChain: chain,
-          supportedChains: [chain],
+          // Testnet stays the default; mainnet is reachable only by explicit choice.
+          supportedChains: [chain, chain.id === 143 ? monadTestnet : monad],
           appearance: { theme: "dark", accentColor: "#c6f25a" },
           embeddedWallets: {
             ethereum: { createOnLogin: "users-without-wallets" },

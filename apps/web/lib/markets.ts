@@ -3,12 +3,14 @@ import { IdentityError } from "@call-my-bluff/database/identity";
 import {
   EMPTY_BID,
   type KuruMarketKey,
+  kuruMainnet,
+  kuruV1OrderBookAbi,
   kuruV2,
   orderBookAbi,
 } from "@call-my-bluff/integrations/kuru";
 import { perplContextSchema } from "@call-my-bluff/integrations/market-schemas";
 import { createPublicClient, erc20Abi, http } from "viem";
-import { monadTestnet } from "viem/chains";
+import { monad, monadTestnet } from "viem/chains";
 
 export function testnetClient() {
   if (
@@ -25,6 +27,73 @@ export function testnetClient() {
       retryCount: 0,
     }),
   });
+}
+
+/**
+ * Monad mainnet moves real funds, so it is off unless the server explicitly
+ * enables it. A disabled mainnet never falls back to testnet.
+ */
+export function mainnetEnabled() {
+  return process.env.KURU_MAINNET_ENABLED === "true";
+}
+export function mainnetClient() {
+  if (!mainnetEnabled())
+    throw new IdentityError("mainnet_trading_disabled", 409);
+  return createPublicClient({
+    chain: monad,
+    transport: http(
+      process.env.MONAD_MAINNET_RPC_URL || "https://rpc.monad.xyz",
+      {
+        timeout: 15000,
+        retryCount: 0,
+      },
+    ),
+  });
+}
+
+/** Verifies the configured Kuru mainnet order book at one block before any read is trusted. */
+export async function kuruMainnetSnapshot(key: KuruMarketKey) {
+  const client = mainnetClient();
+  if ((await client.getChainId()) !== 143)
+    throw new IdentityError("rpc_chain_mismatch", 503);
+  const config = kuruMainnet.markets[key];
+  const block = await client.getBlock();
+  const at = { blockNumber: block.number };
+  const [code, params, top] = await Promise.all([
+    client.getCode({ address: config.market, ...at }),
+    client.readContract({
+      address: config.market,
+      abi: kuruV1OrderBookAbi,
+      functionName: "getMarketParams",
+      ...at,
+    }),
+    client.readContract({
+      address: config.market,
+      abi: kuruV1OrderBookAbi,
+      functionName: "bestBidAsk",
+      ...at,
+    }),
+  ]);
+  if (
+    !code ||
+    code === "0x" ||
+    BigInt(params[0]) !== config.pricePrecision ||
+    params[1] !== config.sizePrecision ||
+    params[2].toLowerCase() !== config.base.address.toLowerCase() ||
+    params[3] !== BigInt(config.base.decimals) ||
+    params[4].toLowerCase() !== kuruMainnet.quote.address.toLowerCase() ||
+    params[5] !== BigInt(kuruMainnet.quote.decimals) ||
+    params[9] > 100n ||
+    !block.hash
+  )
+    throw new IdentityError("market_verification_failed", 503);
+  return {
+    client,
+    block,
+    takerFeeBps: params[9],
+    bid: top[0],
+    ask: top[1],
+  };
 }
 
 /** Verifies the configured Kuru V2 market at one block before any read is trusted. */

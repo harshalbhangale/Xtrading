@@ -1,5 +1,5 @@
 "use client";
-import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useRef, useState } from "react";
 import {
   type Address,
@@ -11,6 +11,7 @@ import {
   parseAbi,
 } from "viem";
 import { monadTestnet } from "viem/chains";
+import { useWalletSend } from "./use-wallet-send";
 
 const faucet = "0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C" as const;
 const token = "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC" as const;
@@ -23,7 +24,7 @@ const client = createPublicClient({
 export default function ConfiguredAusdFaucet() {
   const { ready, authenticated, login } = usePrivy();
   const { wallets } = useWallets();
-  const { sendTransaction } = useSendTransaction();
+  const { sendTransaction } = useWalletSend();
   const wallet = wallets.find((item) => item.walletClientType === "privy");
   const owner = useRef(wallet?.address);
   owner.current = authenticated ? wallet?.address : undefined;

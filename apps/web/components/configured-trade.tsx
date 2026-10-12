@@ -1,15 +1,19 @@
 "use client";
-import { kuruV2 } from "@call-my-bluff/integrations/kuru";
+import {
+  kuruNetwork,
+  networkTradeTokens,
+} from "@call-my-bluff/integrations/kuru";
 import {
   kuruAccountSchema,
   spotReviewSchema,
   withdrawReviewSchema,
 } from "@call-my-bluff/integrations/market-schemas";
 import { stakeUnits } from "@call-my-bluff/integrations/stake";
-import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPublicClient, formatUnits, http } from "viem";
-import { monadTestnet } from "viem/chains";
+import { monad, monadTestnet } from "viem/chains";
+import { useWalletSend } from "./use-wallet-send";
 
 type Review = ReturnType<typeof spotReviewSchema.parse>;
 type Withdrawal = ReturnType<typeof withdrawReviewSchema.parse>;
@@ -18,8 +22,8 @@ type Market = "MON" | "WETH" | "WBTC";
 const errors: Record<string, string> = {
   insufficient_market_token:
     "Not enough of the input token in your wallet or Kuru account.",
-  invalid_market_amount:
-    "Amount is outside the market's limits (minimum order is 10 USDC).",
+  invalid_market_amount: "Amount is outside the market's limits.",
+  mainnet_trading_disabled: "Mainnet trading is switched off on this server.",
   quote_unavailable_or_insufficient_liquidity:
     "No executable quote at this size. Try a smaller amount.",
   trade_simulation_failed:
@@ -37,10 +41,15 @@ const stepTitle = {
 const units = (value: string | null, decimals: number, symbol: string) =>
   value === null ? "—" : `${formatUnits(BigInt(value), decimals)} ${symbol}`;
 
-export default function ConfiguredTrade() {
+export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
+  const mainnet = chainId === 143;
+  const network = kuruNetwork(chainId);
+  const explorer = mainnet
+    ? "https://monadvision.com"
+    : "https://testnet.monadvision.com";
   const { ready, authenticated, user, login, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
-  const { sendTransaction } = useSendTransaction();
+  const { sendTransaction } = useWalletSend();
   const [market, setMarket] = useState<Market>("MON");
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [amount, setAmount] = useState("");
@@ -107,23 +116,24 @@ export default function ConfiguredTrade() {
   );
   const loadAccount = useCallback(async () => {
     try {
-      setAccount(kuruAccountSchema.parse(await api("/api/trades/account")));
+      setAccount(
+        kuruAccountSchema.parse(
+          await api(`/api/trades/account?chainId=${chainId}`),
+        ),
+      );
     } catch {
       setAccount(null);
     }
-  }, [api]);
+  }, [api, chainId]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reset private state on account change.
   useEffect(() => {
     setReview(null);
     setHash(null);
     setNotice("");
     if (ready && authenticated) void loadAccount();
-  }, [ready, authenticated, user?.id]);
+  }, [ready, authenticated, user?.id, chainId]);
 
-  const tokens =
-    side === "buy"
-      ? { input: kuruV2.quote, output: kuruV2.markets[market].base }
-      : { input: kuruV2.markets[market].base, output: kuruV2.quote };
+  const tokens = networkTradeTokens(chainId, market, side);
   const expired = review ? Date.parse(review.expiresAt) <= now : false;
 
   function intent() {
@@ -145,7 +155,7 @@ export default function ConfiguredTrade() {
     }
     return {
       instrument: "spot",
-      chainId: 10143,
+      chainId,
       market,
       side,
       amount: units.toString(),
@@ -166,11 +176,14 @@ export default function ConfiguredTrade() {
       await api("/api/trades/prepare", intent()),
     );
     const allowed = [
-      kuruV2.accountCore,
-      kuruV2.markets[result.market].market,
+      ...("accountCore" in network ? [network.accountCore] : []),
+      network.markets[result.market].market,
       result.input.address,
     ].map((a) => a.toLowerCase());
-    if (!allowed.includes(result.to.toLowerCase()))
+    if (
+      result.chainId !== chainId ||
+      !allowed.includes(result.to.toLowerCase())
+    )
       throw new Error("Unexpected transaction target.");
     return result;
   }
@@ -231,12 +244,12 @@ export default function ConfiguredTrade() {
         (w) => w.address.toLowerCase() === current.wallet.toLowerCase(),
       );
       if (!wallet) throw new Error("Bound wallet is not connected.");
-      await wallet.switchChain(10143);
+      await wallet.switchChain(chainId);
       if (owner.current !== who) return;
       setReview(null);
       const sent = await sendTransaction(
         {
-          chainId: 10143,
+          chainId,
           to: current.to,
           data: current.data as `0x${string}`,
           value: BigInt(current.value),
@@ -247,7 +260,7 @@ export default function ConfiguredTrade() {
       setHash(sent.hash);
       setNotice("Submitted. Waiting for confirmation…");
       const receipt = await createPublicClient({
-        chain: monadTestnet,
+        chain: mainnet ? monad : monadTestnet,
         transport: http(),
       }).waitForTransactionReceipt({
         hash: sent.hash,
@@ -265,15 +278,18 @@ export default function ConfiguredTrade() {
         setReview(await fresh(null));
         return;
       }
-      if (current.action === "swap" && current.sourcePostId)
+      // Fill records are Envio-backed and testnet-only.
+      if (!mainnet && current.action === "swap" && current.sourcePostId)
         await api("/api/trades/record", {
           transactionHash: sent.hash,
           sourcePostId: current.sourcePostId,
         }).catch(() => undefined);
       setNotice(
-        current.action === "swap"
-          ? `Swap confirmed in block ${receipt.blockNumber}. Proceeds are in your Kuru account; withdraw them below. The fill appears in your portfolio once Envio indexes it.`
-          : `Withdrawal confirmed in block ${receipt.blockNumber}.`,
+        current.action === "swap" && mainnet
+          ? `Market order confirmed in block ${receipt.blockNumber} on Monad mainnet. The output is in your wallet; check the receipt for the exact fill.`
+          : current.action === "swap"
+            ? `Swap confirmed in block ${receipt.blockNumber}. Proceeds are in your Kuru account; withdraw them below. The fill appears in your portfolio once Envio indexes it.`
+            : `Withdrawal confirmed in block ${receipt.blockNumber}.`,
       );
     });
 
@@ -301,7 +317,7 @@ export default function ConfiguredTrade() {
               setReview(null);
             }}
           >
-            {choice} / USDC
+            {network.markets[choice].base.symbol} / USDC
           </button>
         ))}
       </fieldset>
@@ -316,7 +332,8 @@ export default function ConfiguredTrade() {
               setReview(null);
             }}
           >
-            {choice === "buy" ? "Buy" : "Sell"} {market}
+            {choice === "buy" ? "Buy" : "Sell"}{" "}
+            {network.markets[market].base.symbol}
           </button>
         ))}
       </fieldset>
@@ -329,7 +346,19 @@ export default function ConfiguredTrade() {
         maxLength={40}
         disabled={busy}
         value={amount}
-        placeholder={side === "buy" ? "10" : market === "MON" ? "400" : "0.004"}
+        placeholder={
+          mainnet
+            ? side === "buy"
+              ? "1"
+              : market === "MON"
+                ? "10"
+                : "0.0004"
+            : side === "buy"
+              ? "10"
+              : market === "MON"
+                ? "400"
+                : "0.004"
+        }
         onChange={(e) => {
           setAmount(e.target.value);
           setReview(null);
@@ -414,7 +443,9 @@ export default function ConfiguredTrade() {
                         review.input.decimals,
                         review.input.symbol,
                       )}{" "}
-                      (not enough liquidity for the full amount)
+                      {mainnet
+                        ? "(rounded down to the market's size precision)"
+                        : "(not enough liquidity for the full amount)"}
                     </dd>
                   </div>
                 )}
@@ -425,7 +456,7 @@ export default function ConfiguredTrade() {
                       ? new Date(
                           Number(review.deadline) * 1000,
                         ).toLocaleTimeString()
-                      : "—"}
+                      : "None on Kuru mainnet; the minimum is enforced onchain"}
                   </dd>
                 </div>
               </>
@@ -456,7 +487,9 @@ export default function ConfiguredTrade() {
                       review.input.symbol,
                     )}{" "}
                     {review.action === "approve"
-                      ? "to Kuru AccountCore, exact amount"
+                      ? mainnet
+                        ? "to the Kuru order book, exact amount"
+                        : "to Kuru AccountCore, exact amount"
                       : review.input.symbol === "MON"
                         ? "native MON, sent as the transaction value. Leave enough MON for gas."
                         : "from your wallet into your Kuru account"}
@@ -490,7 +523,9 @@ export default function ConfiguredTrade() {
           <p className="small-note">
             Block {review.blockNumber}, unfinalized.{" "}
             {review.action === "swap"
-              ? "The contract enforces the minimum and the deadline."
+              ? mainnet
+                ? "The order book enforces the minimum output. Real funds."
+                : "The contract enforces the minimum and the deadline."
               : "This step moves no funds into a trade; the swap is reviewed separately."}{" "}
             Review{" "}
             {expired
@@ -559,7 +594,7 @@ export default function ConfiguredTrade() {
       {hash && (
         <a
           className="text-link"
-          href={`https://testnet.monadvision.com/tx/${hash}`}
+          href={`${explorer}/tx/${hash}`}
           target="_blank"
           rel="noreferrer"
         >
@@ -574,8 +609,8 @@ export default function ConfiguredTrade() {
             <tr>
               <th scope="col">Token</th>
               <th scope="col">Wallet</th>
-              <th scope="col">Kuru account</th>
-              <th scope="col" />
+              {!mainnet && <th scope="col">Kuru account</th>}
+              {!mainnet && <th scope="col" />}
             </tr>
           </thead>
           <tbody>
@@ -583,21 +618,27 @@ export default function ConfiguredTrade() {
               <tr key={row.token.address}>
                 <td>{row.token.symbol}</td>
                 <td>{formatUnits(BigInt(row.wallet), row.token.decimals)}</td>
-                <td>{formatUnits(BigInt(row.account), row.token.decimals)}</td>
-                <td>
-                  {row.account !== "0" && (
-                    <button
-                      type="button"
-                      className="text-link"
-                      disabled={busy}
-                      onClick={() =>
-                        void prepareWithdraw(row.token.symbol, row.account)
-                      }
-                    >
-                      Withdraw
-                    </button>
-                  )}
-                </td>
+                {!mainnet && (
+                  <td>
+                    {formatUnits(BigInt(row.account), row.token.decimals)}
+                  </td>
+                )}
+                {!mainnet && (
+                  <td>
+                    {row.account !== "0" && (
+                      <button
+                        type="button"
+                        className="text-link"
+                        disabled={busy}
+                        onClick={() =>
+                          void prepareWithdraw(row.token.symbol, row.account)
+                        }
+                      >
+                        Withdraw
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -605,15 +646,27 @@ export default function ConfiguredTrade() {
       ) : (
         <p className="small-note">Balances unavailable.</p>
       )}
-      <p className="small-note">
-        Kuru test tokens on Monad testnet; no monetary value. Minimum order is
-        10 USDC. Kuru test USDC is <code>{kuruV2.quote.address}</code>, not the
-        staking token. Wallet MON pays gas
-        {account
-          ? ` (${formatUnits(BigInt(account.nativeBalance), 18)} MON)`
-          : ""}
-        . A MON deposit uses that same balance.
-      </p>
+      {mainnet ? (
+        <p className="small-note">
+          Monad mainnet · real funds. Market orders spend directly from your
+          wallet (no Kuru account, no deposit) and have no minimum size. USDC is{" "}
+          <code>{network.quote.address}</code>. Keep MON for gas
+          {account
+            ? ` (${formatUnits(BigInt(account.nativeBalance), 18)} MON)`
+            : ""}
+          .
+        </p>
+      ) : (
+        <p className="small-note">
+          Kuru test tokens on Monad testnet; no monetary value. Minimum order is
+          10 USDC. Kuru test USDC is <code>{network.quote.address}</code>, not
+          the staking token. Wallet MON pays gas
+          {account
+            ? ` (${formatUnits(BigInt(account.nativeBalance), 18)} MON)`
+            : ""}
+          . A MON deposit uses that same balance.
+        </p>
+      )}
     </div>
   );
 }

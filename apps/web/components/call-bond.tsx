@@ -4,11 +4,12 @@ import {
   callBondStateSchema,
   preparedCallBondSchema,
 } from "@call-my-bluff/domain";
-import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useState } from "react";
 import { createPublicClient, formatUnits, http } from "viem";
 import { monadTestnet } from "viem/chains";
 import { price } from "./call-ledger";
+import { useWalletSend } from "./use-wallet-send";
 
 type Prepared = ReturnType<typeof preparedCallBondSchema.parse>;
 const BOND_OPTIONS = ["10", "50", "100", "250", "500", "1000"];
@@ -40,7 +41,7 @@ const time = (seconds: string) =>
 export function CallBond({ callId }: { callId: string }) {
   const { getAccessToken } = usePrivy();
   const { wallets } = useWallets();
-  const { sendTransaction } = useSendTransaction();
+  const { sendTransaction } = useWalletSend();
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<CallBondState | null>(null);
   const [prepared, setPrepared] = useState<Prepared | null>(null);

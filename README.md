@@ -81,6 +81,12 @@ To run locally, copy `services/indexer/.env.example` to `.env`, run `docker comp
 
 Set server-only `ENVIO_GRAPHQL_URL=http://localhost:8081/v1/graphql` and `ENVIO_HASURA_ADMIN_SECRET=testing` for local app access. The authenticated endpoint scopes queries to the current bound wallet and configured contract, validates integer strings and timestamps, and compares indexer freshness and latest balance to the RPC snapshot. Unavailable indexing does not disable direct chain reads or transaction review. Hasura must stringify numeric types; never convert token balances through JavaScript numbers.
 
+## Mainnet spot (Kuru)
+
+The dashboard sidebar has a Testnet / Mainnet switch, which is remembered per browser; a `?chainId=` link overrides it. Testnet is the default. Mainnet uses Kuru's mainnet order books (MON, WETH and cbBTC against USDC, verified onchain at every quote). A market order spends straight from the wallet: one exact approval to the order book for USDC buys, then one immediate-or-cancel order with a minimum output derived from an `eth_call` of the same order. There is no Kuru account, deposit or deadline on mainnet, and limit-order minimum sizes do not apply. Mainnet is off unless the server sets `KURU_MAINNET_ENABLED=true`. Perpl and staking remain testnet-only in the app. Run `KURU_MAINNET_FORK_RPC=http://127.0.0.1:8549 pnpm test` against `anvil --fork-url https://rpc.monad.xyz --port 8549` to execute both order types on a fork.
+
+Embedded Privy wallets confirm in Privy's dialog; external wallets (MetaMask, Rabby) receive the reviewed transaction through their own provider. The server never signs.
+
 ## Bonded calls (Chainlink CRE)
 
 `contracts/src/CallSettlement.sol` holds opt-in call bonds, separate from refundable stake. A creator registers a call (asset, direction, target move, 1h–30d horizon, bond); its window starts at the registration block. Every hour, the workflow in `services/cre/settlement` reads due calls at a finalized block. It fetches the opens of the Binance 1-minute candles at the window start and expiry; each node fetches independently and the median is agreed. It then writes one signed report through the Chainlink forwarder. Success returns bond + reward, failure moves the bond into the reward pool, and a tie returns the bond. A missing price never slashes; the bond is refundable after three days.

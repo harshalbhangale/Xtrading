@@ -3,9 +3,15 @@ import { IdentityError } from "@call-my-bluff/database/identity";
 import {
   accountCoreAbi,
   bookEstimate,
+  kuruMainnet,
   kuruUsdc,
+  kuruV1OrderBookAbi,
   kuruV2,
+  mainnetOrderSize,
+  mainnetTopOfBookEstimate,
+  mainnetTradeStep,
   minimumQuotedOutput,
+  networkTradeTokens,
   nextTradeStep,
   orderBookAbi,
   tradeTokens,
@@ -27,15 +33,20 @@ import {
   zeroAddress,
 } from "viem";
 import { identityContext } from "./identity-http";
-import { kuruMarketSnapshot, testnetClient } from "./markets";
+import {
+  kuruMainnetSnapshot,
+  kuruMarketSnapshot,
+  mainnetClient,
+  testnetClient,
+} from "./markets";
 
 const REVIEW_SECONDS = 30;
 // Onchain swap deadline; covers wallet review after the app-side expiry.
 const DEADLINE_SECONDS = 120n;
 
+// The trading chain is explicit per request; each client enforces its own chain.
 async function boundWallet(request: Request) {
-  const { user, service, chainId } = await identityContext(request);
-  if (chainId !== 10143) throw new IdentityError("trading_testnet_only", 409);
+  const { user, service } = await identityContext(request);
   const binding = await service.current(user.privyUserId);
   if (
     !binding ||
@@ -48,9 +59,12 @@ async function boundWallet(request: Request) {
   return getAddress(binding.wallet);
 }
 
-type Client = ReturnType<typeof testnetClient>;
+type Client =
+  | ReturnType<typeof testnetClient>
+  | ReturnType<typeof mainnetClient>;
 async function finishStep(
   client: Client,
+  chainId: 10143 | 143,
   wallet: Address,
   step: { to: Address; data: Hex; value: bigint },
   block: { number: bigint; hash: Hex | null },
@@ -58,7 +72,10 @@ async function finishStep(
 ) {
   let gas: bigint;
   try {
-    gas = await client.estimateGas({ account: wallet, ...step });
+    gas = await (client as ReturnType<typeof testnetClient>).estimateGas({
+      account: wallet,
+      ...step,
+    });
   } catch {
     throw new IdentityError("trade_simulation_failed", 409);
   }
@@ -72,7 +89,7 @@ async function finishStep(
   return {
     status: "prepared" as const,
     venue: "Kuru" as const,
-    chainId: 10143 as const,
+    chainId,
     wallet,
     to: step.to,
     data: step.data,
@@ -91,6 +108,7 @@ export async function prepareSpot(request: Request, body: unknown) {
   if (!parsed.success) throw new IdentityError("invalid_trade_intent");
   const input = parsed.data;
   const wallet = await boundWallet(request);
+  if (input.chainId === 143) return prepareMainnetSpot(wallet, input);
   const { client, block, book, takerFeePps } = await kuruMarketSnapshot(
     input.market,
   );
@@ -198,7 +216,7 @@ export async function prepareSpot(request: Request, body: unknown) {
     }
   }
   return spotReviewSchema.parse({
-    ...(await finishStep(client, wallet, step, block, nativeBalance)),
+    ...(await finishStep(client, 10143, wallet, step, block, nativeBalance)),
     instrument: "spot",
     market: input.market,
     side: input.side,
@@ -220,6 +238,164 @@ export async function prepareSpot(request: Request, body: unknown) {
   });
 }
 
+type SpotIntent = ReturnType<typeof prepareSpotSchema.parse>;
+/**
+ * Kuru mainnet: the market order spends wallet funds directly. The order is
+ * executed with eth_call at the pinned block to derive the minimum output.
+ */
+async function prepareMainnetSpot(wallet: Address, input: SpotIntent) {
+  const { client, block, takerFeeBps, bid, ask } = await kuruMainnetSnapshot(
+    input.market,
+  );
+  const at = { blockNumber: block.number };
+  const market = kuruMainnet.markets[input.market];
+  const tokens = networkTradeTokens(143, input.market, input.side);
+  const native = tokens.input.address === zeroAddress;
+  const [nativeBalance, tokenBalance, allowance] = await Promise.all([
+    client.getBalance({ address: wallet, ...at }),
+    native
+      ? 0n
+      : client.readContract({
+          address: tokens.input.address,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [wallet],
+          ...at,
+        }),
+    native
+      ? 0n
+      : client.readContract({
+          address: tokens.input.address,
+          abi: erc20Abi,
+          functionName: "allowance",
+          args: [wallet, market.market],
+          ...at,
+        }),
+  ]);
+  const walletBalance = native ? nativeBalance : tokenBalance;
+  let spend: bigint;
+  try {
+    spend = mainnetOrderSize({
+      key: input.market,
+      side: input.side,
+      amount: BigInt(input.amount),
+    }).spend;
+  } catch {
+    throw new IdentityError("invalid_market_amount", 409);
+  }
+  if (spend > walletBalance)
+    throw new IdentityError("insufficient_market_token", 409);
+  const stepInput = {
+    key: input.market,
+    side: input.side,
+    amount: BigInt(input.amount),
+    walletBalance,
+    allowance,
+    minimumOutput: 1n,
+  };
+  let step = mainnetTradeStep(stepInput);
+  let expectedOutput: bigint | null = null,
+    minimumOutput: bigint | null = null;
+  if (step.action === "swap") {
+    try {
+      const result = await client.call({
+        account: wallet,
+        to: step.to,
+        data: step.data,
+        value: step.value,
+        ...at,
+      });
+      expectedOutput = decodeFunctionResult({
+        abi: kuruV1OrderBookAbi,
+        functionName:
+          input.side === "buy"
+            ? "placeAndExecuteMarketBuy"
+            : "placeAndExecuteMarketSell",
+        data: result.data as Hex,
+      });
+      minimumOutput = minimumQuotedOutput(expectedOutput, input.slippageBps);
+      step = mainnetTradeStep({ ...stepInput, minimumOutput });
+    } catch {
+      throw new IdentityError(
+        "quote_unavailable_or_insufficient_liquidity",
+        409,
+      );
+    }
+  }
+  const indicative = mainnetTopOfBookEstimate({
+    key: input.market,
+    side: input.side,
+    spend,
+    bid,
+    ask,
+    takerFeeBps,
+  });
+  return spotReviewSchema.parse({
+    ...(await finishStep(client, 143, wallet, step, block, nativeBalance)),
+    instrument: "spot",
+    market: input.market,
+    side: input.side,
+    action: step.action,
+    amount: input.amount,
+    input: tokens.input,
+    output: tokens.output,
+    walletBalance: walletBalance.toString(),
+    accountBalance: "0",
+    indicativeOutput: indicative > 0n ? indicative.toString() : null,
+    indicativeFilled: true,
+    amountInUsed: spend.toString(),
+    expectedOutput: expectedOutput?.toString() ?? null,
+    minimumOutput: minimumOutput?.toString() ?? null,
+    // Kuru mainnet market orders have no onchain deadline.
+    deadline: null,
+    // Pips (1e-7) to match the testnet review; mainnet fees are in bps.
+    takerFeePps: (takerFeeBps * 1000n).toString(),
+    sourcePostId: input.sourcePostId,
+    slippageBps: input.slippageBps,
+  });
+}
+
+/** Mainnet has no Kuru custody account: wallet balances only. */
+async function mainnetAccount(wallet: Address) {
+  const client = mainnetClient();
+  if ((await client.getChainId()) !== 143)
+    throw new IdentityError("rpc_chain_mismatch", 503);
+  const block = await client.getBlock();
+  const at = { blockNumber: block.number };
+  const nativeBalance = await client.getBalance({ address: wallet, ...at });
+  const tokens = [
+    kuruMainnet.markets.MON.base,
+    kuruMainnet.quote,
+    kuruMainnet.markets.WETH.base,
+    kuruMainnet.markets.WBTC.base,
+  ];
+  const balances = await Promise.all(
+    tokens.map(async (token) => ({
+      token,
+      account: "0",
+      wallet: (token.address === zeroAddress
+        ? nativeBalance
+        : await client.readContract({
+            address: token.address,
+            abi: erc20Abi,
+            functionName: "balanceOf",
+            args: [wallet],
+            ...at,
+          })
+      ).toString(),
+    })),
+  );
+  return kuruAccountSchema.parse({
+    chainId: 143,
+    wallet,
+    rootAccountId: "0",
+    balances,
+    nativeBalance: nativeBalance.toString(),
+    observedAt: new Date().toISOString(),
+    blockNumber: block.number.toString(),
+  });
+}
+
 const accountTokens = [
   kuruV2.markets.MON.base,
   kuruUsdc,
@@ -227,8 +403,9 @@ const accountTokens = [
   kuruV2.markets.WBTC.base,
 ];
 
-export async function kuruAccount(request: Request) {
+export async function kuruAccount(request: Request, chainId: 10143 | 143) {
   const wallet = await boundWallet(request);
+  if (chainId === 143) return mainnetAccount(wallet);
   const client = testnetClient();
   if ((await client.getChainId()) !== 10143)
     throw new IdentityError("rpc_chain_mismatch", 503);
@@ -326,7 +503,7 @@ export async function prepareWithdraw(request: Request, body: unknown) {
     wallet,
   });
   return withdrawReviewSchema.parse({
-    ...(await finishStep(client, wallet, step, block, nativeBalance)),
+    ...(await finishStep(client, 10143, wallet, step, block, nativeBalance)),
     action: "withdraw",
     token,
     amount: parsed.data.amount,

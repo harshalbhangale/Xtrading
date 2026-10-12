@@ -3,8 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   accountCoreAbi,
   bookEstimate,
+  kuruMainnet,
   kuruUsdc,
+  kuruV1OrderBookAbi,
   kuruV2,
+  mainnetOrderSize,
+  mainnetTopOfBookEstimate,
+  mainnetTradeStep,
   minimumQuotedOutput,
   nextTradeStep,
   orderBookAbi,
@@ -172,5 +177,82 @@ describe("bookEstimate", () => {
     expect(sell.filled).toBe(false);
     // 0.0055951569 WETH at 2678.20, less 0.07%.
     expect(sell.output).toBe(14_974_459n);
+  });
+});
+
+describe("Kuru mainnet market orders", () => {
+  const order = {
+    key: "MON" as const,
+    side: "sell" as const,
+    amount: 10n * 10n ** 18n,
+    walletBalance: 20n * 10n ** 18n,
+    allowance: 0n,
+    minimumOutput: 240_000n,
+  };
+  it("scales sizes to the book and rounds the spend down", () => {
+    // MON size precision 1e10: 1 MON = 1e10 size units.
+    expect(mainnetOrderSize(order)).toEqual({
+      size: 100_000_000_000n,
+      spend: 10n * 10n ** 18n,
+    });
+    expect(
+      mainnetOrderSize({ ...order, amount: 10n ** 18n + 12_345n }).spend,
+    ).toBe(10n ** 18n);
+    // USDC buys use price precision (1e8 on MON/USDC): 0.20 USDC = 2e7.
+    expect(
+      mainnetOrderSize({ key: "MON", side: "buy", amount: 200_000n }).size,
+    ).toBe(20_000_000n);
+    expect(() =>
+      mainnetOrderSize({ key: "MON", side: "sell", amount: 1n }),
+    ).toThrow();
+  });
+  it("sells native MON as value with no approval", () => {
+    const step = mainnetTradeStep(order);
+    expect(step.action).toBe("swap");
+    expect(step.to).toBe(kuruMainnet.markets.MON.market);
+    expect(step.value).toBe(order.amount);
+    const call = decodeFunctionData({
+      abi: kuruV1OrderBookAbi,
+      data: step.data,
+    });
+    expect(call.functionName).toBe("placeAndExecuteMarketSell");
+    expect(call.args).toEqual([100_000_000_000n, 240_000n, false, false]);
+  });
+  it("approves exactly the spend to the order book before a buy", () => {
+    const buy = {
+      ...order,
+      side: "buy" as const,
+      amount: 200_000n,
+      walletBalance: 1_000_000n,
+    };
+    const approve = mainnetTradeStep(buy);
+    expect(approve.action).toBe("approve");
+    expect(approve.to).toBe(kuruMainnet.quote.address);
+    expect(
+      decodeFunctionData({ abi: erc20Abi, data: approve.data }).args,
+    ).toEqual([kuruMainnet.markets.MON.market, 200_000n]);
+    const swap = mainnetTradeStep({ ...buy, allowance: 200_000n });
+    expect(swap.value).toBe(0n);
+    expect(
+      decodeFunctionData({ abi: kuruV1OrderBookAbi, data: swap.data })
+        .functionName,
+    ).toBe("placeAndExecuteMarketBuy");
+  });
+  it("rejects missing funds and minimums", () => {
+    expect(() => mainnetTradeStep({ ...order, walletBalance: 1n })).toThrow();
+    expect(() => mainnetTradeStep({ ...order, minimumOutput: 0n })).toThrow();
+  });
+  it("estimates from the 18-decimal top of book", () => {
+    // 10 MON at a 0.02475 bid ≈ 0.2475 USDC.
+    expect(
+      mainnetTopOfBookEstimate({
+        key: "MON",
+        side: "sell",
+        spend: 10n * 10n ** 18n,
+        bid: 24_750_000_000_000_000n,
+        ask: 24_790_000_000_000_000n,
+        takerFeeBps: 0n,
+      }),
+    ).toBe(247_500n);
   });
 });

@@ -31,10 +31,12 @@ const token = z.object({
   decimals: uint.max(36),
 });
 export const kuruMarketSchema = z.enum(["WETH", "WBTC", "MON"]);
+/** Spot trading networks; each request names one explicitly. */
+export const spotChainIdSchema = z.union([z.literal(10143), z.literal(143)]);
 export const prepareSpotSchema = z
   .object({
     instrument: z.literal("spot"),
-    chainId: z.literal(10143),
+    chainId: spotChainIdSchema,
     market: kuruMarketSchema,
     side: z.enum(["buy", "sell"]),
     // Integer input-token units. No arbitrary market, target or calldata.
@@ -58,7 +60,7 @@ export const prepareWithdrawSchema = z
 const step = {
   status: z.literal("prepared"),
   venue: z.literal("Kuru"),
-  chainId: z.literal(10143),
+  chainId: spotChainIdSchema,
   wallet: address,
   to: address,
   data: z.string().regex(/^0x[0-9a-fA-F]+$/),
@@ -100,7 +102,7 @@ export const withdrawReviewSchema = z.object({
   amount: amountSchema,
 });
 export const kuruAccountSchema = z.object({
-  chainId: z.literal(10143),
+  chainId: spotChainIdSchema,
   wallet: address,
   rootAccountId: amountSchema,
   balances: z.array(

@@ -1,9 +1,10 @@
 "use client";
 import { preparedStakeSchema, stakeStateSchema } from "@call-my-bluff/domain";
-import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPublicClient, formatUnits, http, parseUnits } from "viem";
 import { monadTestnet } from "viem/chains";
+import { useWalletSend } from "./use-wallet-send";
 
 type State = ReturnType<typeof stakeStateSchema.parse>;
 type Prepared = ReturnType<typeof preparedStakeSchema.parse>;
@@ -11,7 +12,7 @@ export default function ConfiguredStake() {
   const { ready, authenticated, getAccessToken, user, login, logout } =
     usePrivy();
   const { wallets } = useWallets();
-  const { sendTransaction } = useSendTransaction();
+  const { sendTransaction } = useWalletSend();
   const [state, setState] = useState<State | null>(null);
   const [prepared, setPrepared] = useState<Prepared | null>(null);
   const [amount, setAmount] = useState("500");

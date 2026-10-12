@@ -273,3 +273,160 @@ export function withdrawStep(input: {
     value: 0n,
   };
 }
+
+/**
+ * Kuru spot on Monad mainnet (chain 143): the V1 order books listed by
+ * api.kuru.io, verified onchain with getMarketParams on 12 Oct 2026. ABI from
+ * @kuru-labs/kuru-sdk@0.0.95. Market orders pull the input straight from the
+ * wallet (no custody account): exact approve to the order book, then one IOC
+ * market order. There is no onchain deadline; the minimum output protects it.
+ * Limit-order minimum sizes do not apply to these market orders (fork-tested).
+ */
+export const kuruV1OrderBookAbi = parseAbi([
+  "function getMarketParams() view returns (uint32 pricePrecision, uint96 sizePrecision, address baseAsset, uint256 baseDecimals, address quoteAsset, uint256 quoteDecimals, uint32 tickSize, uint96 minSize, uint96 maxSize, uint256 takerFeeBps, uint256 makerFeeBps)",
+  "function bestBidAsk() view returns (uint256 bid, uint256 ask)",
+  "function placeAndExecuteMarketBuy(uint96 quoteSize, uint256 minAmountOut, bool isMargin, bool isFillOrKill) payable returns (uint256)",
+  "function placeAndExecuteMarketSell(uint96 size, uint256 minAmountOut, bool isMargin, bool isFillOrKill) payable returns (uint256)",
+]);
+export const kuruMainnetUsdc: Token = {
+  symbol: "USDC",
+  address: "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
+  decimals: 6,
+};
+export const kuruMainnet = {
+  chainId: 143,
+  quote: kuruMainnetUsdc,
+  markets: {
+    MON: {
+      market: "0x065C9d28E428A0db40191a54d33d5b7c71a9C394" as Address,
+      base: { symbol: "MON", address: zeroAddress, decimals: 18 },
+      pricePrecision: 100_000_000n,
+      sizePrecision: 10_000_000_000n,
+    },
+    WETH: {
+      market: "0xa6aFd386135B7d41a6c40C525ABc4a1019b0D132" as Address,
+      base: {
+        symbol: "WETH",
+        address: "0xEE8c0E9f1BFFb4Eb878d8f15f368A02a35481242" as Address,
+        decimals: 18,
+      },
+      pricePrecision: 10_000n,
+      sizePrecision: 10_000_000_000n,
+    },
+    // Coinbase-wrapped BTC; shares the "WBTC" key with the testnet market.
+    WBTC: {
+      market: "0x40C49f171202f91ff5D2Fae34c22Dd2bfdd22aF0" as Address,
+      base: {
+        symbol: "cbBTC",
+        address: "0xd18B7EC58Cdf4876f6AFebd3Ed1730e4Ce10414b" as Address,
+        decimals: 8,
+      },
+      pricePrecision: 10_000n,
+      sizePrecision: 100_000_000n,
+    },
+  },
+} as const;
+export const MAINNET_PRICE_SCALE = 10n ** 18n;
+
+/** Explicit per-chain spot configuration; never falls back between chains. */
+export function kuruNetwork(chainId: 10143 | 143) {
+  return chainId === 143 ? kuruMainnet : kuruV2;
+}
+export function networkTradeTokens(
+  chainId: 10143 | 143,
+  key: KuruMarketKey,
+  side: "buy" | "sell",
+) {
+  const network = kuruNetwork(chainId);
+  const base = network.markets[key].base as Token;
+  return side === "buy"
+    ? { input: network.quote, output: base }
+    : { input: base, output: network.quote };
+}
+
+/**
+ * Converts an input-token amount to the order book's integer size. Buys are
+ * quoted in price precision, sells in size precision; the amount actually
+ * spent is rounded down to what the book can represent.
+ */
+export function mainnetOrderSize(input: {
+  key: KuruMarketKey;
+  side: "buy" | "sell";
+  amount: bigint;
+}) {
+  const market = kuruMainnet.markets[input.key];
+  const [precision, decimals] =
+    input.side === "buy"
+      ? [market.pricePrecision, kuruMainnetUsdc.decimals]
+      : [market.sizePrecision, market.base.decimals];
+  const scale = 10n ** BigInt(decimals);
+  const size = (input.amount * precision) / scale;
+  if (size <= 0n || size >= 2n ** 96n) throw new Error("Amount out of bounds");
+  return { size, spend: (size * scale) / precision };
+}
+
+/** Display-only estimate from the top of book (18-decimal quote-per-base prices). */
+export function mainnetTopOfBookEstimate(input: {
+  key: KuruMarketKey;
+  side: "buy" | "sell";
+  spend: bigint;
+  bid: bigint;
+  ask: bigint;
+  takerFeeBps: bigint;
+}) {
+  const market = kuruMainnet.markets[input.key];
+  const baseScale = 10n ** BigInt(market.base.decimals);
+  const quoteScale = 10n ** BigInt(kuruMainnetUsdc.decimals);
+  const keep = 10_000n - input.takerFeeBps;
+  if (input.side === "buy")
+    return input.ask === 0n
+      ? 0n
+      : (input.spend * MAINNET_PRICE_SCALE * baseScale * keep) /
+          (input.ask * quoteScale * 10_000n);
+  return (
+    (input.spend * input.bid * quoteScale * keep) /
+    (MAINNET_PRICE_SCALE * baseScale * 10_000n)
+  );
+}
+
+/** Next mainnet transaction: an exact approval to the order book, or the market order. */
+export function mainnetTradeStep(input: {
+  key: KuruMarketKey;
+  side: "buy" | "sell";
+  amount: bigint;
+  walletBalance: bigint;
+  allowance: bigint;
+  minimumOutput: bigint;
+}): Step {
+  const market = kuruMainnet.markets[input.key];
+  const { input: token } = networkTradeTokens(143, input.key, input.side);
+  const { size, spend } = mainnetOrderSize(input);
+  if (input.walletBalance < spend) throw new Error("Insufficient funds");
+  const native = token.address === zeroAddress;
+  if (!native && input.allowance < spend)
+    return {
+      action: "approve",
+      to: token.address,
+      data: encodeFunctionData({
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [market.market, spend],
+      }),
+      value: 0n,
+    };
+  if (input.minimumOutput <= 0n) throw new Error("Positive minimum required");
+  return {
+    action: "swap",
+    to: market.market,
+    data: encodeFunctionData({
+      abi: kuruV1OrderBookAbi,
+      functionName:
+        input.side === "buy"
+          ? "placeAndExecuteMarketBuy"
+          : "placeAndExecuteMarketSell",
+      // Wallet funds (not margin), immediate-or-cancel (not fill-or-kill).
+      args: [size, input.minimumOutput, false, false],
+    }),
+    value: native ? spend : 0n,
+  };
+}
