@@ -1,11 +1,16 @@
-/** Interim Tradepost lockup: TP tile plus wordmark, in the brand purple. */
+import Image from "next/image";
+
 export function Brand() {
   return (
     <span className="brand">
-      <span className="brand-mark" aria-hidden="true">
-        TP
-      </span>
-      <span className="brand-word">Tradepost</span>
+      <Image
+        className="brand-logo"
+        src="/brand/xtrading-logo.png"
+        alt="Xtrading"
+        width={2172}
+        height={724}
+        priority
+      />
     </span>
   );
 }

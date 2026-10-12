@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Jost } from "next/font/google";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AuthProvider } from "../components/auth-provider";
@@ -11,30 +10,24 @@ import "./frontend.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Tradepost — conviction has a record",
-    template: "%s · Tradepost",
+    default: "Xtrading — conviction has a record",
+    template: "%s · Xtrading",
   },
   description:
     "Verified X identity, refundable stake and wallet-approved trading from X, on Monad.",
 };
 
-const brandFont = Jost({
-  subsets: ["latin"],
-  weight: ["700"],
-  variable: "--brand-font",
-});
-
 export default function RootLayout({ children }: { children: ReactNode }) {
   const testnet = process.env.NEXT_PUBLIC_MONAD_CHAIN_ID !== "143";
   return (
-    <html lang="en" className={brandFont.variable}>
+    <html lang="en">
       <body>
         <AuthProvider>
           <a href="#main" className="skip-link">
             Skip to content
           </a>
           <header className="topbar">
-            <Link href="/" className="wordmark" aria-label="Tradepost home">
+            <Link href="/" className="wordmark" aria-label="Xtrading home">
               <Brand />
             </Link>
             <Navigation />
@@ -48,7 +41,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </header>
           <main id="main">{children}</main>
           <footer>
-            <span>Tradepost · Monad {testnet ? "testnet" : "mainnet"}</span>
+            <span>Xtrading · Monad {testnet ? "testnet" : "mainnet"}</span>
             <Link href="/setup">System status</Link>
           </footer>
         </AuthProvider>

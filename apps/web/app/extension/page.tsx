@@ -38,7 +38,7 @@ export default function ExtensionPage() {
           </p>
           <a
             className="button"
-            href="/downloads/tradepost-extension.zip"
+            href="/downloads/xtrading-extension.zip"
             download
           >
             Download extension (.zip)

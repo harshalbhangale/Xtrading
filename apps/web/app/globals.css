@@ -73,27 +73,11 @@ input:focus-visible {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  font-family:
-    var(--brand-font), "Futura", "Avenir Next", system-ui, sans-serif;
-  font-weight: 700;
-  color: var(--ink);
 }
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: #4f1ff0;
-  color: #fff;
-  font-size: 17px;
-  letter-spacing: -0.06em;
-}
-.brand-word {
-  font-size: 26px;
-  letter-spacing: -0.03em;
-  line-height: 1;
+.brand-logo {
+  display: block;
+  width: 168px;
+  height: auto;
 }
 .topbar nav {
   display: flex;

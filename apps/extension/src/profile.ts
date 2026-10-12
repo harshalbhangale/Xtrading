@@ -62,7 +62,7 @@ export async function scanProfile() {
   const card = el(
     "div",
     { class: "card" },
-    el("div", { class: "title" }, "Tradepost · creator record"),
+    el("div", { class: "title" }, "Xtrading · creator record"),
   );
   const details = el(
     "div",

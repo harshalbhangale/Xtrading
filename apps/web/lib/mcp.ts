@@ -40,7 +40,7 @@ function errorText(error: unknown) {
   if (error instanceof IdentityError)
     return error.code === "authentication_required" ||
       error.code === "invalid_session"
-      ? "This tool needs the user's Tradepost session: send their Privy access token as an Authorization: Bearer header on the MCP connection."
+      ? "This tool needs the user's Xtrading session: send their Privy access token as an Authorization: Bearer header on the MCP connection."
       : `Request refused: ${error.code}.`;
   return "The service is temporarily unavailable.";
 }
@@ -57,12 +57,12 @@ async function run(task: () => Promise<unknown>) {
  * caller's Authorization header to the authenticated tools; public tools ignore it.
  * No tool signs or submits a transaction.
  */
-export function tradepostMcp(request: Request) {
+export function xtradingMcp(request: Request) {
   const server = new McpServer(
-    { name: "tradepost", version: "0.1.0" },
+    { name: "xtrading", version: "0.1.0" },
     {
       instructions:
-        "Tradepost evidence and trade preparation on Monad testnet (chain 10143). Identity, refundable stake, call outcomes and wallet returns are separate signals; never merge them into one judgement. Test tokens have no monetary value. prepare_trade returns an unsigned transaction for the user to approve in their own wallet; nothing here signs or submits.",
+        "Xtrading evidence and trade preparation on Monad testnet (chain 10143). Identity, refundable stake, call outcomes and wallet returns are separate signals; never merge them into one judgement. Test tokens have no monetary value. prepare_trade returns an unsigned transaction for the user to approve in their own wallet; nothing here signs or submits.",
     },
   );
 

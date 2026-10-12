@@ -6,8 +6,8 @@ The extension's profile card and creator dashboard have an **Expand calls & wall
 
 X's official API is pay-per-use. This version makes no X API following requests and adds no paid provider. It reads visible X UI after explicit opt-in instead:
 
-1. Load extension 0.4.0 in the same Chrome profile as X and Tradepost; approve its storage permission if Chrome asks. Reload X and `/dashboard/watchlist` after updating.
-2. Sign in to Tradepost with X. On Watchlist, choose **Enable viewed-follow sync**. The dashboard verifies the Privy session through `/api/identity` to determine its viewer handle.
+1. Load extension 0.4.0 in the same Chrome profile as X and Xtrading; approve its storage permission if Chrome asks. Reload X and `/dashboard/watchlist` after updating.
+2. Sign in to Xtrading with X. On Watchlist, choose **Enable viewed-follow sync**. The dashboard verifies the Privy session through `/api/identity` to determine its viewer handle.
 3. Visit a followed account's profile or your own `/following` list on X. The extension observes explicit Follow/Following controls; it never treats a generic mention, feed post or another person's following list as your follow.
 4. Observed accounts appear in the Watchlist section within 15 seconds while the dashboard is visible. Records are stored only in extension storage, separately for each viewer handle, capped at 500 latest observations. They contain a handle and observation time, not cookies, passwords or Privy tokens.
 5. A visible Follow control removes that account from the observed list. **Disable sync & clear observations** stops recording and clears the viewer's browser records.

@@ -45,7 +45,7 @@ export default function IntegrationsPage() {
           </dd>
           <dt>Claude Code</dt>
           <dd>
-            <code>claude mcp add --transport http tradepost {endpoint}</code>
+            <code>claude mcp add --transport http xtrading {endpoint}</code>
           </dd>
           <dt>Signed-in tools</dt>
           <dd>
