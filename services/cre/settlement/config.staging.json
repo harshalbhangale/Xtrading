@@ -1,0 +1,10 @@
+{
+  "schedule": "0 0 * * * *",
+  "chainSelectorName": "monad-testnet",
+  "settlementAddress": "0x0000000000000000000000000000000000000000",
+  "gasLimit": "1500000",
+  "scanLimit": 50,
+  "maxSettlementsPerRun": 5,
+  "priceApi": "https://data-api.binance.vision/api/v3/klines",
+  "symbols": { "BTC": "BTCUSDT", "ETH": "ETHUSDT", "SOL": "SOLUSDT" }
+}

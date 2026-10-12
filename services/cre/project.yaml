@@ -1,0 +1,10 @@
+# CRE project settings. RPC URLs may use ${VAR} from .env (never commit keyed URLs).
+staging-settings:
+  rpcs:
+    - chain-name: monad-testnet
+      url: https://testnet-rpc.monad.xyz
+
+production-settings:
+  rpcs:
+    - chain-name: monad-testnet
+      url: https://testnet-rpc.monad.xyz
