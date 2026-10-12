@@ -129,3 +129,20 @@ export function byAssetDirection(calls: PublicCall[]): GroupStats[] {
     })
     .sort((a, b) => b.scored - a.scored);
 }
+
+/** Big-number tiles for the card: hit rate and median return per window. */
+export function statTiles(stats: CallStats | null) {
+  if (!stats?.scored) return [];
+  const tiles: Array<{ label: string; value: string; tone?: "bad" | "good" }> =
+    [{ label: "Hit rate", value: `${stats.hits}/${stats.scored}` }];
+  for (const horizon of horizons) {
+    const bps = stats.medianBps[horizon];
+    if (bps !== undefined)
+      tiles.push({
+        label: `Median ${horizon}`,
+        value: formatBps(bps),
+        tone: bps < 0 ? "bad" : bps > 0 ? "good" : undefined,
+      });
+  }
+  return tiles;
+}

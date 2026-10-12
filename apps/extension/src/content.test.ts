@@ -106,7 +106,7 @@ it("shows one honest creator card on profile pages without adding feed panels", 
   expect(document.querySelectorAll(".cmb-profile-host")).toHaveLength(1);
   expect(
     document.querySelector(".cmb-profile-host")?.shadowRoot?.textContent,
-  ).toContain("Creator evidence unavailable");
+  ).toContain("service unavailable");
   // Only the header badge's identity lookup; an unverified creator gets no badge.
   expect(sendMessage.mock.calls.map(([message]) => message.type)).toEqual([
     "creator-evidence",

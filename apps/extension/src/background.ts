@@ -106,15 +106,15 @@ function handleMessage(
     });
   }
   if (
-    message.type === "call-availability" &&
-    typeof message.id === "string" &&
-    /^[0-9a-f-]{36}$/i.test(message.id)
+    message.type === "post-availability" &&
+    typeof message.postId === "string" &&
+    /^[0-9]{1,20}$/.test(message.postId)
   ) {
-    const id = message.id;
-    // The server rate-limits post checks; keep answers for ten minutes.
-    return cached(`availability:${id}`, 600000, async () =>
+    const postId = message.postId;
+    // The server rate-limits post checks; a short cache lets a deletion show up quickly.
+    return cached(`availability:${postId}`, 120000, async () =>
       postAvailabilitySchema.parse(
-        await getJson(`/api/calls/${encodeURIComponent(id)}/availability`),
+        await getJson(`/api/posts/${postId}/availability`),
       ),
     );
   }

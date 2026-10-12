@@ -1,10 +1,11 @@
 import { normalizeHandle, publicCallLedgerSchema } from "@call-my-bluff/domain";
-import { callStats, callsLine, formatUnits6 } from "./card-metrics";
+import { callStats, formatUnits6, statTiles } from "./card-metrics";
 import { appOrigin } from "./config";
 import { addProfileBadge } from "./creator-badge";
 import {
   el,
-  metricLine as line,
+  type Metric,
+  metricPanel,
   safeLink,
   send,
   shadowHost,
@@ -72,7 +73,7 @@ export async function scanProfile() {
   const card = el(
     "div",
     { class: "card" },
-    el("div", { class: "title" }, "Xtrading · creator record"),
+    el("div", { class: "title" }, "Xtrading"),
   );
   const details = el(
     "div",
@@ -127,101 +128,104 @@ export async function scanProfile() {
   const insights = await loadInsights(handle, null, null).catch(() => null);
   if (!host.isConnected || profileHandle() !== handle) return;
   details.replaceChildren();
+  const panel = metricPanel();
+  details.append(panel.root);
   if (!insights) {
-    details.append(
-      line("Calls", null, "service unavailable"),
-      line("Said / did", null, "service unavailable"),
-      line("Wallet", null, "service unavailable"),
-      line("Stake", null, "service unavailable"),
-      el(
-        "p",
-        { class: "note" },
-        "Creator evidence unavailable. No identity, stake or performance claim.",
-      ),
-    );
+    panel.set("all", {
+      label: "Creator record",
+      value: null,
+      reason: "service unavailable",
+    });
     return;
   }
   const evidence = insights.evidence;
-  const wallet =
+  panel.set(
+    "wallet",
     evidence?.identity.status === "bound"
-      ? line(
-          "Wallet",
-          `Linked · ${shortAddress(evidence.identity.wallet ?? "")}`,
-        )
-      : line("Wallet", null, "no linked wallet");
+      ? {
+          label: "Wallet linked",
+          value: shortAddress(evidence.identity.wallet ?? ""),
+        }
+      : { label: "Wallet", value: null, reason: "not linked" },
+  );
   const stake = evidence?.stake;
-  const stakeLine =
+  panel.set(
+    "stake",
     stake?.status === "active" && stake.balance
-      ? line(
-          "Stake",
-          `${formatUnits6(stake.balance)} ${stake.symbol ?? ""} staked`.trim(),
-        )
+      ? {
+          label: "Stake",
+          value:
+            `${formatUnits6(stake.balance)} ${stake.symbol ?? ""} staked`.trim(),
+        }
       : stake?.status === "withdrawal-pending"
-        ? line("Stake", "Withdrawal pending")
-        : stake?.status === "inactive"
-          ? line("Stake", null, "no active stake")
-          : line("Stake", null, "chain or indexer data not current");
-  const callsSlot = line("Calls", "…");
-  const sayDidSlot = line("Said / did", "…");
-  details.append(callsSlot, sayDidSlot, wallet, stakeLine);
+        ? { label: "Stake", value: "Withdrawing" }
+        : {
+            label: "Stake",
+            value: null,
+            reason:
+              stake?.status === "inactive" ? "none" : "indexer not current",
+          },
+  );
   const [ledgerRaw, checked] = await Promise.all([
     send<unknown>({ type: "creator-ledger", handle }),
     sayDid(handle, insights),
   ]);
   if (!host.isConnected || profileHandle() !== handle) return;
   const ledger = publicCallLedgerSchema.safeParse(ledgerRaw);
-  const text = callsLine(
-    callStats(ledger.success ? ledger.data.calls : []),
-    insights.reputation.status === "ready"
-      ? insights.reputation.trackedCalls
-      : 0,
-  );
-  callsSlot.replaceWith(
-    text
-      ? line("Calls", text)
-      : line(
-          "Calls",
-          null,
-          ledger.success ? "no registered calls" : "call ledger unavailable",
-        ),
-  );
-  sayDidSlot.replaceWith(checked);
+  const tiles = statTiles(callStats(ledger.success ? ledger.data.calls : []));
+  tiles.forEach((tile, index) => {
+    panel.set(`tile${index}`, { ...tile, kind: "stat", group: "" });
+  });
+  if (!tiles.length)
+    panel.set("calls", {
+      label: "Calls",
+      value: null,
+      reason: !ledger.success
+        ? "ledger unavailable"
+        : insights.reputation.status === "ready" &&
+            insights.reputation.trackedCalls
+          ? `${insights.reputation.trackedCalls} detected, none scored`
+          : "none yet",
+    });
+  panel.set("saiddid", checked);
 }
 
 /** Said versus did for the creator's latest classified call, from the Nansen wallet check. */
-async function sayDid(handle: string, insights: Insights) {
+async function sayDid(handle: string, insights: Insights): Promise<Metric> {
   const label = "Said / did";
+  const none = (reason: string): Metric => ({ label, value: null, reason });
   const latest = insights.reputation.recent[0];
-  if (!latest?.asset || !latest.direction)
-    return line(label, null, "no classified call to check");
+  if (!latest?.asset || !latest.direction) return none("no directional call");
   const checked = await loadInsights(handle, latest.asset, latest.direction);
   const check = checked?.nansen;
   if (!check || check.mode === "unavailable" || check.verdict === "unavailable")
-    return line(label, null, "Nansen unavailable");
+    return none("Nansen unavailable");
   // Demo results are fixtures, never evidence.
-  if (check.mode === "demo") return line(label, null, "Nansen in demo mode");
+  if (check.mode === "demo") return none("Nansen demo mode");
   if (check.verdict === "not-applicable")
-    return line(label, null, `not applicable to ${latest.asset}`);
+    return none(`n/a for ${latest.asset}`);
   if (check.verdict === "no-activity")
-    return line(label, `No wallet activity in ${latest.asset}`);
-  const row = line(
-    label,
-    check.verdict === "contradiction"
-      ? `⚠ Wallet did the opposite of the latest ${latest.asset} call`
-      : `Wallet matched the latest ${latest.asset} call`,
-    "",
-    check.verdict,
-  );
+    return { label, value: `No ${latest.asset} wallet activity` };
+  const bad = check.verdict === "contradiction";
+  const text = bad
+    ? `Wallet contradicts ${latest.asset} call`
+    : `Wallet matches ${latest.asset} call`;
   const tx = check.findings.find((finding) => finding.transactionHash);
-  if (tx?.transactionHash && /^0x[0-9a-fA-F]{64}$/.test(tx.transactionHash))
-    row
-      .querySelector(".metric-value")
-      ?.append(
-        " ",
-        safeLink(
-          `https://testnet.monadvision.com/tx/${tx.transactionHash}`,
-          "↗",
-        ),
-      );
-  return row;
+  const hasTx =
+    tx?.transactionHash && /^0x[0-9a-fA-F]{64}$/.test(tx.transactionHash);
+  return {
+    label,
+    tone: bad ? "bad" : "good",
+    value: hasTx
+      ? el(
+          "span",
+          {},
+          `${text} `,
+          safeLink(
+            `https://testnet.monadvision.com/tx/${tx.transactionHash}`,
+            "↗",
+          ),
+        )
+      : text,
+  };
 }
