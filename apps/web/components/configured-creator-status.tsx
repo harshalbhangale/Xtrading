@@ -2,6 +2,7 @@
 import {
   identityStatusSchema,
   type PublicCreatorEvidence,
+  publicCallLedgerSchema,
   publicCreatorEvidenceSchema,
 } from "@call-my-bluff/domain";
 import { usePrivy } from "@privy-io/react-auth";
@@ -17,6 +18,7 @@ type State =
       kind: "ready";
       identity: Identity;
       evidence: PublicCreatorEvidence | null;
+      calls: number | null;
     };
 
 export default function ConfiguredCreatorStatus() {
@@ -37,19 +39,25 @@ export default function ConfiguredCreatorStatus() {
       if (!response.ok) throw new Error("identity unavailable");
       const identity = identityStatusSchema.parse(await response.json());
       let evidence: PublicCreatorEvidence | null = null;
+      let calls: number | null = null;
       if (identity.bindingCurrent && identity.binding) {
-        const public_ = await fetch(
-          `/api/creators/${identity.binding.handle}`,
-          { cache: "no-store" },
-        );
+        const handle = identity.binding.handle;
+        const [public_, ledger] = await Promise.all([
+          fetch(`/api/creators/${handle}`, { cache: "no-store" }),
+          fetch(`/api/creators/${handle}/calls`, { cache: "no-store" }),
+        ]);
         if (public_.ok) {
           const parsed = publicCreatorEvidenceSchema.safeParse(
             await public_.json(),
           );
           if (parsed.success) evidence = parsed.data;
         }
+        if (ledger.ok) {
+          const parsed = publicCallLedgerSchema.safeParse(await ledger.json());
+          if (parsed.success) calls = parsed.data.calls.length;
+        }
       }
-      if (!cancelled) setState({ kind: "ready", identity, evidence });
+      if (!cancelled) setState({ kind: "ready", identity, evidence, calls });
     })().catch(() => {
       if (!cancelled) setState({ kind: "error" });
     });
@@ -77,7 +85,7 @@ export default function ConfiguredCreatorStatus() {
       </p>
     );
 
-  const { identity, evidence } = state;
+  const { identity, evidence, calls } = state;
   const bound = identity.bindingCurrent && identity.binding;
   const stake = evidence?.stake;
   const staked =
@@ -107,10 +115,16 @@ export default function ConfiguredCreatorStatus() {
     },
     {
       title: "Register calls",
-      done: false,
-      detail: "Call registration is not live yet.",
+      done: Boolean(calls),
+      detail: !bound
+        ? "Available after binding."
+        : calls === null
+          ? "Call ledger unavailable."
+          : calls === 0
+            ? "Register a prediction from one of your posts within 24 hours of posting."
+            : `${calls} registered.`,
       href: "/creator/calls",
-      action: "View calls",
+      action: calls ? "View calls" : "Register a call",
     },
   ];
   return (

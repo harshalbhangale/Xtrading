@@ -84,7 +84,7 @@ Set server-only `ENVIO_GRAPHQL_URL=http://localhost:8081/v1/graphql` and `ENVIO_
 - **Web:** Vercel project `nomorebluff`, root directory `apps/web`, Node 22, function region `bom1`. Pushes to `main` deploy to production. Environment variables mirror `apps/web/.env.example`; `NEXT_PUBLIC_APP_URL` must equal the production origin because POST routes check it. Add that origin to the Privy app's allowed domains.
 - **Database:** AWS RDS (ap-south-1). Hosted runtimes pass the regional CA bundle as `DATABASE_CA_PEM`. Run schema changes with the bootstrap in `infrastructure/aws`.
 - **Indexer:** Envio Hosted Service with root `services/indexer` and `config.yaml`; set `ENVIO_MONAD_RPC_URL` there, then set the hosted GraphQL URL as `ENVIO_GRAPHQL_URL` on Vercel (no admin secret needed for a public endpoint).
-- **Extension:** `CMB_EXTENSION_APP_ORIGIN=https://nomorebluff.vercel.app pnpm --filter @call-my-bluff/extension build`, then zip `apps/extension/dist`. A production build only talks to that origin; rebuild without the variable for localhost.
+- **Extension:** `pnpm --filter @call-my-bluff/extension package` builds for the production origin and writes `apps/web/public/downloads/no-more-bluff-extension.zip`, served from the extension page. Re-run it after extension changes. A production build only talks to that origin; `build` without the variable targets localhost.
 
 ## Checks
 

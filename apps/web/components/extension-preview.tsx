@@ -90,7 +90,8 @@ export function ExtensionPreview() {
             </button>
           </div>
           <p className="small-note">
-            Trading is not connected. Real trades require wallet approval.
+            Illustration. In the extension, Buy and Sell open a trade review
+            here; your wallet approves every transaction.
           </p>
         </div>
       </div>

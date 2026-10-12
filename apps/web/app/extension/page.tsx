@@ -31,36 +31,45 @@ export default function ExtensionPage() {
       </div>
       <section className="extension-install" id="install">
         <div>
-          <h2>Install the developer build</h2>
-          <p>Not yet on the Chrome Web Store.</p>
+          <h2>Install</h2>
+          <p>
+            Not on the Chrome Web Store yet. Load it as an unpacked extension;
+            it only talks to this site.
+          </p>
+          <a
+            className="button"
+            href="/downloads/no-more-bluff-extension.zip"
+            download
+          >
+            Download extension (.zip)
+          </a>
         </div>
         <ol className="install-steps">
           <li>
             <span>01</span>
             <div>
-              <strong>Build the extension</strong>
-              <code>pnpm --filter @call-my-bluff/extension build</code>
+              <strong>Unzip it</strong>
+              <p>Extract the download to a folder you will keep.</p>
             </div>
           </li>
           <li>
             <span>02</span>
             <div>
-              <strong>Load the local folder</strong>
+              <strong>Load it in Chrome</strong>
               <p>
-                In Chrome, open <code>chrome://extensions</code>, enable
-                developer mode, then load <code>apps/extension/dist</code> as an
-                unpacked extension.
+                Open <code>chrome://extensions</code>, turn on Developer mode,
+                choose Load unpacked and select the unzipped folder.
               </p>
             </div>
           </li>
           <li>
             <span>03</span>
             <div>
-              <strong>Start the app and open X</strong>
+              <strong>Open X</strong>
               <p>
-                Run <code>pnpm dev</code> and the Envio indexer. Visible posts
-                get separate evidence indicators and Buy/Sell links to wallet
-                review.
+                Posts by bound creators show identity and stake badges. When a
+                post contains a call, the drawer offers a Kuru spot or Perpl
+                perp review; nothing is signed outside your wallet.
               </p>
             </div>
           </li>
