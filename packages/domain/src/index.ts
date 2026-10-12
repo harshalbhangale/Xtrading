@@ -330,3 +330,26 @@ export const postAvailabilitySchema = z.object({
   checkedAt: z.iso.datetime(),
 });
 export type PostAvailability = z.infer<typeof postAvailabilitySchema>;
+
+export const creatorOverviewSchema = z.object({
+  handle: xHandleSchema,
+  observedAt: z.iso.datetime(),
+  callsStatus: z.enum(["ready", "unavailable", "untracked"]),
+  ongoingCalls: z.array(publicCallSchema).max(50),
+  expiredUnresolved: z.number().int().nonnegative(),
+  activity: kuruActivitySchema.nullable(),
+  positionsNote: z.string(),
+});
+export type CreatorOverview = z.infer<typeof creatorOverviewSchema>;
+
+export const browserFollowSchema = z.object({
+  handle: xHandleSchema,
+  observedAt: z.iso.datetime(),
+});
+export const browserFollowingSchema = z.object({
+  viewerHandle: xHandleSchema,
+  enabled: z.boolean(),
+  follows: z.array(browserFollowSchema).max(500),
+  coverage: z.literal("viewed-only"),
+});
+export type BrowserFollowing = z.infer<typeof browserFollowingSchema>;

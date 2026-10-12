@@ -6,6 +6,8 @@ Identity binding works. Both stake contracts and mUSDC are deployed and verified
 
 Live withdrawal request and cancellation were confirmed and indexed; the 500 mUSDC stake is active again. The extension implements separate binding/stake indicators, evidence details and spot trade review links. Chrome installation and real-X validation are pending. Its public evidence endpoint exposes recorded stable-X-ID bindings and requires fresh matching RPC/Envio data before showing active stake.
 
+Profile cards and creator pages now expand to show ongoing registered calls and indexed Kuru swaps. Optional browser-only follow observations populate Watchlist without a paid X following API. This covers accounts you view, not the full following graph; creator-owned Perpl positions remain pending. See [setup and limits](docs/browser-following.md).
+
 Live: https://tradepostapp.vercel.app (Monad testnet). See [Deployment](#deployment).
 
 ## Run locally
@@ -93,7 +95,7 @@ Set server-only `ENVIO_GRAPHQL_URL=http://localhost:8081/v1/graphql` and `ENVIO_
 IDENTITY_TEST_DATABASE_URL=postgresql://cmb:cmb_local@localhost:5433/call_my_bluff pnpm check
 ```
 
-Checks include formatting, TypeScript, application tests, local identity integration tests, Foundry and web/extension builds. Latest local results: 22 application tests and 12 Foundry tests passed; six database integration tests were skipped without a test database URL. CI provisions its own Postgres service.
+Checks include formatting, TypeScript, application tests, local identity integration tests, Foundry and web/extension builds. Latest local results: 83 application tests and 29 Foundry tests passed; six database integration tests were skipped without a test database URL. CI provisions its own Postgres service.
 
 ## Developer documents
 

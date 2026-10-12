@@ -15,7 +15,7 @@ Updated 12 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added tar
 - [x] Live stake RPC reads and separate wallet reviews for approval, deposit and withdrawal actions.
 - [x] Original six-decimal mUSDC contract and faucet; deployed with 10,000 mUSDC in the project wallet.
 - [x] Envio schema, event handlers, contract configuration and generated bindings.
-- [x] Latest local checks: 74 application tests, 29 Foundry tests, web/extension builds; six database integration tests skipped in this run.
+- [x] Latest local checks: 83 application tests, 29 Foundry tests, web/extension builds; six database integration tests skipped in this run.
 
 ## Phase 1: Finish stake and indexing
 
@@ -123,3 +123,11 @@ Commit verified features separately and update this checklist as they land.
 - [ ] Archive extension-detected post text as append-only versions with capture provenance.
 - [ ] Persist availability observations and run resumable scheduled checks with provider backoff.
 - [ ] Add evidence timeline, edit/missing-post filters and evaluated-call performance breakdowns.
+
+## Expanded creator views and free following observations
+
+- [x] Click-to-expand registered ongoing calls and bound-wallet Kuru swaps in the profile card and creator dashboard; separate expired unresolved calls and unavailable creator Perpl positions.
+- [x] Opt-in, browser-only observed-follow sync from X profile headers and the signed-in viewer's following list; dashboard polls local extension observations every 15 seconds.
+- [x] Keep manual handles separate; show partial coverage and capture times, disable/clear control, no paid X following API.
+- [ ] Reload extension 0.4.0 and validate real-X header/list selectors, account switching and the production app bridge.
+- [ ] Creator-owned Perpl account mapping and actual open-position reads.

@@ -25,9 +25,18 @@ if (
   );
 const manifest = JSON.parse(await readFile("public/manifest.json", "utf8"));
 manifest.host_permissions = [`${url.origin}/*`];
+manifest.content_scripts.push({
+  matches: [`${url.origin}/*`],
+  js: ["app-bridge.js"],
+});
 await writeFile("dist/manifest.json", `${JSON.stringify(manifest, null, 2)}\n`);
 await build({
-  entryPoints: ["src/content.ts", "src/popup.ts", "src/background.ts"],
+  entryPoints: [
+    "src/content.ts",
+    "src/popup.ts",
+    "src/background.ts",
+    "src/app-bridge.ts",
+  ],
   outdir: "dist",
   bundle: true,
   format: "iife",

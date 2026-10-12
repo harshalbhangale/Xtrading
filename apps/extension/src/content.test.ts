@@ -150,3 +150,31 @@ it("discards profile evidence if navigation changes before the response", async 
     document.querySelector(".cmb-profile-host")?.shadowRoot?.textContent,
   ).not.toContain("Creator evidence unavailable");
 });
+
+it("loads expanded creator evidence only after the Expand button is clicked", async () => {
+  window.history.replaceState(null, "", "/alice");
+  document.body.innerHTML =
+    '<div data-testid="primaryColumn"><div data-testid="UserName">Alice</div></div>';
+  await import("./content");
+  await flush();
+  expect(
+    sendMessage.mock.calls.some(
+      ([message]) => message.type === "creator-overview",
+    ),
+  ).toBe(false);
+  const button = document
+    .querySelector(".cmb-profile-host")
+    ?.shadowRoot?.querySelector<HTMLButtonElement>(
+      'button[aria-controls="creator-overview"]',
+    );
+  button?.click();
+  await flush();
+  expect(button?.getAttribute("aria-expanded")).toBe("true");
+  expect(
+    sendMessage.mock.calls.some(
+      ([message]) => message.type === "creator-overview",
+    ),
+  ).toBe(true);
+  button?.click();
+  expect(button?.getAttribute("aria-expanded")).toBe("false");
+});

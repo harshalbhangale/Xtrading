@@ -5,6 +5,8 @@ The extension is the primary product surface. On x.com it adds:
 1. **Signal bars** only under posts classified as trading calls: asset, direction, spot/perp and venue, with **Trade ▸** (routable) or **Details ▸** (no testnet market).
 2. **A profile-header card** on X profile pages with separate recorded binding, refundable stake, detected-call count and pending score; it links to the creator dashboard. Untracked accounts show missing evidence honestly.
 3. **A call-check drawer**, opened only when the user clicks: the post, separate creator identity/stake/call evidence, Nansen wallet observations and the venue route, with **Review trade in app ↗**.
+4. **Expand calls & wallet activity** on the profile card: ongoing registered calls and indexed Kuru swaps. Creator-specific Perpl positions remain unavailable until the creator links their own account.
+5. **Optional viewed-follow sync** into Watchlist using local extension storage. It observes profiles and visible rows in your own following list, with no paid X following API. See [setup and limits](browser-following.md).
 
 Ordinary posts remain untouched and author names have no automatically inserted badges. Profile evidence refreshes every minute while the tab is visible; drawer evidence loads when opened.
 
@@ -41,11 +43,11 @@ Trade ▸ → GET /api/creators/:handle/insights?asset&direction → evidence + 
 ## Limits and protections
 
 - `POST /api/signals/classify`: public, 90 requests/min per client, body ≤ 4 KB, text ≤ 2000 chars, global LLM budget 120 calls/min (overflow falls back to rules), cached by post ID + text hash.
-- The service worker only accepts messages from x.com/twitter.com tabs, caps concurrency at 4, deduplicates requests and sends no cookies or tokens.
+- Provider requests accept messages only from x.com/twitter.com tabs, cap concurrency at 4, deduplicate requests and send no cookies or tokens. The local following bridge accepts only the configured app origin's Watchlist page.
 - Untrusted post text is rendered with `textContent` only and isolated in shadow roots.
 - Delayed classification responses are discarded if X has recycled the post. Missing or invalid classification produces no injected UI.
 
-Seven DOM regression cases cover ordinary posts, click-only drawers, profile records, navigation during evidence reads, invalid responses and recycled posts. Production validation on real X is still pending.
+Eight extension UI cases cover ordinary posts, click-only drawers and expansion, profile records, navigation during evidence reads, invalid responses and recycled posts. Five follow-observation and three storage tests cover scoping, opt-in, isolation and clearing. Production validation on real X is still pending.
 
 ## Build and install
 

@@ -4,6 +4,7 @@ import {
 } from "@call-my-bluff/domain";
 import { el, send, shadowHost } from "./dom";
 import { openDrawer } from "./drawer";
+import { observeFollowing } from "./follow-observer";
 import { scanProfile } from "./profile";
 
 function postIdentity(article: HTMLElement) {
@@ -126,6 +127,7 @@ function schedule() {
     queued = false;
     scanPosts();
     void scanProfile();
+    observeFollowing();
   });
 }
 new MutationObserver(schedule).observe(document.body, {
@@ -137,3 +139,5 @@ schedule();
 setInterval(() => {
   if (document.visibilityState === "visible") void scanProfile();
 }, 60_000);
+
+setInterval(observeFollowing, 3000);

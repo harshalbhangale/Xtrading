@@ -1,10 +1,12 @@
 import {
+  creatorOverviewSchema,
   normalizeHandle,
   postSignalRequestSchema,
   postSignalResponseSchema,
   publicCreatorEvidenceSchema,
 } from "@call-my-bluff/domain";
 import { appOrigin } from "./config";
+import { readFollowing, updateFollowing } from "./follow-storage";
 
 type Entry = { expires: number; value: unknown };
 const cache = new Map<string, Entry>();
@@ -76,6 +78,20 @@ function handleMessage(
       return value;
     });
   }
+  if (
+    message.type === "creator-overview" &&
+    typeof message.handle === "string"
+  ) {
+    const handle = normalizeHandle(message.handle);
+    if (!handle) return Promise.resolve({ error: "invalid_handle" });
+    return cached(`overview:${handle}`, 30000, async () => {
+      const value = creatorOverviewSchema.parse(
+        await getJson(`/api/creators/${handle}/overview`),
+      );
+      if (value.handle !== handle) throw new Error("mismatched_handle");
+      return value;
+    });
+  }
   if (message.type === "classify-post") {
     const input = postSignalRequestSchema.safeParse(message.payload);
     if (!input.success) return Promise.resolve({ error: "invalid_post" });
@@ -113,14 +129,69 @@ function handleMessage(
   return null;
 }
 
+let followWrites: Promise<unknown> = Promise.resolve();
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
-  if (
-    !sender.tab?.url ||
-    !/^https:\/\/(x\.com|twitter\.com)\//.test(sender.tab.url) ||
-    typeof message !== "object" ||
-    message === null
-  )
+  if (!sender.tab?.url || typeof message !== "object" || message === null)
     return false;
+  let senderUrl: URL;
+  try {
+    senderUrl = new URL(sender.tab.url);
+  } catch {
+    return false;
+  }
+  if (message.type === "app-following") {
+    if (
+      senderUrl.origin !== appOrigin ||
+      senderUrl.pathname !== "/dashboard/watchlist" ||
+      typeof message.viewer !== "string"
+    )
+      return false;
+    const viewer = normalizeHandle(message.viewer);
+    if (
+      !viewer ||
+      !["read", "configure"].includes(message.action) ||
+      (message.action === "configure" && typeof message.enabled !== "boolean")
+    )
+      return false;
+    followWrites = followWrites
+      .catch(() => null)
+      .then(() =>
+        message.action === "read"
+          ? readFollowing(viewer)
+          : updateFollowing(viewer, { enabled: message.enabled }),
+      );
+    void followWrites
+      .then(respond)
+      .catch(() => respond({ error: "storage_unavailable" }));
+    return true;
+  }
+  if (!/^https:\/\/(x\.com|twitter\.com)\//.test(sender.tab.url)) return false;
+  if (message.type === "observe-following") {
+    const viewer =
+      typeof message.viewer === "string"
+        ? normalizeHandle(message.viewer)
+        : null;
+    const observations = message.observations;
+    if (
+      !viewer ||
+      !Array.isArray(observations) ||
+      observations.length > 100 ||
+      !observations.every(
+        (item) =>
+          item &&
+          typeof item.handle === "string" &&
+          typeof item.following === "boolean",
+      )
+    )
+      return false;
+    followWrites = followWrites
+      .catch(() => null)
+      .then(() => updateFollowing(viewer, { observations }));
+    void followWrites
+      .then(() => respond({ saved: true }))
+      .catch(() => respond({ error: "storage_unavailable" }));
+    return true;
+  }
   const result = handleMessage(message as Record<string, unknown>);
   if (!result) return false;
   void result.then(respond);

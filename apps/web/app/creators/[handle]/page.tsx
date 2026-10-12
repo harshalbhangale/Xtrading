@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CallLedger, CallSummary } from "../../../components/call-ledger";
+import { CreatorOverviewPanel } from "../../../components/creator-overview";
 import { Panel } from "../../../components/dashboard/ui";
 import { publicCallLedger } from "../../../lib/calls";
 import { creatorReputation } from "../../../lib/insights";
@@ -55,6 +56,9 @@ export default async function CreatorPage({
           View on X ↗
         </a>
       </p>
+      <Panel title="Ongoing calls & wallet activity">
+        <CreatorOverviewPanel key={handle} handle={handle} />
+      </Panel>
       <div className="dashboard-two-column">
         <Panel
           title="Identity"
