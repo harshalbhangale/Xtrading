@@ -1,6 +1,6 @@
 # Xtrading
 
-Creator evidence and spot/perp trading from X, built on Monad. The product includes a landing page, creator studio, user dashboard, Chrome extension and planned MCP server.
+Creator evidence and spot/perp trading from X, built on Monad. The product includes a landing page, creator studio, user dashboard, Chrome extension and MCP server.
 
 Identity binding works. Both stake contracts and mUSDC are deployed and verified on testnet. A wallet-approved 500 mUSDC deposit is confirmed and indexed by Envio; the authenticated stake page now reads indexed history. The X extension adds creator records on profile headers, trade-call detection (Groq, or rules without a key), a call-check drawer with the creator record and a Nansen wallet check, and reviewed Kuru spot / Perpl perp trades; providers without keys run in labelled demo mode. The MCP server is live. The Chainlink CRE settlement workflow for bonded calls has run end to end on a local Monad fork (success and slash paths); its testnet deployment is pending. Confirmed Kuru fills, a live Perpl order and a keyed Nansen run remain pending.
 

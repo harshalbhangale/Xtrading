@@ -1,6 +1,6 @@
 # Frontend handoff
 
-Identity binding and stake RPC reads are connected. The stake contract and mUSDC are deployed; mock-mode configuration, matching stake deployment, deposits, live indexing, trading and MCP remain pending.
+Identity binding, stake reads, call registration, Kuru and Perpl review, public creator lookup and MCP are implemented. Verified on testnet: the stake contracts, mUSDC, one 500 mUSDC deposit, and its withdrawal request and cancellation, indexed by Envio. Pending: a confirmed Kuru fill, a live Perpl order, a keyed Nansen finding, real-X validation of this extension, and DON deployment of CRE. The testnet settlement receiver still trusts the simulation forwarder.
 
 ## Run
 
@@ -24,7 +24,7 @@ Run `pnpm install --frozen-lockfile`, `pnpm indexer:codegen`, and `pnpm dev`. Co
 | `/creator/calls` | Creator calls | Authenticated call registration from the creator's own X post and their ledger |
 | `/creator/reputation` | Creator performance | Methodology and coverage slots; unavailable metrics |
 | `/extension` | Extension hub | Installation and explicitly illustrative unknown/linked/stale previews |
-| `/integrations` | Agent connections | Proposed MCP tools; connection disabled |
+| `/integrations` | Agent connections | Live MCP setup. Production is `https://xtradingnow.xyz/api/mcp`; local follows `NEXT_PUBLIC_APP_URL`. Signed-in tools need the user's Privy bearer token |
 | `/setup` | Developer configuration | Setting presence, separate from live verification |
 | `/portfolio` | Legacy link | Redirects to `/dashboard/portfolio` |
 
@@ -44,7 +44,7 @@ Use an em dash for unavailable metrics. Do not fabricate balances, scores or cha
 
 ## Implemented identity APIs
 
-`GET /api/identity`, `POST /api/identity/challenge` and `POST /api/identity/bind` require a server-verified Privy bearer token. POST requests also require the configured app origin. Responses use runtime schemas from `packages/domain`; no client-supplied X ID or signing message is trusted. See [identity binding](identity-binding.md) for request contracts, limits and verification. Public creator lookup is still pending.
+`GET /api/identity`, `POST /api/identity/challenge` and `POST /api/identity/bind` require a server-verified Privy bearer token. POST requests also require the configured app origin. Responses use runtime schemas from `packages/domain`; no client-supplied X ID or signing message is trusted. See [identity binding](identity-binding.md) for request contracts, limits and verification. Public creator lookup is `GET /api/creators/:handle`, with `/calls`, `/insights` and `/overview`.
 
 ## Implemented market APIs
 
@@ -54,11 +54,11 @@ Kuru Spot V2 on Monad testnet 10143 ([testnet docs](https://kuru-testnet-docs.mi
 - `POST /api/trades/prepare` (session, binding, origin): `{ instrument: "spot", chainId: 10143, market: "WETH" | "WBTC", side, amount, slippageBps, sourcePostId | null }`; `amount` is integer input-token units. Returns exactly one next step: exact `approve` to AccountCore, `deposit` of the shortfall, or `swap`. Swaps are simulated with `eth_call` at a pinned block; the minimum output is derived with integer slippage and the swap carries an onchain deadline. Non-swap steps show a display-only order-book estimate.
 - `GET /api/trades/account` and `POST /api/trades/withdraw`: wallet and Kuru-account balances for USDC/WETH/WBTC, and a reviewed withdrawal to the bound wallet.
 
-Reviews expire after 30 seconds and are re-prepared before Privy opens; a changed target, calldata, value or step requires a new review. Submitted hashes and receipts are not fill records; Envio fill indexing is pending.
+Reviews expire after 30 seconds and are re-prepared before Privy opens; a changed target, calldata, value or step requires a new review. Submitted hashes and receipts are not fill records. Envio indexes Kuru `SpotSwap` events; a projection is not a new confirmed fill, and none has been recorded for the demo wallet.
 
 ## Planned backend contracts
 
-These are proposed APIs, **not existing routes**. Serializable view models are exported from `packages/domain/src/view-models.ts`. Add runtime response validation when implementing them. Monetary fields are integer token-unit strings.
+These paths are still proposals. Public creator lookup, call ledgers, insights, activity and MCP already exist under the routes above. Serializable view models are exported from `packages/domain/src/view-models.ts`. Add runtime response validation when implementing a proposal. Monetary fields are integer token-unit strings.
 
 | Proposed endpoint | Authorization | Consumer |
 |---|---|---|
@@ -79,9 +79,9 @@ Build with `CMB_EXTENSION_APP_ORIGIN=https://your-app.example pnpm --filter @cal
 
 ## MCP
 
-Implement MCP against shared backend services with authorization, rate limits and response validation. Do not fetch provider keys or private database data from the client.
+MCP is a stateless Streamable HTTP endpoint at `/api/mcp`. Do not fetch provider keys or private database data from the client.
 
-Proposed tools: `get_creator`, `list_calls`, `get_stake_status`, authorized `get_portfolio`, and `prepare_trade`. Trade preparation returns unsigned, expiring transactions for review; it does not sign or submit. SDK, transport, authentication and deployment remain separate work.
+Public tools: `get_creator`, `get_stake_status`, `list_calls`, `get_markets`, `quote_trade`, `classify_post`. Signed-in tools `get_portfolio` and `prepare_trade` take the user's Privy bearer token. `prepare_trade` returns one unsigned Kuru step; it does not sign or submit. Setup is on `/integrations`.
 
 ## Next work
 

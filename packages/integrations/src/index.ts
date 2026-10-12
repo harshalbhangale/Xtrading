@@ -57,7 +57,7 @@ export function integrationStatus(
       configured: Boolean(env.ENVIO_GRAPHQL_URL),
       implementation: "foundation",
       detail:
-        "Stake events indexed (local runtime) with reorg rollback; history and freshness shown on stake and creator pages. Fill indexing not started.",
+        "Stake, Kuru SpotSwap and CallSettlement events are indexed with reorg rollback. History is shown on stake, creator and ledger pages. An indexed swap is a projection, not a new confirmed fill.",
     },
     {
       name: "Nansen",
@@ -80,7 +80,7 @@ export function integrationStatus(
       configured: false,
       implementation: "foundation",
       detail:
-        "Hourly call settlement planned. Workflow, network support and authenticated receiver are not yet implemented.",
+        "CallSettlement and the hourly workflow exist. Fork simulation covers success and slash. The testnet receiver still trusts the simulation forwarder; the DON deploy is not live.",
     },
   ];
 }

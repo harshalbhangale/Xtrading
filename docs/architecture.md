@@ -8,12 +8,12 @@ Trading: X post → app review → Privy wallet approval → Kuru (spot) / Perpl
 
 - Next.js: public pages, authenticated APIs and transaction preparation.
 - Privy: X login, embedded wallets and explicit signing.
-- Postgres: verified identity bindings, nonce challenges and future call/trade records.
+- Postgres: verified identity bindings, nonce challenges, registered calls and trade records.
 - CreatorStake: refundable ERC20 deposits with a seven-day withdrawal cooldown.
 - Envio: stake and trading events, keyed by chain/contract and event identity.
 - Nansen: server-side mainnet wallet/token context, with coverage and timestamps.
 - MCP: bounded access to the same evidence and trade-preparation services.
-- Planned CRE workflow: hourly expired-call discovery, historical price evaluation and authenticated reports to a separate call settlement contract.
+- CRE workflow: hourly expired-call discovery, historical price evaluation and authenticated reports to CallSettlement. The source and contract exist; DON deployment is pending, and the testnet receiver still trusts the simulation forwarder.
 
 ## Data rules
 
@@ -25,7 +25,7 @@ Store transaction amounts as bigint or validated decimal integer strings. Defaul
 
 Calls retain their source, asset chain/address, direction, horizon and interpretation version. AI extracts and explains; deterministic code calculates results under published rules. Ambiguous calls and missing prices remain unresolved.
 
-Bonded calls require creator opt-in and immutable terms before their evaluation window starts. Each locks a capped call bond and reserves a reward from a funded pool. CRE evaluates the expiry-time price and submits a signed report through an allowlisted forwarder/workflow. The receiver permits one settlement per call, returns the bond plus reserved reward on success, and deducts only the agreed bond on failure. Tie handling, slash destination, expiry price tolerance and timeout refund rules must be fixed before implementation. Ordinary refundable CreatorStake deposits are separate. See [CRE settlement](cre-settlement.md).
+Bonded calls require creator opt-in and immutable terms before their evaluation window starts. Each locks a capped call bond and reserves a reward from a funded pool. CRE evaluates the expiry-time price and submits a signed report through an allowlisted forwarder/workflow. The receiver permits one settlement per call. Success returns the bond plus the reserved reward, failure moves the bond into the reward pool, a tie returns the bond, and a missing price never slashes. Ordinary refundable CreatorStake deposits are separate. See [CRE settlement](cre-settlement.md).
 
 A linked-wallet sale is an observation with transaction evidence, not proof of deception. Coverage of one wallet does not establish complete financial activity.
 

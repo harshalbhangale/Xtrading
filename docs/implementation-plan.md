@@ -92,7 +92,7 @@ Exit: each scored call is traceable to its source and inputs; Nansen adds a usef
 - [x] Enforce single settlement, fixed payout limits and timeout refunds in the contract.
 - [x] Foundry-test rewards, losses, ties, duplicate/unauthorized reports, missing prices and accounting conservation (16 tests).
 - [x] Simulate CRE end to end: `services/cre/scripts/fork-e2e.sh` (fork; success and slash paths) and a real testnet call on `0x260264E7…95DF`.
-- [ ] Index `CallSettled` with Envio and show settlement evidence in the public ledger and extension (the owner's bond panel reads the contract directly).
+- [x] Index CallSettlement events with Envio and show bond state in the public ledger. The hosted indexer config is on `origin/envio`. The extension does not show settlement evidence yet; the owner's bond panel also reads the contract directly.
 - [ ] Deploy the workflow to the DON and switch the contract to the production forwarder.
 
 Exit: an expired bonded call produces one verified settlement, paying its reserved reward or deducting only its agreed call bond. Missing prices never trigger a slash. Production activation remains pending until network support and deployment access are verified.

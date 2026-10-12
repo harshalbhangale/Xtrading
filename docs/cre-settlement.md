@@ -1,6 +1,6 @@
 # Hourly call settlement
 
-Status: planned; no workflow or reward/slashing contract is deployed.
+Status: the CallSettlement contract and the hourly workflow are implemented. `services/cre/scripts/fork-e2e.sh` has run the success and slash paths on a local Monad fork. Testnet receiver `0x260264E74028d498a1A10f90dDC4f4b91F3395DF` still trusts the simulation forwarder. DON deployment and `setForwarder` to the production forwarder are pending. Envio indexes CallSettlement events from the `envio` branch; an indexed event is not a live hourly DON run.
 
 Every hour, CRE discovers expired unsettled calls, fetches the historical price at each call's expiry, evaluates its registered terms and submits an authenticated onchain settlement report. Envio projects confirmed events into the dashboard and extension.
 
@@ -27,7 +27,7 @@ Reserve rewards from a funded pool and lock bonds per call. Use integer prices w
 - Tie: proposed default is bond return with no reward.
 - Price unavailable beyond the registered refund deadline: allow bond refund and release reward reservation without a performance verdict.
 
-Before coding, fix the success rule, bond/reward limits, slash destination and price tolerance. The proposed hackathon scope uses mUSDC on Monad testnet only. No unrestricted access to creator wallets is required; users claim payouts explicitly.
+Implemented rules, from the contract and README: success returns the bond plus the reserved reward, failure moves the bond into the reward pool, a tie returns the bond, and a missing price never slashes (the bond is refundable after three days). The hackathon scope uses mUSDC on Monad testnet only. No unrestricted access to creator wallets is required; users claim payouts explicitly. Production activation still needs the DON deploy and the production forwarder.
 
 ## Delivery checks
 
