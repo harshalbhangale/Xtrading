@@ -5,6 +5,8 @@ import {
   type CallEvidence,
   callEvidenceSchema,
   callRegistrationSchema,
+  type IndexedCallBond,
+  indexedCallBondSchema,
   normalizeHandle,
   type PublicCall,
   publicCallLedgerSchema,
@@ -21,7 +23,10 @@ import {
   REGISTRATION_WINDOW_SECONDS,
 } from "@call-my-bluff/integrations/calls";
 import { and, desc, eq, gt, sql } from "drizzle-orm";
+import { getAddress } from "viem";
+import { onchainCallId } from "./call-bond";
 import { getDatabase } from "./database";
+import { envioQuery } from "./envio";
 import { identityContext, requireX } from "./identity-http";
 
 const DAILY_LIMIT = 10;
@@ -193,6 +198,63 @@ async function evaluateDue(rows: CallRow[]) {
   return result;
 }
 
+type BondRow = {
+  callId: string;
+  contract: string;
+  status: string;
+  bond: string;
+  reward: string;
+  start: string;
+  expiry: string;
+  entryPrice: string | null;
+  exitPrice: string | null;
+  payout: string | null;
+  registeredTx: string;
+  settledTx: string | null;
+};
+/** Indexed CallSettlement bonds for these calls, keyed by ledger call ID. */
+async function indexedBonds(ids: string[]) {
+  const contract = process.env.CALL_SETTLEMENT_ADDRESS;
+  if (!contract)
+    return {
+      status: "unconfigured" as const,
+      progressBlock: null,
+      bonds: null,
+    };
+  const onchain = new Map(ids.map((id) => [onchainCallId(id), id]));
+  try {
+    const result = await envioQuery(
+      `query Bonds($contract: String!, $ids: [String!]!) {
+        _meta(where: {chainId: {_eq: 10143}}) {progressBlock}
+        CallBond(where: {chainId: {_eq: 10143}, contract: {_eq: $contract}, callId: {_in: $ids}}) {
+          callId contract status bond reward start expiry entryPrice exitPrice payout registeredTx settledTx
+        }
+      }`,
+      { contract: contract.toLowerCase(), ids: [...onchain.keys()] },
+    );
+    const data = result?.errors ? undefined : result?.data;
+    const meta = (data?._meta as { progressBlock: number }[] | undefined)?.[0];
+    const rows = data?.CallBond as BondRow[] | undefined;
+    if (!meta || !rows) throw new Error("unavailable");
+    const bonds = new Map<string, IndexedCallBond>();
+    for (const row of rows) {
+      const id = onchain.get(row.callId as `0x${string}`);
+      const parsed = indexedCallBondSchema.safeParse({
+        ...row,
+        contract: getAddress(row.contract),
+      });
+      if (id && parsed.success) bonds.set(id, parsed.data);
+    }
+    return {
+      status: "indexed" as const,
+      progressBlock: String(meta.progressBlock),
+      bonds,
+    };
+  } catch {
+    return { status: "unavailable" as const, progressBlock: null, bonds: null };
+  }
+}
+
 /** Public call ledger for a handle; null when the handle has no unique binding. */
 export async function publicCallLedger(input: string) {
   const handle = normalizeHandle(input);
@@ -225,10 +287,16 @@ export async function publicCallLedger(input: string) {
       evidence: evidence.data,
     });
   }
+  const indexed = await indexedBonds(list.map((call) => call.id));
+  for (const call of list)
+    call.bond = indexed.bonds
+      ? (indexed.bonds.get(call.id) ?? null)
+      : undefined;
   return publicCallLedgerSchema.parse({
     handle,
     methodology: CALL_METHODOLOGY,
     calls: list,
+    bonds: { status: indexed.status, progressBlock: indexed.progressBlock },
     observedAt: new Date().toISOString(),
   });
 }

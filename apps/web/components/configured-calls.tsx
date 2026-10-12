@@ -31,6 +31,8 @@ export default function ConfiguredCalls() {
   const { ready, authenticated, login, getAccessToken, user } = usePrivy();
   const [handle, setHandle] = useState<string | null | undefined>();
   const [calls, setCalls] = useState<PublicCall[] | null>(null);
+  const [bonds, setBonds] =
+    useState<ReturnType<typeof publicCallLedgerSchema.parse>["bonds"]>();
   const [form, setForm] = useState({
     postUrl: "",
     asset: "BTC",
@@ -47,6 +49,7 @@ export default function ConfiguredCalls() {
     });
     const parsed = publicCallLedgerSchema.safeParse(await response.json());
     setCalls(parsed.success ? parsed.data.calls : []);
+    setBonds(parsed.success ? parsed.data.bonds : undefined);
   }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reload when the signed-in account changes.
@@ -210,7 +213,7 @@ export default function ConfiguredCalls() {
         <p className="small-note">Loading your calls…</p>
       ) : (
         <>
-          <CallSummary calls={calls} />
+          <CallSummary calls={calls} bonds={bonds} />
           <CallLedger
             calls={calls}
             action={(call) => <CallBond callId={call.id} />}

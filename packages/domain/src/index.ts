@@ -256,6 +256,31 @@ export const callEvidenceSchema = z.object({
   lastAttemptAt: z.iso.datetime().nullable(),
 });
 export type CallEvidence = z.infer<typeof callEvidenceSchema>;
+export const bondOutcomes = [
+  "open",
+  "success",
+  "failure",
+  "tie",
+  "refunded",
+] as const;
+/** CallSettlement state as indexed by Envio; prices use 8 decimals. */
+export const indexedCallBondSchema = z.object({
+  contract: addressSchema,
+  status: z.enum(bondOutcomes),
+  bond: amountSchema,
+  reward: amountSchema,
+  start: amountSchema,
+  expiry: amountSchema,
+  entryPrice: amountSchema.nullable(),
+  exitPrice: amountSchema.nullable(),
+  payout: amountSchema.nullable(),
+  registeredTx: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+  settledTx: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{64}$/)
+    .nullable(),
+});
+export type IndexedCallBond = z.infer<typeof indexedCallBondSchema>;
 export const publicCallSchema = z.object({
   id: z.uuid(),
   postId: z.string().regex(/^[0-9]+$/),
@@ -264,12 +289,20 @@ export const publicCallSchema = z.object({
   registeredAt: z.iso.datetime(),
   status: z.enum(["open", "resolved"]),
   evidence: callEvidenceSchema,
+  bond: indexedCallBondSchema.nullable().optional(),
 });
 export type PublicCall = z.infer<typeof publicCallSchema>;
 export const publicCallLedgerSchema = z.object({
   handle: xHandleSchema,
   methodology: z.literal("directional-return-v1"),
   calls: z.array(publicCallSchema),
+  // Bonds come from Envio; "unavailable" means unknown, not unbonded.
+  bonds: z
+    .object({
+      status: z.enum(["indexed", "unavailable", "unconfigured"]),
+      progressBlock: amountSchema.nullable(),
+    })
+    .optional(),
   observedAt: z.iso.datetime(),
 });
 export * from "./signals";
@@ -369,13 +402,6 @@ export type BrowserFollowing = z.infer<typeof browserFollowingSchema>;
 
 /** Opt-in onchain bond for a registered call, settled by the Chainlink CRE workflow. */
 const bytes32Schema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
-export const bondOutcomes = [
-  "open",
-  "success",
-  "failure",
-  "tie",
-  "refunded",
-] as const;
 export const callBondStateSchema = z.object({
   callId: z.uuid(),
   onchainId: bytes32Schema,

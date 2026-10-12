@@ -1,4 +1,4 @@
-import type { PublicCall } from "@call-my-bluff/domain";
+import type { IndexedCallBond, PublicCall } from "@call-my-bluff/domain";
 import type { ReactNode } from "react";
 import { formatUnits } from "viem";
 import { PostAvailabilityCheck } from "./post-availability";
@@ -33,9 +33,31 @@ const outcomes = {
   tie: "Flat",
 } as const;
 
-export function CallSummary({ calls }: { calls: PublicCall[] }) {
+const bondOutcomes = {
+  open: "awaiting Chainlink settlement",
+  success: "Chainlink: correct",
+  failure: "Chainlink: wrong · bond slashed",
+  tie: "Chainlink: flat · bond returned",
+  refunded: "refunded · no price settled",
+} as const;
+const usdc = (units: string) => formatUnits(BigInt(units), 6);
+const txLink = (hash: string) => `https://testnet.monadvision.com/tx/${hash}`;
+
+type BondIndex = {
+  status: "indexed" | "unavailable" | "unconfigured";
+  progressBlock: string | null;
+};
+
+export function CallSummary({
+  calls,
+  bonds,
+}: {
+  calls: PublicCall[];
+  bonds?: BondIndex;
+}) {
   const resolved = calls.filter((c) => c.evidence.outcome);
   const correct = resolved.filter((c) => c.evidence.outcome === "success");
+  const bonded = calls.filter((c) => c.bond).length;
   return (
     <p className="small-note">
       {calls.length} registered · {resolved.length} resolved
@@ -43,6 +65,47 @@ export function CallSummary({ calls }: { calls: PublicCall[] }) {
         ` · ${correct.length} of ${resolved.length} correct`}{" "}
       · {calls.length - resolved.length} open. Creator-registered within 24h of
       posting; posts they did not register are not covered.
+      {bonds?.status === "indexed" &&
+        ` ${bonded} bonded onchain (Envio, block ${bonds.progressBlock}).`}
+      {bonds?.status === "unavailable" &&
+        " Onchain bond status is unavailable right now."}
+    </p>
+  );
+}
+
+/** Onchain bond and its Chainlink CRE settlement, as indexed. */
+function BondLine({ bond }: { bond: IndexedCallBond }) {
+  return (
+    <p className={`bond-line bond-${bond.status}`}>
+      <a
+        href={txLink(bond.registeredTx)}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Bonded {usdc(bond.bond)} mUSDC ↗
+      </a>
+      <br />
+      {bond.settledTx ? (
+        <a
+          href={txLink(bond.settledTx)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {bondOutcomes[bond.status]}
+          {bond.status === "success" &&
+            bond.payout &&
+            ` · paid ${usdc(bond.payout)}`}{" "}
+          ↗
+        </a>
+      ) : (
+        bondOutcomes[bond.status]
+      )}
+      {bond.entryPrice && bond.exitPrice && (
+        <span className="muted">
+          <br />
+          {price(bond.entryPrice, 8)} → {price(bond.exitPrice, 8)}
+        </span>
+      )}
     </p>
   );
 }
@@ -120,6 +183,7 @@ export function CallLedger({
                   ) : (
                     <span className="status-badge">Open</span>
                   )}
+                  {call.bond && <BondLine bond={call.bond} />}
                   {action?.(call)}
                 </td>
               </tr>

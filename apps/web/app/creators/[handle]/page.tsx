@@ -130,7 +130,7 @@ export default async function CreatorPage({
       >
         {ledger ? (
           <>
-            <CallSummary calls={ledger.calls} />
+            <CallSummary calls={ledger.calls} bonds={ledger.bonds} />
             <CallLedger calls={ledger.calls} />
           </>
         ) : (

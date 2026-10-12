@@ -22,6 +22,14 @@ contracts:
       - event: AccountRegistered(uint40 indexed accountId, uint40 indexed rootAccountId, address indexed rootOwner, uint16 subaccountSeq)
       - event: Deposit(uint40 indexed accountId, address indexed token, address indexed payer, uint256 amount)
       - event: Withdrawal(uint40 indexed accountId, address indexed token, address indexed recipient, uint256 amount)
+  # Opt-in call bonds settled by the Chainlink CRE workflow (contracts/src/CallSettlement.sol).
+  - name: CallSettlement
+    handler: src/handlers.ts
+    events:
+      - event: CallRegistered(bytes32 indexed callId, address indexed creator, bytes32 asset, uint8 direction, uint16 targetBps, uint64 start, uint64 expiry, uint128 bond, uint128 reward, bytes32 termsHash)
+      - event: CallSettled(bytes32 indexed callId, address indexed creator, uint8 outcome, uint256 entryPrice, uint256 exitPrice, uint256 payout, uint256 slashed)
+      - event: CallRefunded(bytes32 indexed callId, address indexed creator, uint256 bond)
+      - event: SettlementRejected(bytes32 indexed callId, uint8 reason)
 chains:
   - id: 10143
     start_block: 70144598
@@ -49,3 +57,8 @@ chains:
         start_block: 70280000
         address:
           - "0xdbaaDe7B42c95399bb1E9614D51B5B9e2cf78038"
+      # contracts/deployments/call-settlement-monad-testnet.json
+      - name: CallSettlement
+        start_block: 70449727
+        address:
+          - "0x260264E74028d498a1A10f90dDC4f4b91F3395DF"

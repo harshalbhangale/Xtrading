@@ -600,6 +600,16 @@ textarea:focus-visible {
 .call-failure {
   color: var(--negative);
 }
+.bond-line {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+.bond-success a {
+  color: var(--positive);
+}
+.bond-failure a {
+  color: var(--negative);
+}
 .bond-toggle {
   display: block;
   margin-top: 8px;
