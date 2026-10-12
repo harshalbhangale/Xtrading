@@ -55,6 +55,12 @@ function config() {
   };
 }
 
+/** Public order caps; the same limits are enforced again on prepare and submit. */
+export function perpLimits() {
+  const c = config();
+  return { maxLeverage: c.maxLeverage, maxSize: c.maxSize };
+}
+
 export function perplMode(xUserId?: string) {
   const c = config();
   return c.apiKey &&
@@ -70,11 +76,14 @@ const executionNote = (mode: "live" | "demo", accountId: string) =>
     ? `Executes on the team's Perpl testnet account #${accountId} via its API key, not from your wallet.`
     : "Demo: the order is validated against live market caps but not sent. No position is opened.";
 
+type Context = typeof identityContext;
+
 async function reviewed(
   request: Request,
   input: z.infer<typeof perpRequestSchema>,
+  context: Context,
 ) {
-  const { user, service, chainId } = await identityContext(request);
+  const { user, service, chainId } = await context(request);
   if (chainId !== 10143) throw new IdentityError("trading_testnet_only", 409);
   const binding = await service.current(user.privyUserId);
   if (
@@ -92,6 +101,10 @@ async function reviewed(
   const c = config();
   if (input.leverage > c.maxLeverage)
     throw new IdentityError("leverage_above_cap", 409);
+  if (market.marketMaxLeverage && input.leverage > market.marketMaxLeverage)
+    throw new IdentityError("leverage_above_market_max", 409);
+  if (market.maxSlippageBps && input.slippageBps > market.maxSlippageBps)
+    throw new IdentityError("slippage_above_market_max", 409);
   let size: bigint, maxSize: bigint;
   try {
     size = stakeUnits(input.size, market.sizeDecimals);
@@ -114,8 +127,13 @@ async function reviewed(
 export async function preparePerp(
   request: Request,
   input: z.infer<typeof perpRequestSchema>,
+  context: Context = identityContext,
 ) {
-  const { binding, market, size, c, mode } = await reviewed(request, input);
+  const { binding, market, size, c, mode } = await reviewed(
+    request,
+    input,
+    context,
+  );
   return {
     status: "prepared" as const,
     venue: "Perpl" as const,
@@ -144,11 +162,13 @@ export async function preparePerp(
 export async function submitPerp(
   request: Request,
   input: z.infer<typeof perpRequestSchema>,
+  context: Context = identityContext,
 ) {
   if (input.confirm !== true) throw new IdentityError("confirmation_required");
   const { market, size, maxSize, c, privyUserId, mode } = await reviewed(
     request,
     input,
+    context,
   );
   // One submission per user, post and side per minute; protects against double clicks and replays.
   if (
@@ -307,8 +327,12 @@ async function signedGet(c: ReturnType<typeof config>, target: string) {
  * Outcome of a live order, read back from Perpl: forwarding is not execution,
  * so the order's status, fill and resulting position come from Perpl's history.
  */
-export async function perpStatus(request: Request, requestId: number) {
-  const { user, service } = await identityContext(request);
+export async function perpStatus(
+  request: Request,
+  requestId: number,
+  context: Context = identityContext,
+) {
+  const { user, service } = await context(request);
   const binding = await service.current(user.privyUserId);
   if (!binding || perplMode(binding.xUserId) !== "live")
     throw new IdentityError("perpl_operator_only", 403);

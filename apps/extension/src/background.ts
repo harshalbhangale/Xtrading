@@ -62,6 +62,46 @@ async function getJson(path: string, init?: RequestInit) {
   return (await response.json()) as unknown;
 }
 
+// Perp-scoped extension session. Stored only here; content scripts get status, not the token.
+const sessionKey = "xtrading.extension-session.v1";
+type Session = { token: string; handle: string | null; expiresAt: string };
+async function readSession(): Promise<Session | null> {
+  const stored = (await chrome.storage.local.get(sessionKey))[sessionKey] as
+    | Session
+    | undefined;
+  if (!stored || Date.parse(stored.expiresAt) <= Date.now()) return null;
+  return stored;
+}
+/** Authenticated call to the app; returns the body or the error code, never throws. */
+async function sessionCall(path: string, body?: unknown) {
+  const session = await readSession();
+  if (!session) return { failure: "not_connected" };
+  try {
+    const response = await fetch(`${appOrigin}${path}`, {
+      method: body ? "POST" : "GET",
+      headers: {
+        Authorization: `Extension ${session.token}`,
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+      signal: AbortSignal.timeout(25000),
+      cache: "no-store",
+      credentials: "omit",
+    });
+    const value = (await response.json().catch(() => null)) as {
+      error?: unknown;
+    } | null;
+    if (response.status === 401) await chrome.storage.local.remove(sessionKey);
+    if (!response.ok)
+      return {
+        failure: typeof value?.error === "string" ? value.error : "unavailable",
+      };
+    return { result: value };
+  } catch {
+    return { failure: "unavailable" };
+  }
+}
+
 function handleMessage(
   message: Record<string, unknown>,
 ): Promise<unknown> | null {
@@ -118,6 +158,34 @@ function handleMessage(
       ),
     );
   }
+  if (message.type === "session-status")
+    return readSession().then((session) => ({
+      connected: Boolean(session),
+      handle: session?.handle ?? null,
+      expiresAt: session?.expiresAt ?? null,
+    }));
+  if (message.type === "session-clear")
+    return chrome.storage.local
+      .remove(sessionKey)
+      .then(() => ({ cleared: true }));
+  if (
+    (message.type === "perp-prepare" || message.type === "perp-submit") &&
+    message.order &&
+    typeof message.order === "object"
+  )
+    return sessionCall(
+      `/api/extension/perp/${message.type === "perp-prepare" ? "prepare" : "submit"}`,
+      message.order,
+    );
+  if (
+    message.type === "perp-status" &&
+    typeof message.requestId === "number" &&
+    Number.isSafeInteger(message.requestId)
+  )
+    return sessionCall(`/api/extension/perp/status?rq=${message.requestId}`);
+  if (message.type === "markets")
+    // Public market data only; a short cache keeps the ticket's mark price fresh.
+    return cached("markets", 10000, () => getJson("/api/markets"));
   if (message.type === "classify-post") {
     const input = postSignalRequestSchema.safeParse(message.payload);
     if (!input.success) return Promise.resolve({ error: "invalid_post" });
@@ -161,6 +229,31 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     senderUrl = new URL(sender.tab.url);
   } catch {
     return false;
+  }
+  if (message.type === "store-session") {
+    if (
+      senderUrl.origin !== appOrigin ||
+      senderUrl.pathname !== "/extension/connect" ||
+      typeof message.token !== "string" ||
+      !/^v1\.[A-Za-z0-9_-]{1,512}\.[A-Za-z0-9_-]{43}$/.test(message.token) ||
+      typeof message.expiresAt !== "string" ||
+      !(Date.parse(message.expiresAt) > Date.now())
+    )
+      return false;
+    void chrome.storage.local
+      .set({
+        [sessionKey]: {
+          token: message.token,
+          handle:
+            typeof message.handle === "string"
+              ? normalizeHandle(message.handle)
+              : null,
+          expiresAt: message.expiresAt,
+        },
+      })
+      .then(() => respond({ saved: true }))
+      .catch(() => respond({ saved: false }));
+    return true;
   }
   if (message.type === "app-following") {
     if (

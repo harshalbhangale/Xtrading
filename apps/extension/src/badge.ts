@@ -1,6 +1,6 @@
 import { el, svg } from "./dom";
 
-const markPath =
+export const markPath =
   "M14 19H35Q42 19 48 27L56 38 44 49 32 36H14Q8 36 8 29Q8 19 14 19 M39 62L54 48 69 31Q76 23 85 23H94 L78 43 66 53 87 76Q94 84 85 84H69 Q63 84 57 76L48 65 35 79 Q30 84 22 84H9Z";
 
 /** XTrading verified badge: radar scanner, corner brackets, white logo and tooltip. */

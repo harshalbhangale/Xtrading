@@ -458,3 +458,4 @@ export const preparedCallBondSchema = z.object({
   termsHash: bytes32Schema.nullable(),
   state: callBondStateSchema,
 });
+export * from "./perp-ticket";

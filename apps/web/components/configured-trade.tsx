@@ -1,5 +1,11 @@
 "use client";
 import {
+  formatUsd,
+  fromUnits,
+  spotEstimate,
+  toUnits,
+} from "@call-my-bluff/domain";
+import {
   kuruNetwork,
   networkTradeTokens,
 } from "@call-my-bluff/integrations/kuru";
@@ -19,6 +25,16 @@ type Review = ReturnType<typeof spotReviewSchema.parse>;
 type Withdrawal = ReturnType<typeof withdrawReviewSchema.parse>;
 type Account = ReturnType<typeof kuruAccountSchema.parse>;
 type Market = "MON" | "WETH" | "WBTC";
+type Book = {
+  key: Market;
+  base: { symbol: string; decimals: number };
+  quote: { symbol: string; decimals: number };
+  pricePrecision: string;
+  takerFeePps: string;
+  minimumQuote: string;
+  bestBid: string | null;
+  bestAsk: string | null;
+};
 const errors: Record<string, string> = {
   insufficient_market_token:
     "Not enough of the input token in your wallet or Kuru account.",
@@ -61,6 +77,8 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
   const [notice, setNotice] = useState("");
   const [hash, setHash] = useState<`0x${string}` | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [books, setBooks] = useState<Book[]>([]);
+  const [popup, setPopup] = useState(false);
   const owner = useRef(user?.id);
   owner.current = user?.id;
 
@@ -68,8 +86,19 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get("side"),
       source = params.get("postId"),
-      requestedMarket = params.get("market");
+      requestedMarket = params.get("market"),
+      requestedAmount = params.get("amount");
     if (requested === "buy" || requested === "sell") setSide(requested);
+    if (
+      requestedAmount &&
+      /^[0-9]{1,18}(\.[0-9]{1,18})?$/.test(requestedAmount)
+    )
+      setAmount(requestedAmount);
+    // Opened from X as a small window: hide site chrome, keep the trade.
+    if (params.get("popup") === "1") {
+      setPopup(true);
+      document.documentElement.classList.add("popup-mode");
+    }
     if (
       requestedMarket === "MON" ||
       requestedMarket === "WETH" ||
@@ -82,6 +111,19 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
+  useEffect(() => {
+    if (mainnet) return setBooks([]);
+    const load = () =>
+      fetch("/api/markets", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((value: { kuru?: Book[] }) =>
+          setBooks((value.kuru ?? []).filter((b) => "pricePrecision" in b)),
+        )
+        .catch(() => setBooks([]));
+    void load();
+    const timer = setInterval(load, 15000);
+    return () => clearInterval(timer);
+  }, [mainnet]);
 
   const api = useCallback(
     async (path: string, body?: unknown) => {
@@ -300,373 +342,495 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
         Sign in to trade
       </button>
     );
+  const book = books.find((b) => b.key === market);
+  const price = book ? (side === "buy" ? book.bestAsk : book.bestBid) : null;
+  const priceDecimals = book ? book.pricePrecision.length - 1 : 0;
+  const amountUnits = amount.trim()
+    ? toUnits(amount, tokens.input.decimals)
+    : null;
+  const estimate =
+    book && price && amountUnits
+      ? spotEstimate({
+          side,
+          amount: amountUnits,
+          price: BigInt(price),
+          pricePrecision: BigInt(book.pricePrecision),
+          baseDecimals: book.base.decimals,
+          quoteDecimals: book.quote.decimals,
+          takerFeePps: BigInt(book.takerFeePps),
+        })
+      : null;
+  const balance = account?.balances.find(
+    (row) => row.token.symbol === tokens.input.symbol,
+  );
+  // Native MON also pays gas: keep 0.1 MON aside from percentage presets.
+  const spendable = balance
+    ? BigInt(balance.wallet) +
+      BigInt(balance.account) -
+      (tokens.input.symbol === "MON" ? 10n ** 17n : 0n)
+    : 0n;
+  const fmtPrice = (value: string | null) =>
+    value && book ? formatUsd(BigInt(value), priceDecimals) : "—";
+  const amountError =
+    amount.trim() && amountUnits === null
+      ? `Use at most ${tokens.input.decimals} decimals`
+      : amountUnits !== null && spendable > 0n && amountUnits > spendable
+        ? "More than your balance"
+        : "";
+  const baseSymbol = network.markets[market].base.symbol;
   return (
-    <div className="stake-form">
-      <fieldset
-        className="preview-selector"
-        aria-label="Market"
-        disabled={busy}
-      >
-        {(["MON", "WETH", "WBTC"] as const).map((choice) => (
-          <button
-            key={choice}
-            type="button"
-            aria-pressed={market === choice}
-            onClick={() => {
-              setMarket(choice);
-              setReview(null);
-            }}
-          >
-            {network.markets[choice].base.symbol} / USDC
-          </button>
-        ))}
-      </fieldset>
-      <fieldset className="preview-selector" aria-label="Side" disabled={busy}>
-        {(["buy", "sell"] as const).map((choice) => (
-          <button
-            key={choice}
-            type="button"
-            aria-pressed={side === choice}
-            onClick={() => {
-              setSide(choice);
-              setReview(null);
-            }}
-          >
-            {choice === "buy" ? "Buy" : "Sell"}{" "}
-            {network.markets[market].base.symbol}
-          </button>
-        ))}
-      </fieldset>
-      <label htmlFor="trade-amount">
-        Amount to spend ({tokens.input.symbol})
-      </label>
-      <input
-        id="trade-amount"
-        inputMode="decimal"
-        maxLength={40}
-        disabled={busy}
-        value={amount}
-        placeholder={
-          mainnet
-            ? side === "buy"
-              ? "1"
-              : market === "MON"
-                ? "10"
-                : "0.0004"
-            : side === "buy"
-              ? "10"
-              : market === "MON"
-                ? "400"
-                : "0.004"
-        }
-        onChange={(e) => {
-          setAmount(e.target.value);
-          setReview(null);
-        }}
-      />
-      <label htmlFor="trade-slippage">
-        Max slippage (basis points, 100 = 1%)
-      </label>
-      <input
-        id="trade-slippage"
-        inputMode="numeric"
-        disabled={busy}
-        value={slippage}
-        onChange={(e) => {
-          setSlippage(e.target.value);
-          setReview(null);
-        }}
-      />
-      <label htmlFor="trade-source">Source X post ID (optional)</label>
-      <input
-        id="trade-source"
-        inputMode="numeric"
-        maxLength={30}
-        disabled={busy}
-        value={postId}
-        onChange={(e) => {
-          setPostId(e.target.value);
-          setReview(null);
-        }}
-      />
-      <button
-        type="button"
-        className="button"
-        disabled={busy || !amount}
-        onClick={() => void prepare()}
-      >
-        Review trade
-      </button>
+    <div className={`pt${popup ? " pt-popup" : ""}`}>
+      <section className="pt-market" aria-label="Market">
+        <span className="pt-label">Market · Kuru spot</span>
+        <div className="pt-chips pt-pairs">
+          {(["MON", "WETH", "WBTC"] as const).map((choice) => (
+            <button
+              key={choice}
+              type="button"
+              aria-pressed={market === choice}
+              disabled={busy}
+              onClick={() => {
+                setMarket(choice);
+                setAmount("");
+                setReview(null);
+              }}
+            >
+              {network.markets[choice].base.symbol}/USDC
+            </button>
+          ))}
+        </div>
+        <div className="pt-price">
+          <strong>{fmtPrice(book?.bestAsk ?? book?.bestBid ?? null)}</strong>
+        </div>
+        <dl className="pt-stats">
+          <div>
+            <dt>Best bid</dt>
+            <dd>{fmtPrice(book?.bestBid ?? null)}</dd>
+          </div>
+          <div>
+            <dt>Best ask</dt>
+            <dd>{fmtPrice(book?.bestAsk ?? null)}</dd>
+          </div>
+          <div>
+            <dt>Taker fee</dt>
+            <dd>{book ? `${Number(book.takerFeePps) / 1000} bps` : "—"}</dd>
+          </div>
+          <div>
+            <dt>Min order</dt>
+            <dd>
+              {book
+                ? `${fromUnits(BigInt(book.minimumQuote), book.quote.decimals)} USDC`
+                : "—"}
+            </dd>
+          </div>
+        </dl>
+        {!popup && (
+          <>
+            <span className="pt-label pt-gap">Balances</span>
+            {account ? (
+              <table className="record-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Token</th>
+                    <th scope="col">Wallet</th>
+                    {!mainnet && <th scope="col">Kuru account</th>}
+                    {!mainnet && <th scope="col" />}
+                  </tr>
+                </thead>
+                <tbody>
+                  {account.balances.map((row) => (
+                    <tr key={row.token.address}>
+                      <td>{row.token.symbol}</td>
+                      <td>
+                        {formatUnits(BigInt(row.wallet), row.token.decimals)}
+                      </td>
+                      {!mainnet && (
+                        <td>
+                          {formatUnits(BigInt(row.account), row.token.decimals)}
+                        </td>
+                      )}
+                      {!mainnet && (
+                        <td>
+                          {row.account !== "0" && (
+                            <button
+                              type="button"
+                              className="text-link"
+                              disabled={busy}
+                              onClick={() =>
+                                void prepareWithdraw(
+                                  row.token.symbol,
+                                  row.account,
+                                )
+                              }
+                            >
+                              Withdraw
+                            </button>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="small-note">Balances unavailable.</p>
+            )}
+          </>
+        )}
+        <p className="pt-foot">
+          {mainnet
+            ? "Monad mainnet · real funds · market orders spend from your wallet."
+            : "Monad testnet · Kuru test tokens, no value · MON pays gas."}
+        </p>
+      </section>
 
-      {review && review.action !== "withdraw" && (
-        <section aria-label="Trade review">
-          <h3>{stepTitle[review.action]}</h3>
-          <dl className="quote-review">
-            <div>
-              <dt>Spend</dt>
-              <dd>
-                {units(
-                  review.amount,
-                  review.input.decimals,
-                  review.input.symbol,
-                )}
-              </dd>
-            </div>
-            {review.action === "swap" ? (
-              <>
-                <div>
-                  <dt>Expected (simulated)</dt>
-                  <dd>
-                    {units(
-                      review.expectedOutput,
-                      review.output.decimals,
-                      review.output.symbol,
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Minimum received</dt>
-                  <dd>
-                    {units(
-                      review.minimumOutput,
-                      review.output.decimals,
-                      review.output.symbol,
-                    )}
-                  </dd>
-                </div>
-                {review.amountInUsed !== review.amount && (
+      <section className="pt-ticket" aria-label="Order ticket">
+        <div className="pt-tabs">
+          <span className="active">Market</span>
+          <span className="pt-venue">Kuru</span>
+        </div>
+        <div className="pt-side">
+          {(["buy", "sell"] as const).map((choice) => (
+            <button
+              key={choice}
+              type="button"
+              aria-pressed={side === choice}
+              className={choice === "buy" ? "long" : "short"}
+              disabled={busy}
+              onClick={() => {
+                setSide(choice);
+                setAmount("");
+                setReview(null);
+              }}
+            >
+              {choice === "buy" ? "Buy" : "Sell"} {baseSymbol}
+            </button>
+          ))}
+        </div>
+        <div className={`pt-field${amountError ? " invalid" : ""}`}>
+          <label htmlFor="trade-amount">
+            {side === "buy" ? "Spend" : "Sell"}
+          </label>
+          <input
+            id="trade-amount"
+            inputMode="decimal"
+            maxLength={40}
+            disabled={busy}
+            value={amount}
+            placeholder="0"
+            onChange={(e) => {
+              setAmount(e.target.value);
+              setReview(null);
+            }}
+          />
+          <span className="pt-unit">{tokens.input.symbol}</span>
+        </div>
+        {amountError && <p className="pt-error">{amountError}</p>}
+        <div className="pt-chips pt-pcts">
+          <span className="pt-avail">
+            {balance
+              ? `Available ${fromUnits(spendable > 0n ? spendable : 0n, tokens.input.decimals)} ${tokens.input.symbol}`
+              : ""}
+          </span>
+          {[25, 50, 75, 100].map((pct) => (
+            <button
+              key={pct}
+              type="button"
+              disabled={busy || spendable <= 0n}
+              onClick={() => {
+                setAmount(
+                  fromUnits(
+                    (spendable * BigInt(pct)) / 100n,
+                    tokens.input.decimals,
+                  ),
+                );
+                setReview(null);
+              }}
+            >
+              {pct}%
+            </button>
+          ))}
+        </div>
+        <div className="pt-slippage">
+          <span>Max slippage</span>
+          {[10, 50, 100].map((bps) => (
+            <button
+              key={bps}
+              type="button"
+              aria-pressed={Number(slippage) === bps}
+              onClick={() => {
+                setSlippage(String(bps));
+                setReview(null);
+              }}
+            >
+              {bps / 100}%
+            </button>
+          ))}
+        </div>
+        {postId && (
+          <p className="pt-post">
+            From X post …{postId.slice(-6)}{" "}
+            <button type="button" onClick={() => setPostId("")}>
+              Remove
+            </button>
+          </p>
+        )}
+        {!review && (
+          <button
+            type="button"
+            className={`pt-submit ${side === "buy" ? "long" : "short"}`}
+            disabled={busy || !amountUnits || Boolean(amountError)}
+            onClick={() => void prepare()}
+          >
+            {busy
+              ? "Checking…"
+              : `Review ${side === "buy" ? "Buy" : "Sell"} ${baseSymbol}`}
+          </button>
+        )}
+        <dl className="pt-summary">
+          <div>
+            <dt>{side === "buy" ? "You receive ≈" : "You get ≈"}</dt>
+            <dd>
+              {estimate
+                ? `${fromUnits(estimate.output, tokens.output.decimals)} ${tokens.output.symbol}`
+                : "—"}
+            </dd>
+          </div>
+          <div>
+            <dt>Price</dt>
+            <dd>{fmtPrice(price)}</dd>
+          </div>
+          <div>
+            <dt>Est. taker fee</dt>
+            <dd>
+              {estimate
+                ? `${fromUnits(estimate.fee, tokens.output.decimals)} ${tokens.output.symbol}`
+                : "—"}
+            </dd>
+          </div>
+          <div>
+            <dt>Max slippage</dt>
+            <dd>{(Number(slippage) / 100).toFixed(2)}%</dd>
+          </div>
+        </dl>
+        <p className="pt-foot">
+          Indicative at the best book price; the review simulates the exact
+          fill.
+          {!price && book ? " This side of the book is empty right now." : ""}
+        </p>
+        {review && review.action !== "withdraw" && (
+          <section aria-label="Trade review">
+            <h3>{stepTitle[review.action]}</h3>
+            <dl className="quote-review">
+              <div>
+                <dt>Spend</dt>
+                <dd>
+                  {units(
+                    review.amount,
+                    review.input.decimals,
+                    review.input.symbol,
+                  )}
+                </dd>
+              </div>
+              {review.action === "swap" ? (
+                <>
                   <div>
-                    <dt>Would execute</dt>
+                    <dt>Expected (simulated)</dt>
                     <dd>
                       {units(
-                        review.amountInUsed,
+                        review.expectedOutput,
+                        review.output.decimals,
+                        review.output.symbol,
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Minimum received</dt>
+                    <dd>
+                      {units(
+                        review.minimumOutput,
+                        review.output.decimals,
+                        review.output.symbol,
+                      )}
+                    </dd>
+                  </div>
+                  {review.amountInUsed !== review.amount && (
+                    <div>
+                      <dt>Would execute</dt>
+                      <dd>
+                        {units(
+                          review.amountInUsed,
+                          review.input.decimals,
+                          review.input.symbol,
+                        )}{" "}
+                        {mainnet
+                          ? "(rounded down to the market's size precision)"
+                          : "(not enough liquidity for the full amount)"}
+                      </dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt>Onchain deadline</dt>
+                    <dd>
+                      {review.deadline
+                        ? new Date(
+                            Number(review.deadline) * 1000,
+                          ).toLocaleTimeString()
+                        : "None on Kuru mainnet; the minimum is enforced onchain"}
+                    </dd>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <dt>Indicative output</dt>
+                    <dd>
+                      {units(
+                        review.indicativeOutput,
+                        review.output.decimals,
+                        review.output.symbol,
+                      )}
+                      {!review.indicativeFilled &&
+                        " (book too thin for the full amount)"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>
+                      {review.action === "approve" ? "Approval" : "Deposit"}
+                    </dt>
+                    <dd>
+                      {units(
+                        (
+                          BigInt(review.amount) - BigInt(review.accountBalance)
+                        ).toString(),
                         review.input.decimals,
                         review.input.symbol,
                       )}{" "}
-                      {mainnet
-                        ? "(rounded down to the market's size precision)"
-                        : "(not enough liquidity for the full amount)"}
+                      {review.action === "approve"
+                        ? mainnet
+                          ? "to the Kuru order book, exact amount"
+                          : "to Kuru AccountCore, exact amount"
+                        : review.input.symbol === "MON"
+                          ? "native MON, sent as the transaction value. Leave enough MON for gas."
+                          : "from your wallet into your Kuru account"}
                     </dd>
                   </div>
-                )}
-                <div>
-                  <dt>Onchain deadline</dt>
-                  <dd>
-                    {review.deadline
-                      ? new Date(
-                          Number(review.deadline) * 1000,
-                        ).toLocaleTimeString()
-                      : "None on Kuru mainnet; the minimum is enforced onchain"}
-                  </dd>
-                </div>
-              </>
-            ) : (
-              <>
-                <div>
-                  <dt>Indicative output</dt>
-                  <dd>
-                    {units(
-                      review.indicativeOutput,
-                      review.output.decimals,
-                      review.output.symbol,
-                    )}
-                    {!review.indicativeFilled &&
-                      " (book too thin for the full amount)"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>
-                    {review.action === "approve" ? "Approval" : "Deposit"}
-                  </dt>
-                  <dd>
-                    {units(
-                      (
-                        BigInt(review.amount) - BigInt(review.accountBalance)
-                      ).toString(),
-                      review.input.decimals,
-                      review.input.symbol,
-                    )}{" "}
-                    {review.action === "approve"
-                      ? mainnet
-                        ? "to the Kuru order book, exact amount"
-                        : "to Kuru AccountCore, exact amount"
-                      : review.input.symbol === "MON"
-                        ? "native MON, sent as the transaction value. Leave enough MON for gas."
-                        : "from your wallet into your Kuru account"}
-                  </dd>
-                </div>
-              </>
-            )}
-            <div>
-              <dt>Kuru taker fee</dt>
-              <dd>{Number(review.takerFeePps) / 1000} bps, included</dd>
+                </>
+              )}
+              <div>
+                <dt>Kuru taker fee</dt>
+                <dd>{Number(review.takerFeePps) / 1000} bps, included</dd>
+              </div>
+              <div>
+                <dt>Network fee (est.)</dt>
+                <dd>
+                  {formatUnits(
+                    ((BigInt(review.gas) * 120n) / 100n) *
+                      BigInt(review.gasPrice),
+                    18,
+                  )}{" "}
+                  MON
+                </dd>
+              </div>
+              <div>
+                <dt>Source post</dt>
+                <dd>
+                  {review.sourcePostId ?? "None"}{" "}
+                  {review.sourcePostId && "· unverified"}
+                </dd>
+              </div>
+            </dl>
+            <p className="small-note">
+              Block {review.blockNumber}, unfinalized.{" "}
+              {review.action === "swap"
+                ? mainnet
+                  ? "The order book enforces the minimum output. Real funds."
+                  : "The contract enforces the minimum and the deadline."
+                : "This step moves no funds into a trade; the swap is reviewed separately."}{" "}
+              Review{" "}
+              {expired
+                ? "expired"
+                : `expires in ${Math.max(0, Math.ceil((Date.parse(review.expiresAt) - now) / 1000))}s`}
+              .
+            </p>
+            <details>
+              <summary>Unsigned transaction</summary>
+              <p>To: {review.to}</p>
+              <pre className="ownership-message">{review.data}</pre>
+            </details>
+            <div className="button-row">
+              <button
+                type="button"
+                className="button"
+                disabled={busy || expired}
+                onClick={() => void submit()}
+              >
+                Open wallet to approve
+              </button>
+              <button
+                type="button"
+                className="text-link"
+                disabled={busy}
+                onClick={() => setReview(null)}
+              >
+                Discard
+              </button>
             </div>
-            <div>
-              <dt>Network fee (est.)</dt>
-              <dd>
-                {formatUnits(
-                  ((BigInt(review.gas) * 120n) / 100n) *
-                    BigInt(review.gasPrice),
-                  18,
-                )}{" "}
-                MON
-              </dd>
+          </section>
+        )}
+
+        {review && review.action === "withdraw" && (
+          <section aria-label="Withdrawal review">
+            <h3>Withdraw to your wallet</h3>
+            <p>
+              {units(review.amount, review.token.decimals, review.token.symbol)}{" "}
+              from your Kuru account to {review.wallet}.
+            </p>
+            <div className="button-row">
+              <button
+                type="button"
+                className="button"
+                disabled={busy || expired}
+                onClick={() => void submit()}
+              >
+                Open wallet to approve
+              </button>
+              <button
+                type="button"
+                className="text-link"
+                disabled={busy}
+                onClick={() => setReview(null)}
+              >
+                Discard
+              </button>
             </div>
-            <div>
-              <dt>Source post</dt>
-              <dd>
-                {review.sourcePostId ?? "None"}{" "}
-                {review.sourcePostId && "· unverified"}
-              </dd>
-            </div>
-          </dl>
-          <p className="small-note">
-            Block {review.blockNumber}, unfinalized.{" "}
-            {review.action === "swap"
-              ? mainnet
-                ? "The order book enforces the minimum output. Real funds."
-                : "The contract enforces the minimum and the deadline."
-              : "This step moves no funds into a trade; the swap is reviewed separately."}{" "}
-            Review{" "}
-            {expired
-              ? "expired"
-              : `expires in ${Math.max(0, Math.ceil((Date.parse(review.expiresAt) - now) / 1000))}s`}
-            .
-          </p>
-          <details>
-            <summary>Unsigned transaction</summary>
-            <p>To: {review.to}</p>
-            <pre className="ownership-message">{review.data}</pre>
-          </details>
-          <div className="button-row">
-            <button
-              type="button"
-              className="button"
-              disabled={busy || expired}
-              onClick={() => void submit()}
-            >
-              Open wallet to approve
-            </button>
-            <button
-              type="button"
-              className="text-link"
-              disabled={busy}
-              onClick={() => setReview(null)}
-            >
-              Discard
-            </button>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
 
-      {review && review.action === "withdraw" && (
-        <section aria-label="Withdrawal review">
-          <h3>Withdraw to your wallet</h3>
-          <p>
-            {units(review.amount, review.token.decimals, review.token.symbol)}{" "}
-            from your Kuru account to {review.wallet}.
-          </p>
-          <div className="button-row">
-            <button
-              type="button"
-              className="button"
-              disabled={busy || expired}
-              onClick={() => void submit()}
-            >
-              Open wallet to approve
-            </button>
-            <button
-              type="button"
-              className="text-link"
-              disabled={busy}
-              onClick={() => setReview(null)}
-            >
-              Discard
-            </button>
-          </div>
-        </section>
-      )}
-
-      <p role="status">
-        {notice}
-        {busy ? " Working…" : ""}
-      </p>
-      {hash && (
-        <a
-          className="text-link"
-          href={`${explorer}/tx/${hash}`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          View transaction ↗
-        </a>
-      )}
-
-      <h3>Balances</h3>
-      {account ? (
-        <table className="record-table">
-          <thead>
-            <tr>
-              <th scope="col">Token</th>
-              <th scope="col">Wallet</th>
-              {!mainnet && <th scope="col">Kuru account</th>}
-              {!mainnet && <th scope="col" />}
-            </tr>
-          </thead>
-          <tbody>
-            {account.balances.map((row) => (
-              <tr key={row.token.address}>
-                <td>{row.token.symbol}</td>
-                <td>{formatUnits(BigInt(row.wallet), row.token.decimals)}</td>
-                {!mainnet && (
-                  <td>
-                    {formatUnits(BigInt(row.account), row.token.decimals)}
-                  </td>
-                )}
-                {!mainnet && (
-                  <td>
-                    {row.account !== "0" && (
-                      <button
-                        type="button"
-                        className="text-link"
-                        disabled={busy}
-                        onClick={() =>
-                          void prepareWithdraw(row.token.symbol, row.account)
-                        }
-                      >
-                        Withdraw
-                      </button>
-                    )}
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p className="small-note">Balances unavailable.</p>
-      )}
-      {mainnet ? (
-        <p className="small-note">
-          Monad mainnet · real funds. Market orders spend directly from your
-          wallet (no Kuru account, no deposit) and have no minimum size. USDC is{" "}
-          <code>{network.quote.address}</code>. Keep MON for gas
-          {account
-            ? ` (${formatUnits(BigInt(account.nativeBalance), 18)} MON)`
-            : ""}
-          .
+        <p role="status" className="pt-status">
+          {notice}
+          {busy ? " Working…" : ""}
         </p>
-      ) : (
-        <p className="small-note">
-          Kuru test tokens on Monad testnet; no monetary value. Minimum order is
-          10 USDC. Kuru test USDC is <code>{network.quote.address}</code>, not
-          the staking token. Wallet MON pays gas
-          {account
-            ? ` (${formatUnits(BigInt(account.nativeBalance), 18)} MON)`
-            : ""}
-          . A MON deposit uses that same balance.
-        </p>
-      )}
+        {hash && (
+          <a
+            className="text-link"
+            href={`${explorer}/tx/${hash}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            View transaction ↗
+          </a>
+        )}
+        {popup && hash && !busy && (
+          <button
+            type="button"
+            className="pt-back pt-close"
+            onClick={() => window.close()}
+          >
+            Close and return to X
+          </button>
+        )}
+      </section>
     </div>
   );
 }
