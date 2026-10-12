@@ -48,7 +48,8 @@ function badgeChips(value: Evidence | null) {
         "span",
         {
           class: "chip verified",
-          title: "X account bound to a wallet with a signed proof",
+          title:
+            "Recorded stable X ID/wallet binding; handle is a lookup hint, not a fresh ownership check",
         },
         "✓ Verified",
       ),
@@ -67,12 +68,22 @@ function badgeChips(value: Evidence | null) {
   return chips;
 }
 
-async function addBadge(article: HTMLElement, handle: string) {
+async function addBadge(article: HTMLElement, handle: string, postId: string) {
   const name = article.querySelector<HTMLElement>('[data-testid="User-Name"]');
   if (!name || name.querySelector(".cmb-badge-host")) return;
   const { host, root } = shadowHost("cmb-badge-host");
   name.append(host);
   const chips = badgeChips(await evidence(handle));
+  const current = postIdentity(article);
+  if (
+    !host.isConnected ||
+    seen.get(article) !== `${handle}:${postId}` ||
+    current?.handle !== handle ||
+    current.postId !== postId
+  ) {
+    host.remove();
+    return;
+  }
   if (!chips.length) return host.remove();
   const badge = el("span", { class: "badge" }, ...chips);
   for (const chip of chips)
@@ -99,7 +110,15 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
     payload: { postId, handle, text },
   });
   const parsed = postSignalResponseSchema.safeParse(raw);
-  if (!parsed.success || !parsed.data.signal.isCall || !article.isConnected)
+  const current = postIdentity(article);
+  if (
+    !parsed.success ||
+    !parsed.data.signal.isCall ||
+    !article.isConnected ||
+    seen.get(article) !== `${handle}:${postId}` ||
+    current?.handle !== handle ||
+    current.postId !== postId
+  )
     return;
   if (article.querySelector(".cmb-signal-host")) return;
   const { signal, route } = parsed.data;
@@ -156,7 +175,7 @@ const visible = new IntersectionObserver(
       visible.unobserve(article);
       const id = postIdentity(article);
       if (!id) continue;
-      void addBadge(article, id.handle);
+      void addBadge(article, id.handle, id.postId);
       void addSignal(article, id.handle, id.postId);
     }
   },
@@ -240,7 +259,7 @@ async function scanProfile() {
   root.append(card);
   anchor.after(host);
   const insights = await loadInsights(handle, null, null);
-  if (!host.isConnected) return;
+  if (!host.isConnected || profileHandle() !== handle) return;
   card.replaceChildren();
   const ev = insights?.evidence;
   const bound = ev?.identity.status === "bound";
@@ -325,3 +344,26 @@ new MutationObserver(schedule).observe(document.body, {
   subtree: true,
 });
 schedule();
+
+// Cached promises expiring alone do not refresh rendered badges/profile cards.
+// Clear old evidence first, then refresh only posts near the visible viewport.
+setInterval(() => {
+  if (document.visibilityState !== "visible") return;
+  evidenceRequests.clear();
+  for (const article of document.querySelectorAll<HTMLElement>(
+    'article[data-testid="tweet"]',
+  )) {
+    for (const badge of article.querySelectorAll(".cmb-badge-host"))
+      badge.remove();
+    const rect = article.getBoundingClientRect();
+    if (rect.bottom < -200 || rect.top > innerHeight + 200) {
+      // Re-entering the viewport should obtain evidence again.
+      seen.delete(article);
+      continue;
+    }
+    const id = postIdentity(article);
+    if (id) void addBadge(article, id.handle, id.postId);
+  }
+  document.querySelector(".cmb-profile-host")?.remove();
+  void scanProfile();
+}, 60000);

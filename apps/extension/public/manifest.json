@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Tradepost",
   "description": "Verified-creator badges, trade-call detection, Nansen wallet checks and reviewed Kuru/Perpl trades on X.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "background": {
     "service_worker": "background.js"
   },

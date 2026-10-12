@@ -15,7 +15,7 @@ Updated 12 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added tar
 - [x] Live stake RPC reads and separate wallet reviews for approval, deposit and withdrawal actions.
 - [x] Original six-decimal mUSDC contract and faucet; deployed with 10,000 mUSDC in the project wallet.
 - [x] Envio schema, event handlers, contract configuration and generated bindings.
-- [x] Latest local checks: 30 application tests, 12 Foundry tests, web/extension builds; six database integration tests skipped in this run.
+- [x] Latest local checks: 63 application tests, 29 Foundry tests, web/extension builds; six database integration tests skipped in this run.
 
 ## Phase 1: Finish stake and indexing
 
@@ -36,6 +36,7 @@ Exit: a deposit updates current stake evidence; requesting withdrawal removes ac
 - [ ] Resolve handles through verified stable-X-ID mappings.
 - [x] Implement separate recorded-binding and current indexed stake indicators plus evidence details. Validate on real X after installation approval.
 - [x] Handle missing/stale data, withdrawal pending, feed navigation and duplicate injection (shadow-DOM UI, recycled-node keys, visibility-gated requests).
+- [x] Discard delayed responses for recycled posts and refresh visible binding/stake badges and profile evidence; four DOM regression tests pass. Production real-X validation remains pending Chrome reload.
 - [x] Author badges, profile cards, signal bars and the call-check drawer. Verified on an X-shaped test page in headless Chrome; real-X validation pending.
 - [x] Validate message sender origins and implement unsigned spot Buy/Sell handoffs with source post ID. Real-X end-to-end validation remains pending.
 

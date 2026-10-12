@@ -42,6 +42,9 @@ Trade ▸ → GET /api/creators/:handle/insights?asset&direction → evidence + 
 - `POST /api/signals/classify`: public, 90 requests/min per client, body ≤ 4 KB, text ≤ 2000 chars, global LLM budget 120 calls/min (overflow falls back to rules), cached by post ID + text hash.
 - The service worker only accepts messages from x.com/twitter.com tabs, caps concurrency at 4, deduplicates requests and sends no cookies or tokens.
 - Untrusted post text is rendered with `textContent` only and isolated in shadow roots.
+- Delayed evidence/classification responses are discarded if X has recycled the post. Visible badges and profile evidence refresh every minute; a failed refresh removes previous stake claims. Binding badges describe a recorded stable-ID proof, not a fresh handle ownership check.
+
+Four DOM regression tests cover independent identity/stake chips, recycled posts and loss of current stake evidence. This does not replace validation of the production build on real X.
 
 ## Build and install
 
