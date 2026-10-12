@@ -27,6 +27,13 @@ export const perpRequestSchema = z
   })
   .strict();
 
+// Perpl's API returns hashes without the 0x prefix; explorers reject those.
+function txHash(value: string | null | undefined) {
+  if (!value) return null;
+  const hex = value.startsWith("0x") ? value.slice(2) : value;
+  return /^[0-9a-fA-F]{64}$/.test(hex) ? `0x${hex}` : null;
+}
+
 function config() {
   const maxLeverage = Number(process.env.PERPL_MAX_LEVERAGE || "5");
   return {
@@ -331,7 +338,7 @@ export async function perpStatus(request: Request, requestId: number) {
           fee: String(order.f),
           leverage: order.lv,
           block: order.at?.b ?? null,
-          transactionHash: order.at?.txid ?? null,
+          transactionHash: txHash(order.at?.txid),
         }
       : null,
     position: position
@@ -342,7 +349,7 @@ export async function perpStatus(request: Request, requestId: number) {
           entryPrice: String(position.ep),
           collateral: String(position.c),
           leverage: position.lv,
-          transactionHash: position.at?.txid ?? null,
+          transactionHash: txHash(position.at?.txid),
         }
       : null,
     observedAt: new Date().toISOString(),
