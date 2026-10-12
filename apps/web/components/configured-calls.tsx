@@ -7,6 +7,7 @@ import {
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { CallBond } from "./call-bond";
 import { CallLedger, CallSummary } from "./call-ledger";
 
 const errors: Record<string, string> = {
@@ -210,7 +211,10 @@ export default function ConfiguredCalls() {
       ) : (
         <>
           <CallSummary calls={calls} />
-          <CallLedger calls={calls} />
+          <CallLedger
+            calls={calls}
+            action={(call) => <CallBond callId={call.id} />}
+          />
         </>
       )}
     </>

@@ -1,8 +1,9 @@
 import type { PublicCall } from "@call-my-bluff/domain";
+import type { ReactNode } from "react";
 import { formatUnits } from "viem";
 import { PostAvailabilityCheck } from "./post-availability";
 
-function price(value: string, decimals: number) {
+export function price(value: string, decimals: number) {
   const [whole, fraction = ""] = formatUnits(BigInt(value), decimals).split(
     ".",
   );
@@ -46,7 +47,14 @@ export function CallSummary({ calls }: { calls: PublicCall[] }) {
   );
 }
 
-export function CallLedger({ calls }: { calls: PublicCall[] }) {
+export function CallLedger({
+  calls,
+  action,
+}: {
+  calls: PublicCall[];
+  /** Optional per-call control, e.g. the owner's bond action. */
+  action?: (call: PublicCall) => ReactNode;
+}) {
   if (calls.length === 0)
     return (
       <div className="dashboard-empty">
@@ -112,6 +120,7 @@ export function CallLedger({ calls }: { calls: PublicCall[] }) {
                   ) : (
                     <span className="status-badge">Open</span>
                   )}
+                  {action?.(call)}
                 </td>
               </tr>
             );

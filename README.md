@@ -8,7 +8,7 @@ Live withdrawal request and cancellation were confirmed and indexed; the 500 mUS
 
 Profile cards and creator pages now expand to show ongoing registered calls and indexed Kuru swaps. Optional browser-only follow observations populate Watchlist without a paid X following API. This covers accounts you view, not the full following graph; creator-owned Perpl positions remain pending. See [setup and limits](docs/browser-following.md).
 
-Live: https://xtradingtoday.vercel.app (Monad testnet). See [Deployment](#deployment).
+Live: https://xtradingnow.xyz (Monad testnet). See [Deployment](#deployment).
 
 ## Run locally
 
@@ -90,14 +90,14 @@ cd services/cre/settlement && bun install && bun test
 services/cre/scripts/fork-e2e.sh ETH 0 1   # asset, direction (0 Up, 1 Down), target bps
 ```
 
-The script forks Monad testnet about three hours back (anvil dev account, port 8548). It deploys against the simulation forwarder, registers and funds a call, and moves time past expiry. Then it runs `cre workflow simulate --broadcast` and prints the onchain outcome. Testnet deployment needs a funded deployer and `cre login`. Deploy the contract with the production forwarder `0xF8344CFd5c43616a4366C34E3EEE75af79a74482`, set `settlementAddress` in `config.staging.json`, and deploy the workflow.
+The script forks Monad testnet about three hours back (anvil dev account, port 8548). It deploys against the simulation forwarder, registers and funds a call, and moves time past expiry. Then it runs `cre workflow simulate --broadcast` and prints the onchain outcome. The testnet contract (`contracts/deployments/call-settlement-monad-testnet.json`) currently trusts the simulation forwarder so `cre workflow simulate settlement --target staging-settings --broadcast` settles real calls; switch it with `setForwarder` once the workflow is deployed. Set `CALL_SETTLEMENT_ADDRESS` for the app. Deploy the contract with the production forwarder `0xF8344CFd5c43616a4366C34E3EEE75af79a74482`, set `settlementAddress` in `config.staging.json`, and deploy the workflow.
 
 ## Deployment
 
-- **Web:** Vercel project `xtradingtoday`, root directory `apps/web`, Node 22, function region `bom1`. Pushes to `main` deploy to production. Environment variables mirror `apps/web/.env.example`; `NEXT_PUBLIC_APP_URL` must equal the production origin because POST routes check it. Add that origin to the Privy app's allowed domains.
+- **Web:** Vercel project `xtradingtoday`, root directory `apps/web`, Node 22, function region `bom1`. Production domain `xtradingnow.xyz` (Vercel nameservers); `www`, `xtradingtoday.vercel.app`, `tradepostapp.vercel.app` and `nomorebluff.vercel.app` 308-redirect to it. Pushes to `main` deploy to production. Environment variables mirror `apps/web/.env.example`; `NEXT_PUBLIC_APP_URL` must equal the production origin because POST routes check it. Add that origin to the Privy app's allowed domains.
 - **Database:** AWS RDS (ap-south-1). Hosted runtimes pass the regional CA bundle as `DATABASE_CA_PEM`. Run schema changes with the bootstrap in `infrastructure/aws`.
 - **Indexer:** Envio Hosted Service project `tradepost` (root `services/indexer`, `config.yaml`). Push to the `envio` branch to redeploy (`git push origin main:envio`) only when the indexer changes; the free plan keeps 3 deployments. Each deployment has its own GraphQL URL, so update Vercel `ENVIO_GRAPHQL_URL` afterwards. `ENVIO_MONAD_RPC_URL` can be set in Envio's environment variables for faster syncs.
-- **MCP:** `https://xtradingtoday.vercel.app/api/mcp` (Streamable HTTP, stateless). Signed-in tools take the user's Privy access token as `Authorization: Bearer`, copied from `/integrations`. No tool signs or submits.
+- **MCP:** `https://xtradingnow.xyz/api/mcp` (Streamable HTTP, stateless). Signed-in tools take the user's Privy access token as `Authorization: Bearer`, copied from `/integrations`. No tool signs or submits.
 - **Extension:** `pnpm --filter @call-my-bluff/extension package` builds for the production origin and writes `apps/web/public/downloads/xtrading-extension.zip`, served from the extension page. Re-run it after extension changes. A production build only talks to that origin; `build` without the variable targets localhost.
 
 ## Checks

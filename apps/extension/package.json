@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit",
-    "package": "CMB_EXTENSION_APP_ORIGIN=https://xtradingtoday.vercel.app node build.mjs && mkdir -p ../web/public/downloads && rm -f ../web/public/downloads/xtrading-extension.zip && cd dist && zip -qr ../../web/public/downloads/xtrading-extension.zip . -x '*.map' && cp ../../web/public/downloads/xtrading-extension.zip ../../web/public/downloads/tradepost-extension.zip"
+    "package": "CMB_EXTENSION_APP_ORIGIN=https://xtradingnow.xyz node build.mjs && mkdir -p ../web/public/downloads && rm -f ../web/public/downloads/xtrading-extension.zip && cd dist && zip -qr ../../web/public/downloads/xtrading-extension.zip . -x '*.map' && cp ../../web/public/downloads/xtrading-extension.zip ../../web/public/downloads/tradepost-extension.zip"
   },
   "dependencies": {
     "@call-my-bluff/domain": "workspace:*",

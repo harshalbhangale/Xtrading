@@ -81,17 +81,19 @@ Exit: each scored call is traceable to its source and inputs; Nansen adds a usef
 
 ## Phase 4B: Hourly CRE settlement
 
-- [ ] Confirm CRE write support and forwarder for Monad testnet 10143; verify CLI/account access.
-- [x] Add integer expiry-price evaluator with missing-data and timestamp checks; price adapter and onchain commitment checks remain pending.
-- [ ] Register opt-in calls with immutable expiry, price source, evaluation rules and bounded bond/reward amounts.
-- [ ] Implement a separate call-bond/reward contract; leave refundable CreatorStake deposits separate.
-- [ ] Fund rewards and reserve them at registration; lock each call's bond until settlement or its defined timeout refund.
-- [ ] Build an hourly CRE trigger that scans expired unsettled calls in bounded, paginated batches.
-- [ ] Retrieve historical expiry prices; validate timestamp, asset identity, decimals and coverage.
-- [ ] Submit signed settlement reports through the configured CRE forwarder with workflow identity validation.
-- [ ] Enforce single settlement, replay protection, fixed payout limits and timeout refunds in the contract.
-- [ ] Foundry-test rewards, losses, ties, duplicate/unauthorized reports, missing prices and accounting conservation.
-- [ ] Simulate CRE and index confirmed outcomes with Envio; show evidence and amounts in creator/extension views.
+- [x] CRE supports Monad testnet (`monad-testnet`, selector 2183018362218727504); simulation forwarder `0xB9F79d86…` and production KeystoneForwarder `0xF8344CFd…`. CLI login verified; workflow deployment (DON) access not yet confirmed.
+- [x] Add integer expiry-price evaluator with missing-data and timestamp checks; the workflow fetches Binance 1m opens with per-node fetch and median consensus.
+- [x] Register opt-in calls with immutable expiry, price source, evaluation rules and bounded bond/reward amounts (`/creator/calls` → "Bond this call"; exact-amount approval, terms hash of the registered call).
+- [x] Implement a separate call-bond/reward contract (`CallSettlement`); refundable CreatorStake deposits stay separate.
+- [x] Fund rewards and reserve them at registration; lock each call's bond until settlement or the three-day timeout refund.
+- [x] Build an hourly CRE trigger that scans expired unsettled calls in bounded batches at a finalized block.
+- [x] Retrieve historical prices at window start and expiry; the contract checks timestamps against a 10-minute tolerance.
+- [x] Submit signed settlement reports through the CRE forwarder; optional workflow ID/owner check in `onReport`.
+- [x] Enforce single settlement, fixed payout limits and timeout refunds in the contract.
+- [x] Foundry-test rewards, losses, ties, duplicate/unauthorized reports, missing prices and accounting conservation (16 tests).
+- [x] Simulate CRE end to end: `services/cre/scripts/fork-e2e.sh` (fork; success and slash paths) and a real testnet call on `0x260264E7…95DF`.
+- [ ] Index `CallSettled` with Envio and show settlement evidence in the public ledger and extension (the owner's bond panel reads the contract directly).
+- [ ] Deploy the workflow to the DON and switch the contract to the production forwarder.
 
 Exit: an expired bonded call produces one verified settlement, paying its reserved reward or deducting only its agreed call bond. Missing prices never trigger a slash. Production activation remains pending until network support and deployment access are verified.
 
@@ -108,8 +110,8 @@ Exit: an expired bonded call produces one verified settlement, paying its reserv
 - [x] RDS accepts 5432 from anywhere (rule `sgr-05bfbb69a0f7f59a4`, added outside CloudFormation) so Vercel can connect; TLS verify-full and the restricted `cmb_app` role still apply. Revoke the rule after the hackathon.
 - [x] Indexer on Envio Hosted Service (project `tradepost`, Development plan, root `services/indexer`, deploys on pushes to the `envio` branch). Vercel `ENVIO_GRAPHQL_URL` is the per-deployment endpoint (`https://indexer.dev.hyperindex.xyz/371a97c/v1/graphql`); a static production endpoint needs a paid plan, so update the variable after any indexer redeploy. Queries are cached 15s to stay under the 100/minute plan limit.
 - [x] Package the extension for the production origin and serve it at `/downloads/no-more-bluff-extension.zip` (`pnpm --filter @call-my-bluff/extension package`).
-- [x] Production URL is https://xtradingtoday.vercel.app; `tradepostapp.vercel.app` and `nomorebluff.vercel.app` 308-redirect there.
-- [x] Privy allowed origins restricted to `https://xtradingtoday.vercel.app` and `http://localhost:3000`; production sign-in and server identity verified.
+- [x] Production URL is https://xtradingnow.xyz (Vercel nameservers); `www`, `xtradingtoday.vercel.app`, `tradepostapp.vercel.app` and `nomorebluff.vercel.app` 308-redirect there.
+- [x] Privy allowed origins include `https://xtradingnow.xyz`, the redirected Vercel URLs and `http://localhost:3000`; production sign-in and server identity verified.
 - [ ] Test restart recovery, stale data, transaction failures and account isolation.
 - [ ] Record the complete onboarding → stake → X evidence → trade → confirmed-fill demo.
 - [ ] Demonstrate Nansen evidence and MCP; prepare sponsor evidence and submission video.
