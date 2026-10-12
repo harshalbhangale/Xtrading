@@ -6,7 +6,7 @@ import {
 } from "../../../packages/integrations/src/signals";
 
 vi.hoisted(() => {
-  vi.stubGlobal("CMB_APP_ORIGIN", "https://tradepostapp.vercel.app");
+  vi.stubGlobal("CMB_APP_ORIGIN", "https://xtradingtoday.vercel.app");
 });
 
 import { closeDrawer, openDrawer } from "./drawer";

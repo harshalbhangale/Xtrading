@@ -29,7 +29,7 @@ const flush = async () => {
 beforeEach(() => {
   vi.resetModules();
   vi.useFakeTimers();
-  vi.stubGlobal("CMB_APP_ORIGIN", "https://tradepostapp.vercel.app");
+  vi.stubGlobal("CMB_APP_ORIGIN", "https://xtradingtoday.vercel.app");
   vi.clearAllMocks();
   window.history.replaceState(null, "", "/home");
   document.body.innerHTML = `<article data-testid="tweet">

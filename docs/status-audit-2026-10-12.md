@@ -8,7 +8,7 @@ Reviewed 12 October 2026 against GitHub, local code, Claude's **Codebase review 
 - Local `codex/foundation` points to `8c5d6f8` and is already an ancestor of `main`. Relative to its own remote it is three commits ahead and one behind. Continue from `main`; do not overwrite it with the old foundation branch.
 - `origin/envio` points to `80ddb37`. This separate deployment branch is intentional; ordinary web commits should not redeploy the indexer.
 - Claude's latest handoff ends at `c07b0fe`: settlement contract and workflow committed, but no settlement deployment, workflow simulation or workflow unit tests. Its expired CLI login blocker is now resolved: `cre whoami` succeeds and deploy access is enabled. `cre version` reports `CRE CLI development`.
-- The product is now Xtrading at https://tradepostapp.vercel.app. The repository and deployed mock token retain their earlier names.
+- The product is now Xtrading at https://xtradingtoday.vercel.app. The repository and deployed mock token retain their earlier names.
 
 ## Evidence checked now
 

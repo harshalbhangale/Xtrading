@@ -8,7 +8,7 @@ Live withdrawal request and cancellation were confirmed and indexed; the 500 mUS
 
 Profile cards and creator pages now expand to show ongoing registered calls and indexed Kuru swaps. Optional browser-only follow observations populate Watchlist without a paid X following API. This covers accounts you view, not the full following graph; creator-owned Perpl positions remain pending. See [setup and limits](docs/browser-following.md).
 
-Live: https://tradepostapp.vercel.app (Monad testnet). See [Deployment](#deployment).
+Live: https://xtradingtoday.vercel.app (Monad testnet). See [Deployment](#deployment).
 
 ## Run locally
 
@@ -83,10 +83,10 @@ Set server-only `ENVIO_GRAPHQL_URL=http://localhost:8081/v1/graphql` and `ENVIO_
 
 ## Deployment
 
-- **Web:** Vercel project `tradepostapp`, root directory `apps/web`, Node 22, function region `bom1`. Pushes to `main` deploy to production. Environment variables mirror `apps/web/.env.example`; `NEXT_PUBLIC_APP_URL` must equal the production origin because POST routes check it. Add that origin to the Privy app's allowed domains.
+- **Web:** Vercel project `xtradingtoday`, root directory `apps/web`, Node 22, function region `bom1`. Pushes to `main` deploy to production. Environment variables mirror `apps/web/.env.example`; `NEXT_PUBLIC_APP_URL` must equal the production origin because POST routes check it. Add that origin to the Privy app's allowed domains.
 - **Database:** AWS RDS (ap-south-1). Hosted runtimes pass the regional CA bundle as `DATABASE_CA_PEM`. Run schema changes with the bootstrap in `infrastructure/aws`.
 - **Indexer:** Envio Hosted Service project `tradepost` (root `services/indexer`, `config.yaml`). Push to the `envio` branch to redeploy (`git push origin main:envio`) only when the indexer changes; the free plan keeps 3 deployments. Each deployment has its own GraphQL URL, so update Vercel `ENVIO_GRAPHQL_URL` afterwards. `ENVIO_MONAD_RPC_URL` can be set in Envio's environment variables for faster syncs.
-- **MCP:** `https://tradepostapp.vercel.app/api/mcp` (Streamable HTTP, stateless). Signed-in tools take the user's Privy access token as `Authorization: Bearer`, copied from `/integrations`. No tool signs or submits.
+- **MCP:** `https://xtradingtoday.vercel.app/api/mcp` (Streamable HTTP, stateless). Signed-in tools take the user's Privy access token as `Authorization: Bearer`, copied from `/integrations`. No tool signs or submits.
 - **Extension:** `pnpm --filter @call-my-bluff/extension package` builds for the production origin and writes `apps/web/public/downloads/xtrading-extension.zip`, served from the extension page. Re-run it after extension changes. A production build only talks to that origin; `build` without the variable targets localhost.
 
 ## Checks

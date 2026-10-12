@@ -58,7 +58,7 @@ it("review links preserve the source and distinguish spot selling from a perp sh
   });
   const spotUrl = new URL(
     tradeReviewPath(spot, deriveTradeRoute(spot, []), "sell") ?? "",
-    "https://tradepostapp.vercel.app",
+    "https://xtradingtoday.vercel.app",
   );
   expect(Object.fromEntries(spotUrl.searchParams)).toMatchObject({
     postId: "123",
@@ -79,7 +79,7 @@ it("review links preserve the source and distinguish spot selling from a perp sh
       deriveTradeRoute(perp, [{ marketId: 1, symbol: "BTC", open: true }]),
       "sell",
     ) ?? "",
-    "https://tradepostapp.vercel.app",
+    "https://xtradingtoday.vercel.app",
   );
   expect(perpUrl.searchParams.get("side")).toBe("short");
   expect(
