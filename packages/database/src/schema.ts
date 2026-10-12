@@ -1,5 +1,7 @@
 import {
   bigint,
+  boolean,
+  index,
   integer,
   jsonb,
   numeric,
@@ -106,3 +108,25 @@ export const stakeSnapshots = pgTable("stake_snapshots", {
   blockNumber: bigint("block_number", { mode: "bigint" }).notNull(),
   updatedAt: time("updated_at").notNull(),
 });
+
+// Extracted post signals for any author. A handle is a lookup hint, not a verified identity;
+// classifications are versioned and never represent an evaluated outcome.
+export const postSignals = pgTable(
+  "post_signals",
+  {
+    postId: text("post_id").primaryKey(),
+    handle: text("handle").notNull(),
+    textHash: text("text_hash").notNull(),
+    isCall: boolean("is_call").notNull(),
+    asset: text("asset"),
+    direction: text("direction", { enum: ["bullish", "bearish"] }),
+    instrument: text("instrument", { enum: ["spot", "perp"] }),
+    signal: jsonb("signal").notNull(),
+    source: text("source", { enum: ["llm", "heuristic"] }).notNull(),
+    methodologyVersion: text("methodology_version").notNull(),
+    classifiedAt: time("classified_at").notNull(),
+  },
+  (table) => [
+    index("post_signals_handle").on(table.handle, table.classifiedAt),
+  ],
+);

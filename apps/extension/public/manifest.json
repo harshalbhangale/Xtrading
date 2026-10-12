@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "No More Bluff — development",
-  "description": "Separate recorded X bindings and indexed testnet stake evidence, with wallet review handoff.",
-  "version": "0.2.0",
+  "description": "Verified-creator badges, trade-call detection, Nansen wallet checks and reviewed Kuru/Perpl trades on X.",
+  "version": "0.3.0",
   "background": { "service_worker": "background.js" },
   "action": { "default_popup": "popup.html", "default_title": "No More Bluff" },
   "content_scripts": [

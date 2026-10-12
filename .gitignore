@@ -16,3 +16,4 @@ services/indexer/persisted_state.envio.json
 .DS_Store
 *.log
 __pycache__/
+package-lock.json

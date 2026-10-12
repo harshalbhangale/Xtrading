@@ -23,6 +23,11 @@ import deployment from "../../../packages/integrations/abi/CreatorStake-deployme
 import mockDeployment from "../../../packages/integrations/abi/MockUSDC-deployment.json";
 import { identityContext } from "./identity-http";
 
+const mockUsdcAbi = parseAbi([
+  "function claimed(address) view returns (bool)",
+  "function faucet()",
+]);
+
 export async function stakeContext(request: Request) {
   const { user, service, chainId } = await identityContext(request);
   if (chainId !== 10143) throw new IdentityError("stake_testnet_only", 409);
@@ -83,6 +88,19 @@ export async function stakeContext(request: Request) {
   ]);
   if (decimals !== 6 || symbol !== expectedSymbol)
     throw new IdentityError("stake_token_mismatch", 503);
+  // Demo faucet exists only on the mock token; an unreadable flag must not imply an unclaimed faucet.
+  const faucetClaimed =
+    mode === "mock"
+      ? await client
+          .readContract({
+            address: token,
+            abi: mockUsdcAbi,
+            functionName: "claimed",
+            args: [wallet],
+            ...at,
+          })
+          .catch(() => true)
+      : undefined;
   let balance = 0n,
     allowance = 0n,
     withdrawableAt = 0n;
@@ -158,6 +176,7 @@ export async function stakeContext(request: Request) {
     withdrawableAt: withdrawableAt.toString(),
     tokenBalance: tokenBalance.toString(),
     nativeBalance: nativeBalance.toString(),
+    ...(faucetClaimed === undefined ? {} : { faucetClaimed }),
     blockNumber: block.number.toString(),
     blockHash: block.hash,
     blockTimestamp: block.timestamp.toString(),
@@ -184,6 +203,13 @@ export async function prepareStake(
       bytecode: mockDeployment.bytecode as Hex,
       args: [wallet],
     });
+  } else if (action === "faucet") {
+    if (state.symbol !== "mUSDC")
+      throw new IdentityError("faucet_unavailable", 409);
+    if (state.faucetClaimed !== false)
+      throw new IdentityError("faucet_already_claimed", 409);
+    to = state.token as Address;
+    data = encodeFunctionData({ abi: mockUsdcAbi, functionName: "faucet" });
   } else if (action === "deploy") {
     if (to) throw new IdentityError("stake_already_configured", 409);
     data = encodeDeployData({

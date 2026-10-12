@@ -1,6 +1,6 @@
 # Delivery checklist
 
-Updated 11 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added targets: Perpl API and Chainlink CRE. The Chrome extension is the priority product surface.
+Updated 12 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added targets: Perpl API and Chainlink CRE. The Chrome extension is the priority product surface.
 
 ## Done
 
@@ -35,7 +35,8 @@ Exit: a deposit updates current stake evidence; requesting withdrawal removes ac
 - [x] Add build-time app origin configuration and narrowly scoped host permission; service-worker transport is limited to X senders and creator handles.
 - [ ] Resolve handles through verified stable-X-ID mappings.
 - [x] Implement separate recorded-binding and current indexed stake indicators plus evidence details. Validate on real X after installation approval.
-- [ ] Handle missing/stale data, withdrawal pending, feed navigation and duplicate injection.
+- [x] Handle missing/stale data, withdrawal pending, feed navigation and duplicate injection (shadow-DOM UI, recycled-node keys, visibility-gated requests).
+- [x] Author badges, profile cards, signal bars and the call-check drawer. Verified on an X-shaped test page in headless Chrome; real-X validation pending.
 - [x] Validate message sender origins and implement unsigned spot Buy/Sell handoffs with source post ID. Real-X end-to-end validation remains pending.
 
 Exit: a bound creator's profile/post shows current evidence from the backend.
@@ -43,17 +44,18 @@ Exit: a bound creator's profile/post shows current evidence from the backend.
 ## Phase 3: Kuru spot, Perpl perps and user dashboard
 
 - [x] Add explicit spot/perp routing policy with no chain or venue fallback.
-- [ ] Connect routing to reviewed call intent and trading UI.
+- [x] Connect routing to reviewed call intent and trading UI (`/api/signals/classify` → `/dashboard/trade`).
 - [x] Verify Kuru testnet MON/USDC deployment, token decimals and SDK ABI with live reads.
 - [x] Add public Kuru/Perpl market discovery and authenticated unsigned Kuru step preparation.
 - [x] Move spot trading to Kuru Spot V2 testnet (AccountCore `0xdbaa…8038`; WETH/USDC and WBTC/USDC, both with live two-sided books). The old V1 MON/USDC market had no bids. Flow: exact approve → deposit shortfall → swap with simulated minimum and onchain deadline; withdraw back to wallet. A read-only `eth_call` from a funded third-party account returned 0.0037274949 WETH for 10 USDC, matching the book estimate.
 - [ ] Obtain Kuru V2 test USDC (`0xA402…fEF1`, admin-minted, no public faucet) and complete a confirmed fill from the bound wallet.
 - [ ] Verify Perpl network, market IDs, collateral units and unsigned order interface.
-- [ ] Add user-confirmed leverage, collateral/exposure caps, slippage, reduce-only exits and duplicate-order prevention.
+- [x] Add user-confirmed leverage, server leverage/size caps, slippage and duplicate-order prevention for Perpl opens. Reduce-only exits remain.
+- [x] Ed25519-signed Perpl order submission; demo mode without credentials. Live submission pending a funded, forwarding-enabled account.
 - [ ] Demonstrate Perpl social trading with actual onchain activity; record its ≤2-minute API-bounty demo.
 - [x] Connect actual eth_call quote simulation, integer slippage and explicit Privy review UI.
 - [ ] Verify successful quotes and wallet approval in funded/liquid conditions; separate fee breakdown remains unavailable.
-- [ ] Add X buy/sell entry points with source-post attribution.
+- [x] Add X trade entry points with source-post attribution.
 - [ ] Execute only after Privy wallet approval.
 - [ ] Index order/fill events and distinguish open, partial, filled, cancelled and failed orders.
 - [ ] Populate portfolio/activity from confirmed fills; add optional watchlist sync.
@@ -70,6 +72,12 @@ Exit: X → review → approval → Kuru fill → dashboard with actual amounts.
 - [ ] Verify a live registration from the bound account and a resolved outcome.
 - [ ] Add an actual Nansen-backed wallet/token insight with source and timestamp.
 - [ ] Connect dossiers, call ledgers, reputation pages and extension popovers.
+- [ ] Confirm authorized X ingestion and Nansen access/coverage.
+- [x] Store extracted calls (`post_signals`) with handle, asset symbol, direction, instrument, horizon, text hash and methodology version. Stable-ID linkage and asset addresses remain.
+- [ ] Publish deterministic evaluation rules, price sources and methodology version.
+- [ ] Show sample size, coverage, unresolved calls and hypothetical outcomes separately from wallet returns.
+- [x] Nansen DEX-trade consistency check for the bound wallet with timestamps and coverage notes; labelled demo findings without a key. A live keyed run is pending.
+- [x] Connect call ledgers, reputation counts and extension drawers/profile cards. Scores remain pending evaluation.
 
 Exit: each scored call is traceable to its source and inputs; Nansen adds a useful real insight.
 

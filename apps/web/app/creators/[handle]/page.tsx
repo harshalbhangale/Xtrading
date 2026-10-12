@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { CallLedger, CallSummary } from "../../../components/call-ledger";
 import { Panel } from "../../../components/dashboard/ui";
 import { publicCallLedger } from "../../../lib/calls";
+import { creatorReputation } from "../../../lib/insights";
 import { publicCreatorEvidence } from "../../../lib/public-creator";
 import { stakeLabel } from "../../../lib/stake-label";
 
@@ -27,9 +28,10 @@ export default async function CreatorPage({
 }) {
   const handle = normalizeHandle((await params).handle);
   if (!handle) notFound();
-  const [evidence, ledger] = await Promise.all([
+  const [evidence, ledger, detected] = await Promise.all([
     publicCreatorEvidence(handle),
     publicCallLedger(handle).catch(() => null),
+    creatorReputation(handle).catch(() => null),
   ]);
   const identity = evidence?.identity;
   const stake = evidence?.stake;
@@ -135,6 +137,47 @@ export default async function CreatorPage({
           </a>
         </p>
       </Panel>
+      {detected?.status === "ready" && detected.recent.length > 0 && (
+        <Panel
+          title="Calls detected in posts"
+          description="Extracted automatically from posts seen by extension users. Not registered by the creator and not evaluated."
+        >
+          <div className="table-scroll">
+            <table className="record-table">
+              <thead>
+                <tr>
+                  <th scope="col">Post</th>
+                  <th scope="col">Asset / direction</th>
+                  <th scope="col">Instrument</th>
+                  <th scope="col">Detected</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detected.recent.map((call) => (
+                  <tr key={call.postId}>
+                    <td>
+                      <a
+                        href={`https://x.com/${handle}/status/${call.postId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {call.postId} ↗
+                      </a>
+                    </td>
+                    <td>
+                      {call.asset} {call.direction ?? ""}
+                    </td>
+                    <td>{call.instrument}</td>
+                    <td>
+                      {call.classifiedAt.slice(0, 16).replace("T", " ")} UTC
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+      )}
     </div>
   );
 }

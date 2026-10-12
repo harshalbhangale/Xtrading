@@ -167,6 +167,7 @@ export const stakeStateSchema = z.object({
   tokenBalance: amountSchema,
   nativeBalance: amountSchema,
   withdrawableAt: amountSchema,
+  faucetClaimed: z.boolean().optional(),
   blockNumber: amountSchema,
   blockHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
   blockTimestamp: amountSchema,
@@ -179,6 +180,7 @@ export const stakeActionSchema = z
     action: z.enum([
       "deploy",
       "deployMockUSDC",
+      "faucet",
       "deposit",
       "requestWithdrawal",
       "cancelWithdrawal",
@@ -191,6 +193,7 @@ export const preparedStakeSchema = z.object({
   action: z.enum([
     "deploy",
     "deployMockUSDC",
+    "faucet",
     "deposit",
     "approve",
     "resetAllowance",
@@ -268,3 +271,4 @@ export const publicCallLedgerSchema = z.object({
   calls: z.array(publicCallSchema),
   observedAt: z.iso.datetime(),
 });
+export * from "./signals";

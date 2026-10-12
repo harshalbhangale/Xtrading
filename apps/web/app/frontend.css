@@ -1352,3 +1352,10 @@ textarea:focus-visible {
 .prose-page li + li {
   margin-top: 8px;
 }
+.stake-notice {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid currentColor;
+  background: rgba(0, 0, 0, 0.04);
+  font-size: 0.95rem;
+}

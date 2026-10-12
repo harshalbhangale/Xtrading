@@ -38,3 +38,25 @@ a {
   height: auto;
   margin-bottom: 18px;
 }
+
+#status {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  font-size: 12px;
+}
+#status li {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid #e2e5da;
+}
+#status b.ok {
+  color: #2f6b1d;
+}
+#status b.demo {
+  color: #8a6400;
+}
+#status b.off {
+  color: #a5281b;
+}

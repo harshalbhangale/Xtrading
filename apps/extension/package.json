@@ -8,10 +8,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@call-my-bluff/domain": "workspace:*"
+    "@call-my-bluff/domain": "workspace:*",
+    "zod": "4.6.5"
   },
   "devDependencies": {
-    "esbuild": "0.28.2",
-    "@types/chrome": "^0.1.24"
+    "@types/chrome": "^0.1.24",
+    "esbuild": "0.28.2"
   }
 }
