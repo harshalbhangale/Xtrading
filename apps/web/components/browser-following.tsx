@@ -33,7 +33,7 @@ async function bridge(
       window.removeEventListener("message", onMessage);
       reject(
         new Error(
-          "Reload the Tradepost extension and this dashboard to connect browser sync.",
+          "Reload the Xtrading extension and this dashboard to connect browser sync.",
         ),
       );
     }, 2500);

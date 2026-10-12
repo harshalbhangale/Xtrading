@@ -1,5 +1,5 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { tradepostMcp } from "../../../lib/mcp";
+import { xtradingMcp } from "../../../lib/mcp";
 import { allow, clientKey } from "../../../lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ async function handle(request: Request) {
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
   });
-  const server = tradepostMcp(request);
+  const server = xtradingMcp(request);
   await server.connect(transport);
   try {
     return await transport.handleRequest(request);

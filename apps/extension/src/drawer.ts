@@ -216,7 +216,7 @@ export async function openDrawer(
     {
       class: "drawer",
       role: "dialog",
-      "aria-label": "Tradepost call details",
+      "aria-label": "Xtrading call details",
     },
     el("header", {}, el("strong", {}, `@${signal.handle} · call check`), close),
     body,
