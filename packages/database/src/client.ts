@@ -28,8 +28,14 @@ export function databaseOptions(connectionString: string) {
 
 export function createDatabase(connectionString: string) {
   const { url, options } = databaseOptions(connectionString);
+  // Hosted runtimes pass the public CA bundle inline; local setups use a file path.
+  const caPem = process.env.DATABASE_CA_PEM?.replaceAll("\\n", "\n");
   const caFile = process.env.DATABASE_CA_FILE;
-  if (options.ssl && caFile) {
+  if (options.ssl && caPem) {
+    if (!caPem.trimStart().startsWith("-----BEGIN CERTIFICATE-----"))
+      throw new Error("DATABASE_CA_PEM must be a PEM certificate bundle");
+    Object.assign(options.ssl, { ca: caPem });
+  } else if (options.ssl && caFile) {
     Object.assign(options.ssl, { ca: readFileSync(caFile, "utf8") });
   }
   const sql = postgres(url, options);
