@@ -343,6 +343,9 @@ a { color: inherit; }
 .brand-mark svg { width: 20px; height: 20px; }
 .brand strong { display: block; font-size: 15px; letter-spacing: -0.01em; }
 .brand small { display: block; color: var(--muted); font-size: 12px; }
+.brand-mark { border-radius: 9px; }
+.powered { display: flex; align-items: center; gap: 6px; margin: 12px 0 0; color: var(--muted); font: 600 11px system-ui, sans-serif; }
+.powered-logo { height: 14px; width: auto; filter: invert(1); }
 .drawer header button { width: 32px; height: 32px; border-radius: 8px; color: var(--soft); }
 .drawer header button:hover { background: var(--hover); color: var(--foreground); }
 .section { padding: 16px; border-color: var(--line); }

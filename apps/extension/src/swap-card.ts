@@ -7,7 +7,7 @@ import {
 import { getAddress } from "viem";
 import { appOrigin } from "./config";
 import { directTrade } from "./direct-trade";
-import { el, safeLink, send } from "./dom";
+import { el, poweredBy, safeLink, send } from "./dom";
 import {
   formatPrice,
   kuruPrice,
@@ -518,6 +518,7 @@ export function swapCard(input: {
     );
   } else card.append(header, panel);
   renderTokens();
+  card.append(poweredBy());
   return { card, buy };
 }
 

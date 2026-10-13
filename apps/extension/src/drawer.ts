@@ -10,9 +10,16 @@ import {
   tradeReviewPath,
 } from "@call-my-bluff/domain";
 import { z } from "zod";
-import { markPath } from "./badge";
 import { appOrigin } from "./config";
-import { el, safeLink, send, shadowHost, shortAddress, svg } from "./dom";
+import {
+  assetUrl,
+  el,
+  poweredBy,
+  safeLink,
+  send,
+  shadowHost,
+  shortAddress,
+} from "./dom";
 import { perpTicket } from "./perp-ticket";
 import { reputation, tierLabel } from "./reputation";
 import { spotTicket } from "./spot-ticket";
@@ -239,15 +246,13 @@ export async function openDrawer(
       el(
         "div",
         { class: "brand" },
-        el(
-          "span",
-          { class: "brand-mark", "aria-hidden": "true" },
-          svg(
-            "svg",
-            { viewBox: "0 0 100 100" },
-            svg("path", { fill: "currentColor", d: markPath }),
-          ),
-        ),
+        el("img", {
+          class: "brand-mark",
+          src: assetUrl("icons/icon-48.png"),
+          alt: "",
+          width: "32",
+          height: "32",
+        }),
         el(
           "div",
           {},
@@ -258,6 +263,7 @@ export async function openDrawer(
       close,
     ),
     body,
+    poweredBy(),
   );
   shell.root.append(drawer);
   if (inlineRoot) inlineRoot.append(shell.host);

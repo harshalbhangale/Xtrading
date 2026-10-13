@@ -11,6 +11,7 @@ import {
   el,
   type Metric,
   metricPanel,
+  poweredBy,
   safeLink,
   send,
   shadowHost,
@@ -152,6 +153,7 @@ export async function scanProfile() {
     ),
     overview,
   );
+  card.append(poweredBy());
   root.append(card);
   mountProfileCard(anchor, host);
   if (expanded) toggle();

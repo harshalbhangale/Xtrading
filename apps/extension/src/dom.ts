@@ -31,6 +31,27 @@ export function svg(
   return node;
 }
 
+/** Footer line on every card: the Xtrading wordmark, inverted for the dark brand theme. */
+/** Packaged asset URL; falls back to the relative path where the extension API is absent (tests). */
+export function assetUrl(path: string) {
+  return globalThis.chrome?.runtime?.getURL?.(path) ?? path;
+}
+
+export function poweredBy() {
+  return el(
+    "p",
+    { class: "powered" },
+    "Powered by ",
+    el("img", {
+      class: "powered-logo",
+      src: assetUrl("brand/xtrading-wordmark.png"),
+      alt: "Xtrading",
+      width: "42",
+      height: "14",
+    }),
+  );
+}
+
 export function shadowHost(className: string) {
   const host = document.createElement("span");
   host.className = className;
