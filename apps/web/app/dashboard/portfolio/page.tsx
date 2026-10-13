@@ -5,7 +5,7 @@ import {
   PageHeading,
   Panel,
 } from "../../../components/dashboard/ui";
-import { WalletBalancesControl } from "../../../components/wallet-balances-control";
+import { WalletPanelControl } from "../../../components/wallet-panel-control";
 
 export const metadata: Metadata = { title: "Portfolio" };
 
@@ -14,10 +14,10 @@ export default function PortfolioPage() {
     <>
       <PageHeading
         title="Portfolio"
-        description="Swaps your wallet confirmed, with the transaction and the post that prompted it. Your mainnet balances are read below."
+        description="Swaps your wallet confirmed, with the transaction and the post that prompted it. Deposit to your wallet by QR code and send to any address."
       />
-      <Panel title="Wallet balances">
-        <WalletBalancesControl />
+      <Panel title="Wallet">
+        <WalletPanelControl />
       </Panel>
       <Panel title="Confirmed fills">
         <ActivityControl view="fills" />

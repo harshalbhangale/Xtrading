@@ -17,7 +17,8 @@
     "./token-references": "./src/token-references.ts",
     "./creator-fees": "./src/creator-fees.ts",
     "./envio-events": "./src/envio-events.ts",
-    "./perpl-exchange": "./src/perpl-exchange.ts"
+    "./perpl-exchange": "./src/perpl-exchange.ts",
+    "./wallet": "./src/wallet.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
