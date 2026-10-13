@@ -420,11 +420,11 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
         setReview(await fresh(null));
         return;
       }
-      // Fill records are Envio-backed and testnet-only.
-      if (!mainnet && current.action === "swap" && current.sourcePostId)
+      if (current.action === "swap" && current.sourcePostId)
         await api("/api/trades/record", {
           transactionHash: sent.hash,
           sourcePostId: current.sourcePostId,
+          chainId,
         }).catch(() => undefined);
       if (current.action === "swap" && current.creatorFee) {
         const paid = confirmedCreatorPayment(receipt.logs, {

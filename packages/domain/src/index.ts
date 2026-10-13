@@ -366,6 +366,8 @@ export const recordTradeSchema = z
   .object({
     transactionHash: txHashSchema,
     sourcePostId: z.string().regex(/^[0-9]{1,30}$/),
+    // Explicit network; defaults to testnet for older clients.
+    chainId: z.union([z.literal(10143), z.literal(143)]).default(10143),
   })
   .strict();
 

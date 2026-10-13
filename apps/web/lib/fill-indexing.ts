@@ -7,17 +7,30 @@ import {
   recordTradeSchema,
 } from "@call-my-bluff/domain";
 import {
+  flowAbi,
+  flowEntrypoint,
+} from "@call-my-bluff/integrations/creator-fees";
+import {
   type KuruMarketKey,
+  kuruMainnet,
   kuruUsdc,
+  kuruV1OrderBookAbi,
   kuruV2,
+  mainnetOrderSize,
   orderBookAbi,
 } from "@call-my-bluff/integrations/kuru";
 import { and, eq, inArray } from "drizzle-orm";
-import { type Address, decodeEventLog, getAddress, type Hex } from "viem";
+import {
+  type Address,
+  decodeEventLog,
+  decodeFunctionData,
+  getAddress,
+  type Hex,
+} from "viem";
 import { getDatabase } from "./database";
 import { envioQuery } from "./envio";
 import { identityContext } from "./identity-http";
-import { testnetClient } from "./markets";
+import { mainnetClient, testnetClient } from "./markets";
 
 const marketKeys = new Map<string, KuruMarketKey>(
   (Object.keys(kuruV2.markets) as KuruMarketKey[]).map((key) => [
@@ -178,6 +191,13 @@ export async function recordTrade(request: Request, body: unknown) {
   if (!parsed.success) throw new IdentityError("invalid_trade_record");
   const { wallet, privyUserId } = await boundWallet(request);
   const hash = parsed.data.transactionHash.toLowerCase() as Hex;
+  if (parsed.data.chainId === 143)
+    return recordMainnetTrade({
+      wallet,
+      privyUserId,
+      hash,
+      sourcePostId: parsed.data.sourcePostId,
+    });
   const client = testnetClient();
   const [transaction, receipt] = await Promise.all([
     client.getTransaction({ hash }),
@@ -228,6 +248,93 @@ export async function recordTrade(request: Request, body: unknown) {
     amount: swap.amountInUsed.toString(),
     sourcePostId: parsed.data.sourcePostId,
     transactionHash: hash,
+  });
+  return { recorded: true };
+}
+
+/** Mainnet sell/buy attribution: Kuru order-book market orders and creator-fee Flow buys. */
+function mainnetTradeFromInput(to: string, input: Hex) {
+  if (to === flowEntrypoint.toLowerCase()) {
+    const call = decodeFunctionData({ abi: flowAbi, data: input });
+    if (call.functionName !== "executeSwap") return null;
+    const [intent] = call.args;
+    const key = (Object.keys(kuruMainnet.markets) as KuruMarketKey[]).find(
+      (k) =>
+        kuruMainnet.markets[k].base.address.toLowerCase() ===
+          intent.tokenUserBuys.toLowerCase() &&
+        intent.tokenUserSells.toLowerCase() ===
+          kuruMainnet.quote.address.toLowerCase(),
+    );
+    return key
+      ? { key, side: "buy" as const, amount: intent.amountUserSells }
+      : null;
+  }
+  const key = (Object.keys(kuruMainnet.markets) as KuruMarketKey[]).find(
+    (k) => kuruMainnet.markets[k].market.toLowerCase() === to,
+  );
+  if (!key) return null;
+  const call = decodeFunctionData({ abi: kuruV1OrderBookAbi, data: input });
+  if (
+    call.functionName !== "placeAndExecuteMarketBuy" &&
+    call.functionName !== "placeAndExecuteMarketSell"
+  )
+    return null;
+  const side =
+    call.functionName === "placeAndExecuteMarketBuy" ? "buy" : "sell";
+  const market = kuruMainnet.markets[key];
+  const [precision, decimals] =
+    side === "buy"
+      ? [market.pricePrecision, kuruMainnet.quote.decimals]
+      : [market.sizePrecision, market.base.decimals];
+  // Order size back to input-token units (the spend the book could represent).
+  const amount = (call.args[0] * 10n ** BigInt(decimals)) / precision;
+  mainnetOrderSize({ key, side, amount }); // bounds check
+  return { key, side, amount } as const;
+}
+
+async function recordMainnetTrade(input: {
+  wallet: Address;
+  privyUserId: string;
+  hash: Hex;
+  sourcePostId: string;
+}) {
+  const client = mainnetClient();
+  const [transaction, receipt] = await Promise.all([
+    client.getTransaction({ hash: input.hash }),
+    client.getTransactionReceipt({ hash: input.hash }),
+  ]).catch(() => {
+    throw new IdentityError("transaction_unavailable", 409);
+  });
+  let trade: ReturnType<typeof mainnetTradeFromInput> = null;
+  try {
+    trade = transaction.to
+      ? mainnetTradeFromInput(transaction.to.toLowerCase(), transaction.input)
+      : null;
+  } catch {
+    trade = null;
+  }
+  if (
+    receipt.status !== "success" ||
+    transaction.from.toLowerCase() !== input.wallet.toLowerCase() ||
+    !trade
+  )
+    throw new IdentityError("not_a_confirmed_swap", 409);
+  const database = getDatabase();
+  if (!database) throw new IdentityError("database_unavailable", 503);
+  const [existing] = await database.db
+    .select({ id: tradeIntents.id })
+    .from(tradeIntents)
+    .where(eq(tradeIntents.transactionHash, input.hash))
+    .limit(1);
+  if (existing) return { recorded: false, reason: "already_recorded" };
+  await database.db.insert(tradeIntents).values({
+    privyUserId: input.privyUserId,
+    chainId: 143,
+    market: kuruMainnet.markets[trade.key].market.toLowerCase(),
+    side: trade.side,
+    amount: trade.amount.toString(),
+    sourcePostId: input.sourcePostId,
+    transactionHash: input.hash,
   });
   return { recorded: true };
 }
