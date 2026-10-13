@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { EmptyState } from "./ui";
 
-const storageKey = "cmb.watchlist.v1";
+export const storageKey = "cmb.watchlist.v1";
 const bridgeTimeoutMs = 2500;
 
 type Command =
@@ -18,7 +18,7 @@ type Command =
   | { action: "add" | "remove"; handle: string };
 
 /** Reads or changes the handles the Xtrading extension keeps for this browser. Rejects when it is not connected. */
-function extensionWatchlist(command: Command): Promise<SavedWatchlist> {
+export function extensionWatchlist(command: Command): Promise<SavedWatchlist> {
   const nonce = crypto.randomUUID();
   return new Promise((resolve, reject) => {
     const onMessage = (event: MessageEvent) => {
@@ -48,7 +48,7 @@ function extensionWatchlist(command: Command): Promise<SavedWatchlist> {
 }
 
 /** Browser-only fallback used when the extension is not connected. */
-function readLocalHandles(): string[] {
+export function readLocalHandles(): string[] {
   const stored: unknown = JSON.parse(localStorage.getItem(storageKey) ?? "[]");
   if (
     !Array.isArray(stored) ||

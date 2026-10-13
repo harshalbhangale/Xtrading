@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function TerminalPage() {
-  redirect("/creators");
+  redirect("/dashboard/terminal");
 }

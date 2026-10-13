@@ -8,7 +8,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-async function bridge(
+export async function bridge(
   viewer: string,
   enabled?: boolean,
 ): Promise<BrowserFollowing> {
