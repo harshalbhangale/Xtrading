@@ -159,8 +159,11 @@ Commit verified features separately and update this checklist as they land.
 - [x] Verify atomic buyer/creator payment and failed-trade conservation in three mainnet Foundry fork tests.
 - [x] Decode actual creator payment receipts; registration, indication and submitted transaction are not earnings.
 - [x] Envio mainnet fee/fill projection, canonical-block and freshness checks, authenticated earnings history.
+- [x] Merge with the latest Perpl work, push to `main`, deploy web and extension 0.7.0, and verify live quotes on both networks. Combined checks: 129 application tests, 29 contract tests and three separately enabled mainnet fee-fork tests; GitHub CI passed.
 - [ ] Deploy the updated hosted indexer and configure its new GraphQL endpoint.
 - [ ] Register a creator payout wallet and verify account switching in the live UI.
 - [ ] Reload 0.7.0 and verify feed scrolling, theme changes and inline execution on real X.
 - [ ] Complete an approved funded wallet buy and reconcile buyer receipt, creator payment and indexed history.
 - [ ] Add testnet V2 creator builder fees separately; ordinary testnet swaps remain zero creator fee.
+
+Deployment state: `863999b` was pushed to the `envio` branch, but the Development plan has three active deployments and no free slot. Removing the oldest `80ddb37` deployment needs user approval; keep the current `a2e3a1d` deployment. `CREATOR_FEES_ENABLED` remains unset in production until the new indexer and payout flow are verified. Chrome reload requires a user click; native control was blocked by the locked Mac.

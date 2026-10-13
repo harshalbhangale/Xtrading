@@ -8,7 +8,7 @@ The extension is the primary product surface. On x.com it adds:
 4. **Expand calls & wallet activity** on the profile card: ongoing registered calls and indexed Kuru swaps. Creator-specific Perpl positions remain unavailable until the creator links their own account.
 5. **Optional viewed-follow sync** into Watchlist using local extension storage. It observes profiles and visible rows in your own following list, with no paid X following API. See [setup and limits](browser-following.md).
 
-Ordinary posts remain untouched and author names have no automatically inserted badges. Profile evidence refreshes every minute while the tab is visible; drawer evidence loads when opened.
+Ordinary posts receive no trade cards. Bound authors can show a quiet identity badge; a badge does not establish performance or unique humanity. Profile evidence refreshes every minute while the tab is visible; expanded evidence loads when opened.
 
 Signing never happens in the extension. Spot cards open `/trade/inline` in a compact secure wallet window with the route, amount and explicit chain prefilled. The user reviews balances, gas, minimum received and any selected creator fee before approving. Perp review still uses the dashboard.
 
