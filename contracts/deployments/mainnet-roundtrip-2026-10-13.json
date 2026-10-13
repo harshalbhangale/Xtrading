@@ -1,0 +1,45 @@
+{
+  "mode": "mainnet",
+  "wallet": "0x02cefD0E0547bb176f508380399A982fAb676A92",
+  "before": {
+    "MON": "40.6229762602769",
+    "USDC": "3.895576"
+  },
+  "gasPrice": "204000000000",
+  "gasCapWei": "200000000000000000",
+  "steps": [
+    {
+      "name": "approve",
+      "hash": "0x9671cbe9dbc10cc8880e34d2c9617d64b15fc000404cd246cf304ccb46fc1a71",
+      "status": "success",
+      "gasLimit": "106171",
+      "gasCostWei": "21658884000000000",
+      "block": "112987118"
+    },
+    {
+      "name": "buy",
+      "hash": "0x7b3a5f41719f6c0d7611d0d64da497dd50fb3c2f6c7079c103e33fa6a26392ff",
+      "status": "success",
+      "gasLimit": "352285",
+      "gasCostWei": "71866140000000000",
+      "block": "112987123"
+    },
+    {
+      "name": "sell",
+      "hash": "0x45db923a8a1ee310fd6890df3ad03dd6fcb43cbfcbccf9d3bce5206636c3b289",
+      "status": "success",
+      "gasLimit": "336828",
+      "gasCostWei": "68712912000000000",
+      "block": "112987128"
+    }
+  ],
+  "boughtMonWei": "39823185058300000000",
+  "after": {
+    "MON": "40.4607383242769",
+    "USDC": "3.894421"
+  },
+  "totalGasMON": "0.162237936",
+  "usdcChange": "-0.001155",
+  "monDustWei": "0",
+  "usdcRecovered": "0.998845"
+}

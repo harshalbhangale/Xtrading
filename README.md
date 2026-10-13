@@ -35,6 +35,8 @@ Xtrading deploys **no contracts on mainnet**. Trading and creator fees run on Ku
 
 All five succeeded; total gas 0.1286 MON.
 
+**Second mainnet round trip, 13 October:** exact 1-USDC approval → [MON buy](https://monadvision.com/tx/0x7b3a5f41719f6c0d7611d0d64da497dd50fb3c2f6c7079c103e33fa6a26392ff) → [sell back](https://monadvision.com/tx/0x45db923a8a1ee310fd6890df3ad03dd6fcb43cbfcbccf9d3bce5206636c3b289). Returned 0.998845 USDC; gas 0.162237936 MON under the approved 0.2-MON cap. No creator fee or exchange deposit; remaining book allowance is zero. Receipts: `contracts/deployments/mainnet-roundtrip-2026-10-13.json`. This was scripted execution, not the complete X UI flow.
+
 ### Monad testnet (chain 10143)
 
 | Contract | Address | Deploy tx | Status |
