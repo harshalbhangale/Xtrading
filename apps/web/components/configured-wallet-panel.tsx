@@ -17,6 +17,7 @@ import {
   zeroAddress,
 } from "viem";
 import { monad, monadTestnet } from "viem/chains";
+import { TokenLogo } from "./token-logo";
 import { useWalletSend } from "./use-wallet-send";
 
 type Balances = ReturnType<typeof walletBalancesSchema.parse>;
@@ -52,21 +53,39 @@ const errors: Record<string, string> = {
 // The wallet works on Monad mainnet only.
 const chainId: ChainId = 143;
 const short = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`;
-const tokenInfo: Record<string, { name: string; color: string }> = {
-  MON: { name: "Monad", color: "#836ef9" },
-  USDC: { name: "USD Coin", color: "#2775ca" },
-  WETH: { name: "Wrapped Ether", color: "#627eea" },
-  WBTC: { name: "Wrapped Bitcoin", color: "#f7931a" },
-  cbBTC: { name: "Coinbase Wrapped BTC", color: "#0052ff" },
+const tokenInfo: Record<
+  string,
+  { name: string; places: number; price: string | null }
+> = {
+  MON: { name: "Monad", places: 4, price: "MON" },
+  USDC: { name: "USD Coin", places: 2, price: null },
+  WETH: { name: "Wrapped Ether", places: 6, price: "ETH" },
+  WBTC: { name: "Wrapped Bitcoin", places: 8, price: "BTC" },
+  cbBTC: { name: "Coinbase Wrapped BTC", places: 8, price: "BTC" },
 };
-/** Token units for display: at most six decimals, cut (never rounded up). */
-function amountText(value: string, decimals: number) {
+const group = (whole: string) => whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+/** Token units for display: cut (never rounded up) to the token's places. */
+function amountText(value: string, decimals: number, places = 6) {
   const units = BigInt(value);
   const [whole = "0", fraction = ""] = formatUnits(units, decimals).split(".");
-  const cut = fraction.slice(0, 6).replace(/0+$/, "");
-  if (units > 0n && whole === "0" && !cut) return "<0.000001";
-  return cut ? `${whole}.${cut}` : whole;
+  const cut = fraction.slice(0, places).replace(/0+$/, "").padEnd(2, "0");
+  if (units > 0n && whole === "0" && /^0+$/.test(cut))
+    return `<0.${"0".repeat(places - 1)}1`;
+  return `${group(whole)}.${cut}`;
 }
+const PRICE_PLACES = 8;
+/** USD value in cents from integer token units and a decimal price string. */
+function usdCents(value: string, decimals: number, price: string) {
+  const [whole = "0", fraction = ""] = price.split(".");
+  const scaled = BigInt(
+    whole + fraction.slice(0, PRICE_PLACES).padEnd(PRICE_PLACES, "0"),
+  );
+  return (
+    (BigInt(value) * scaled * 100n) / 10n ** BigInt(decimals + PRICE_PLACES)
+  );
+}
+const usdText = (cents: bigint) =>
+  `$${group((cents / 100n).toString())}.${(cents % 100n).toString().padStart(2, "0")}`;
 
 /**
  * The signed-in user's own wallet: receive by QR code, send to any address.
@@ -92,6 +111,7 @@ export default function ConfiguredWalletPanel() {
   const [notice, setNotice] = useState("");
   const [hash, setHash] = useState<`0x${string}` | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [prices, setPrices] = useState<Record<string, string>>({});
   const owner = useRef(user?.id);
   owner.current = user?.id;
 
@@ -176,14 +196,56 @@ export default function ConfiguredWalletPanel() {
     };
   }, [address]);
 
+  // Kuru mainnet last-trade prices, for display values only.
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/markets/prices")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body: unknown) => {
+        if (cancelled || !body || typeof body !== "object") return;
+        const list = (body as { prices?: unknown }).prices;
+        if (!Array.isArray(list)) return;
+        const next: Record<string, string> = {};
+        for (const p of list)
+          if (
+            typeof p?.asset === "string" &&
+            typeof p?.price === "string" &&
+            /^\d+(\.\d+)?$/.test(p.price)
+          )
+            next[p.asset] = p.price;
+        setPrices(next);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     if (!review) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [review]);
 
-  const selectedToken = balances?.balances.find(
-    (b) => b.token.symbol === token,
+  const held = (balances?.balances ?? []).filter((b) => BigInt(b.balance) > 0n);
+  const selectedToken = held.find((b) => b.token.symbol === token) ?? held[0];
+  const usdValue = (row: {
+    balance: string;
+    token: { symbol: string; decimals: number };
+  }) => {
+    const key = tokenInfo[row.token.symbol]?.price;
+    const price = key === null ? "1" : key ? prices[key] : undefined;
+    return price ? usdCents(row.balance, row.token.decimals, price) : null;
+  };
+  const values = held.map(usdValue);
+  const total = values.every((v) => v !== null)
+    ? values.reduce<bigint>((sum, v) => sum + (v ?? 0n), 0n)
+    : null;
+  const uniqueWallets = wallets.filter(
+    (w, i) =>
+      wallets.findIndex(
+        (x) => x.address.toLowerCase() === w.address.toLowerCase(),
+      ) === i,
   );
   const units = selectedToken
     ? amount.trim()
@@ -201,7 +263,7 @@ export default function ConfiguredWalletPanel() {
       chainId,
       from: address,
       to: getAddress(recipient.trim()),
-      token,
+      token: selectedToken.token.symbol,
       amount: units.toString(),
     };
   }
@@ -348,15 +410,6 @@ export default function ConfiguredWalletPanel() {
   const secondsLeft = review
     ? Math.max(0, Math.ceil((Date.parse(review.expiresAt) - now) / 1000))
     : 0;
-  const tokenBadge = (symbol: string) => (
-    <span
-      className="wlt-token-icon"
-      aria-hidden="true"
-      style={{ background: tokenInfo[symbol]?.color ?? "var(--raised)" }}
-    >
-      {symbol.replace(/^cb/, "").slice(0, 1)}
-    </span>
-  );
   return (
     <div className="wlt">
       <header className="wlt-head">
@@ -395,7 +448,7 @@ export default function ConfiguredWalletPanel() {
         </span>
       </header>
 
-      {wallets.length > 1 && (
+      {uniqueWallets.length > 1 && (
         <label className="wlt-field wlt-switch">
           <span>Wallet</span>
           <select
@@ -403,7 +456,7 @@ export default function ConfiguredWalletPanel() {
             disabled={busy}
             onChange={(event) => setSelected(event.target.value)}
           >
-            {wallets.map((w) => (
+            {uniqueWallets.map((w) => (
               <option key={w.address} value={w.address}>
                 {short(w.address)} ·{" "}
                 {w.walletClientType === "privy"
@@ -417,7 +470,12 @@ export default function ConfiguredWalletPanel() {
 
       <section className="wlt-assets" aria-label="Balances">
         <div className="wlt-assets-head">
-          <span>Assets</span>
+          <span>
+            Assets
+            {total !== null && held.length > 0 && (
+              <strong className="wlt-total">{usdText(total)}</strong>
+            )}
+          </span>
           <button
             type="button"
             className="wlt-refresh"
@@ -427,28 +485,36 @@ export default function ConfiguredWalletPanel() {
             ↻ {balances ? `Block ${balances.blockNumber}` : "Refresh"}
           </button>
         </div>
-        {balances ? (
-          <ul>
-            {balances.balances.map((row) => {
-              const zero = BigInt(row.balance) === 0n;
-              return (
-                <li key={row.token.address} data-zero={zero || undefined}>
-                  {tokenBadge(row.token.symbol)}
-                  <span className="wlt-token-name">
-                    <strong>{row.token.symbol}</strong>
-                    <small>
-                      {tokenInfo[row.token.symbol]?.name ?? "Token"}
-                    </small>
-                  </span>
-                  <span className="wlt-token-amount">
-                    {amountText(row.balance, row.token.decimals)}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
+        {!balances ? (
           <p className="wlt-assets-empty">{loadError || "Reading balances…"}</p>
+        ) : held.length === 0 ? (
+          <p className="wlt-assets-empty">
+            No assets yet. Deposit to get started.
+          </p>
+        ) : (
+          <ul>
+            {held.map((row, index) => (
+              <li key={row.token.address}>
+                <TokenLogo symbol={row.token.symbol} />
+                <span className="wlt-token-name">
+                  <strong>{row.token.symbol}</strong>
+                  <small>{tokenInfo[row.token.symbol]?.name ?? "Token"}</small>
+                </span>
+                <span className="wlt-token-amount">
+                  <strong>
+                    {amountText(
+                      row.balance,
+                      row.token.decimals,
+                      tokenInfo[row.token.symbol]?.places,
+                    )}
+                  </strong>
+                  {values[index] != null && (
+                    <small>{usdText(values[index] as bigint)}</small>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 
@@ -500,14 +566,14 @@ export default function ConfiguredWalletPanel() {
             <label className="wlt-field">
               <span>Token</span>
               <select
-                value={token}
+                value={selectedToken?.token.symbol ?? ""}
                 disabled={busy}
                 onChange={(event) => {
                   setToken(event.target.value);
                   setReview(null);
                 }}
               >
-                {(balances?.balances ?? []).map((row) => (
+                {held.map((row) => (
                   <option key={row.token.address} value={row.token.symbol}>
                     {row.token.symbol}
                   </option>
@@ -523,6 +589,7 @@ export default function ConfiguredWalletPanel() {
                     {amountText(
                       selectedToken.balance,
                       selectedToken.token.decimals,
+                      tokenInfo[selectedToken.token.symbol]?.places,
                     )}{" "}
                     {selectedToken.token.symbol}
                   </small>
@@ -582,7 +649,7 @@ export default function ConfiguredWalletPanel() {
           {review ? (
             <div className="wlt-review">
               <p className="wlt-review-amount">
-                {tokenBadge(review.token.symbol)}
+                <TokenLogo symbol={review.token.symbol} size={32} />
                 <strong>
                   {formatUnits(BigInt(review.amount), review.token.decimals)}{" "}
                   {review.token.symbol}
