@@ -129,11 +129,92 @@ export const postSignalResponseSchema = z.object({
 });
 
 export const nansenFindingSchema = z.object({
-  kind: z.enum(["sold-asset", "bought-asset", "no-activity", "note"]),
+  kind: z.enum([
+    "sold-asset",
+    "bought-asset",
+    "no-activity",
+    "note",
+    // Positioned with the call before posting, then exited against it after.
+    "front-run",
+    "perp-long",
+    "perp-short",
+  ]),
   summary: z.string().max(300),
   transactionHash: z.string().max(100).nullable(),
   observedAt: z.string().max(40).nullable(),
+  // Nansen chain name, or "hyperliquid" for perp trades.
+  chain: z.string().max(20).nullable().optional(),
+  // Whether this trade went with or against the stated direction.
+  stance: z.enum(["with", "against"]).nullable().optional(),
+  valueUsd: z.number().finite().nullable().optional(),
 });
+
+/** One Nansen request made (or deliberately skipped) for this check. */
+export const nansenSourceSchema = z.object({
+  endpoint: z.string().max(60),
+  chain: z.string().max(20).nullable(),
+  status: z.enum(["ok", "empty", "failed", "skipped"]),
+  note: z.string().max(160).nullable(),
+});
+export type NansenSource = z.infer<typeof nansenSourceSchema>;
+
+/** Observations about the token or wallet. "caution" is still not proof of intent. */
+export const nansenFlagSchema = z.object({
+  kind: z.enum([
+    "holder-concentration",
+    "smart-money-exit",
+    "whale-exit",
+    "fresh-wallet-inflow",
+    "creator-sold-after-call",
+    "linked-wallet-sold",
+    "creator-took-profit",
+    "young-token",
+    "thin-liquidity",
+  ]),
+  severity: z.enum(["info", "caution"]),
+  summary: z.string().max(300),
+});
+export type NansenFlag = z.infer<typeof nansenFlagSchema>;
+
+const usd = z.number().finite().nullable();
+export const nansenTokenSchema = z.object({
+  chain: z.string().max(20),
+  address: z.string().max(64),
+  symbol: z.string().max(24).nullable(),
+  name: z.string().max(80).nullable(),
+  // "post" when the address came from the post text; "major" for BTC/ETH/MON wrappers.
+  origin: z.enum(["post", "major"]),
+  marketCapUsd: usd,
+  liquidityUsd: usd,
+  holders: z.number().int().nonnegative().nullable(),
+  deployedAt: z.string().max(40).nullable(),
+  // Top 10 holders excluding labelled exchanges and pools, as % of total supply.
+  topHoldersPct: z.number().finite().min(0).max(100).nullable(),
+  flows: z
+    .object({
+      timeframe: z.string().max(4),
+      smartTraderNetUsd: usd,
+      whaleNetUsd: usd,
+      publicFigureNetUsd: usd,
+      freshWalletsNetUsd: usd,
+      exchangeNetUsd: usd,
+    })
+    .nullable(),
+  // Largest net sellers from the call time to 48 hours after.
+  sellersAfterCall: z
+    .array(
+      z.object({
+        address: z.string().max(64),
+        label: z.string().max(80).nullable(),
+        soldUsd: z.number().finite(),
+        boughtUsd: z.number().finite(),
+        isCreator: z.boolean(),
+        isLinked: z.boolean(),
+      }),
+    )
+    .max(5),
+});
+export type NansenToken = z.infer<typeof nansenTokenSchema>;
 
 export const nansenCheckSchema = z.object({
   mode: providerModeSchema,
@@ -153,6 +234,40 @@ export const nansenCheckSchema = z.object({
   findings: z.array(nansenFindingSchema).max(10),
   note: z.string().max(400),
   observedAt: z.iso.datetime(),
+  // Post time from the X post ID; the wallet window is centred on it.
+  callAt: z.iso.datetime().nullable().optional(),
+  chains: z.array(z.string().max(20)).max(6).optional(),
+  token: nansenTokenSchema.nullable().optional(),
+  flags: z.array(nansenFlagSchema).max(10).optional(),
+  // Actual wallet returns: separate from call outcomes and from identity.
+  walletPnl: z
+    .object({
+      window: z.object({ from: z.iso.datetime(), to: z.iso.datetime() }),
+      realizedUsd: usd,
+      tradedTokens: z.number().int().nonnegative().nullable(),
+      onToken: z
+        .object({
+          realizedUsd: usd,
+          unrealizedUsd: usd,
+          stillHoldingRatio: z.number().finite().nullable(),
+        })
+        .nullable(),
+    })
+    .nullable()
+    .optional(),
+  // Funding/deployment links Nansen reports. Possible links, never identity.
+  related: z
+    .array(
+      z.object({
+        address: z.string().max(64),
+        label: z.string().max(80).nullable(),
+        relation: z.string().max(60),
+        chain: z.string().max(20),
+      }),
+    )
+    .max(10)
+    .optional(),
+  sources: z.array(nansenSourceSchema).max(24).optional(),
 });
 export type NansenCheck = z.infer<typeof nansenCheckSchema>;
 

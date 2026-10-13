@@ -10,6 +10,9 @@ const verdictLabel: Record<string, string> = {
   unavailable: "Unavailable",
 };
 
+const usd = (value: number) =>
+  `${value < 0 ? "-" : ""}$${Math.round(Math.abs(value)).toLocaleString("en-US")}`;
+
 /** Server-rendered context for the post a trade came from. Observations, not advice. */
 export async function SourceCall({
   handle: rawHandle,
@@ -24,9 +27,13 @@ export async function SourceCall({
 }) {
   const handle = normalizeHandle(rawHandle);
   if (!handle || !/^[0-9]{1,30}$/.test(postId)) return null;
-  const insights = await creatorInsights(handle, asset, direction).catch(
-    () => null,
-  );
+  const insights = await creatorInsights(
+    handle,
+    asset,
+    direction,
+    postId,
+  ).catch(() => null);
+  const nansen = insights?.nansen;
   return (
     <Panel
       title={`Source call · @${handle}`}
@@ -79,6 +86,79 @@ export async function SourceCall({
               <small>{insights.nansen.note}</small>
             </dd>
           </div>
+          {nansen?.token ? (
+            <div>
+              <dt>
+                Token · {nansen.token.symbol ?? "unknown"} on{" "}
+                {nansen.token.chain}
+              </dt>
+              <dd>
+                {nansen.token.topHoldersPct === null
+                  ? "Holder concentration unavailable"
+                  : `Top 10 holders: ${nansen.token.topHoldersPct.toFixed(1)}% of supply`}
+                {nansen.flags?.length ? (
+                  nansen.flags.map((flag) => (
+                    <span key={flag.kind}>
+                      <br />
+                      {flag.severity === "caution" ? "⚠ " : ""}
+                      {flag.summary}
+                    </span>
+                  ))
+                ) : (
+                  <>
+                    <br />
+                    No token flags from the data returned.
+                  </>
+                )}
+              </dd>
+            </div>
+          ) : null}
+          {nansen?.walletPnl ? (
+            <div>
+              <dt>Wallet returns (90 days, all chains)</dt>
+              <dd>
+                {nansen.walletPnl.realizedUsd === null
+                  ? "Realized PnL unavailable"
+                  : `Realized PnL ${usd(nansen.walletPnl.realizedUsd)}`}
+                {nansen.walletPnl.tradedTokens === null
+                  ? ""
+                  : ` · ${nansen.walletPnl.tradedTokens} tokens traded`}
+                <br />
+                <small>
+                  Actual wallet returns, separate from call outcomes.
+                </small>
+              </dd>
+            </div>
+          ) : null}
+          {nansen?.related?.length ? (
+            <div>
+              <dt>Possibly linked wallets</dt>
+              <dd>
+                {nansen.related.slice(0, 3).map((r) => (
+                  <span key={r.address}>
+                    {r.relation} · {r.label ?? r.address}
+                    <br />
+                  </span>
+                ))}
+                <small>A Nansen relation is not proof of control.</small>
+              </dd>
+            </div>
+          ) : null}
+          {nansen?.sources?.length ? (
+            <div>
+              <dt>Nansen requests</dt>
+              <dd>
+                <small>
+                  {nansen.sources
+                    .map(
+                      (src) =>
+                        `${src.endpoint}${src.chain ? ` (${src.chain})` : ""}: ${src.status}`,
+                    )
+                    .join(" · ")}
+                </small>
+              </dd>
+            </div>
+          ) : null}
         </dl>
       ) : (
         <p>Creator context is unavailable.</p>

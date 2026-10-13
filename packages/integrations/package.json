@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./nansen": "./src/nansen.ts",
+    "./nansen-evidence": "./src/nansen-evidence.ts",
     "./stake": "./src/stake.ts",
     "./routing": "./src/routing.ts",
     "./kuru": "./src/kuru.ts",

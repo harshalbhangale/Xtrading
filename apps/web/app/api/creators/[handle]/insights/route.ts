@@ -18,11 +18,15 @@ export async function GET(
     directionParam === "bullish" || directionParam === "bearish"
       ? directionParam
       : null;
+  const postParam = url.searchParams.get("post");
+  const postId =
+    postParam && /^[0-9]{1,30}$/.test(postParam) ? postParam : null;
   try {
     const value = await creatorInsights(
       (await params).handle,
       asset,
       direction,
+      postId,
     );
     return value ? reply(value) : reply({ error: "invalid_handle" }, 400);
   } catch {

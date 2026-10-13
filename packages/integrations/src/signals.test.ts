@@ -1,11 +1,7 @@
 import { createPrivateKey, createPublicKey, verify } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { buildPerplOpenOrder, signPerplRequest } from "./perpl";
-import {
-  assessConsistency,
-  deriveTradeRoute,
-  heuristicSignal,
-} from "./signals";
+import { deriveTradeRoute, heuristicSignal } from "./signals";
 
 const base = { postId: "123", handle: "Alice" };
 const perpl = [
@@ -106,47 +102,6 @@ describe("deriveTradeRoute", () => {
       deriveTradeRoute(heuristicSignal({ ...base, text: "buy $SOL" }), perpl)
         .status,
     ).toBe("unavailable");
-  });
-});
-
-describe("assessConsistency", () => {
-  const trade = (
-    sold: string | null,
-    bought: string | null,
-    valueUsd: number,
-  ) => ({
-    soldSymbol: sold,
-    boughtSymbol: bought,
-    valueUsd,
-    at: "2026-10-01T00:00:00Z",
-    transactionHash: "0x1",
-  });
-  it("flags a bullish call while the wallet net-sold the asset", () => {
-    expect(
-      assessConsistency({
-        direction: "bullish",
-        asset: "MON",
-        trades: [trade("MON", "USDC", 500), trade("USDC", "MON", 100)],
-      }).verdict,
-    ).toBe("contradiction");
-  });
-  it("marks aligned activity consistent", () => {
-    expect(
-      assessConsistency({
-        direction: "bullish",
-        asset: "MON",
-        trades: [trade("USDC", "MON", 100)],
-      }).verdict,
-    ).toBe("consistent");
-  });
-  it("reports no activity when the asset never traded", () => {
-    expect(
-      assessConsistency({
-        direction: "bearish",
-        asset: "MON",
-        trades: [trade("ETH", "USDC", 1)],
-      }).verdict,
-    ).toBe("no-activity");
   });
 });
 

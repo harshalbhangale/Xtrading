@@ -259,6 +259,11 @@ function handleMessage(
       params.set("asset", message.asset);
     if (message.direction === "bullish" || message.direction === "bearish")
       params.set("direction", message.direction);
+    if (
+      typeof message.postId === "string" &&
+      /^[0-9]{1,30}$/.test(message.postId)
+    )
+      params.set("post", message.postId);
     return cached(`insights:${handle}:${params}`, 30000, () =>
       getJson(`/api/creators/${encodeURIComponent(handle)}/insights?${params}`),
     );

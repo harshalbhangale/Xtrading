@@ -18,6 +18,7 @@ import {
   shortAddress,
 } from "./dom";
 import { type Insights, loadInsights } from "./drawer";
+import { EXPLORERS } from "./nansen-panel";
 import { renderOverview } from "./overview";
 import { reputation, seriousFlags, tierLabel } from "./reputation";
 
@@ -356,7 +357,12 @@ async function sayDid(handle: string, insights: Insights): Promise<Metric> {
   const none = (reason: string): Metric => ({ label, value: null, reason });
   const latest = insights.reputation.recent[0];
   if (!latest?.asset || !latest.direction) return none("no directional call");
-  const checked = await loadInsights(handle, latest.asset, latest.direction);
+  const checked = await loadInsights(
+    handle,
+    latest.asset,
+    latest.direction,
+    latest.postId,
+  );
   const check = checked?.nansen;
   if (!check || check.mode === "unavailable" || check.verdict === "unavailable")
     return none("Nansen unavailable");
@@ -371,14 +377,16 @@ async function sayDid(handle: string, insights: Insights): Promise<Metric> {
       month: "short",
       day: "numeric",
     });
+  const chains = check.chains?.length ? check.chains.join(", ") : check.chain;
+  const span = check.callAt ? "around the post" : "30 days";
   const context = el(
     "small",
     { class: "metric-sub" },
     `${latest.direction} ${latest.asset} post${posted ? ` · ${ago(posted)}` : ""} `,
     safeLink(`https://x.com/${handle}/status/${latest.postId}`, "view ↗"),
     check.window
-      ? ` · ${check.chain} wallet, ${day(check.window.from)}–${day(check.window.to)}`
-      : ` · ${check.chain} wallet`,
+      ? ` · ${chains} wallet, ${day(check.window.from)}–${day(check.window.to)}`
+      : ` · ${chains} wallet`,
   );
   if (check.verdict === "no-activity")
     return {
@@ -386,18 +394,21 @@ async function sayDid(handle: string, insights: Insights): Promise<Metric> {
       value: el(
         "span",
         {},
-        `No ${latest.asset} trades by this wallet in 30 days`,
+        `No ${latest.asset} trades by this wallet (${span})`,
         context,
       ),
     };
   const bad = check.verdict === "contradiction";
   const text = bad
-    ? `Wallet net ${latest.direction === "bullish" ? "sold" : "bought"} ${latest.asset} vs the call (30 days)`
-    : `Wallet traded ${latest.asset} in line with the call (30 days)`;
-  const tx = check.findings.find((finding) => finding.transactionHash);
-  const explorer = /test/i.test(check.chain)
-    ? "https://testnet.monadvision.com"
-    : "https://monadvision.com";
+    ? check.findings.some((f) => f.kind === "front-run")
+      ? `Wallet positioned before the post, then exited against it`
+      : `Wallet net ${latest.direction === "bullish" ? "sold" : "bought"} ${latest.asset} vs the call (${span})`
+    : `Wallet traded ${latest.asset} in line with the call (${span})`;
+  const tx = check.findings.find(
+    (finding) =>
+      finding.transactionHash && EXPLORERS[finding.chain ?? check.chain],
+  );
+  const explorer = EXPLORERS[tx?.chain ?? check.chain];
   return {
     label,
     tone: bad ? "bad" : "good",
@@ -405,7 +416,9 @@ async function sayDid(handle: string, insights: Insights): Promise<Metric> {
       "span",
       {},
       text,
-      tx?.transactionHash && /^0x[0-9a-fA-F]{64}$/.test(tx.transactionHash)
+      explorer &&
+        tx?.transactionHash &&
+        /^0x[0-9a-fA-F]{64}$/.test(tx.transactionHash)
         ? safeLink(`${explorer}/tx/${tx.transactionHash}`, " tx ↗")
         : null,
       context,

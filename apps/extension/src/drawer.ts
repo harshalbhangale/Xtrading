@@ -1,6 +1,5 @@
 import {
   type KolReputation,
-  type NansenCheck,
   nansenCheckSchema,
   type PostSignal,
   publicCreatorEvidenceSchema,
@@ -20,6 +19,7 @@ import {
   shadowHost,
   shortAddress,
 } from "./dom";
+import { nansenPanel } from "./nansen-panel";
 import { perpTicket } from "./perp-ticket";
 import { reputation, tierLabel } from "./reputation";
 import { spotTicket } from "./spot-ticket";
@@ -36,12 +36,14 @@ export function loadInsights(
   handle: string,
   asset: string | null,
   direction: string | null,
+  postId: string | null = null,
 ) {
   return send<unknown>({
     type: "creator-insights",
     handle,
     asset,
     direction,
+    postId,
   }).then((raw) => {
     const parsed = insightsSchema.safeParse(raw);
     return parsed.success ? parsed.data : null;
@@ -136,36 +138,6 @@ const row = (label: string, value: string) =>
   el("div", { class: "row" }, el("span", {}, label), el("span", {}, value));
 const section = (title: string, ...children: Array<Node | false | null>) =>
   el("div", { class: "section" }, el("h3", {}, title), ...children);
-
-function nansenSection(check: NansenCheck) {
-  const verdict: Record<NansenCheck["verdict"], [string, string]> = {
-    contradiction: ["Contradiction observed", "contradiction"],
-    consistent: ["Consistent with the call", "consistent"],
-    "no-activity": ["No matching wallet activity", "neutral"],
-    "not-applicable": ["Not applicable", "neutral"],
-    unavailable: ["Unavailable", "neutral"],
-  };
-  const [label, tone] = verdict[check.verdict];
-  const heading = el("div", {}, el("span", { class: `pill ${tone}` }, label));
-  if (check.mode === "demo")
-    heading.append(el("span", { class: "tag" }, "DEMO DATA"));
-  return section(
-    "Nansen wallet check",
-    heading,
-    ...check.findings.map((finding) =>
-      el(
-        "div",
-        { class: "finding" },
-        finding.summary,
-        finding.observedAt
-          ? el("div", { class: "note" }, finding.observedAt)
-          : null,
-      ),
-    ),
-    check.wallet ? row("Wallet", shortAddress(check.wallet)) : null,
-    el("p", { class: "note" }, check.note),
-  );
-}
 
 function reputationSection(
   reputation: Reputation,
@@ -340,7 +312,7 @@ export async function openDrawer(
   const loading = el(
     "div",
     { class: "section" },
-    el("p", { class: "note" }, "Loading creator record and Nansen check…"),
+    el("p", { class: "note" }, "Loading Nansen check and creator record…"),
   );
   const network = el("div", { class: "section network" });
   const choices = el("div", {
@@ -389,18 +361,18 @@ export async function openDrawer(
   body.append(network, trade, call, loading);
 
   const [insights, tier] = await Promise.all([
-    loadInsights(signal.handle, signal.asset, signal.direction),
+    loadInsights(signal.handle, signal.asset, signal.direction, postId),
     reputation(signal.handle),
   ]);
   if (current !== shell) return;
+  if (insights) loading.before(nansenPanel(insights.nansen));
   loading.replaceWith(
     insights
       ? el(
           "details",
           { class: "evidence-details" },
-          el("summary", {}, "Creator record and Nansen evidence"),
+          el("summary", {}, "Creator record"),
           reputationSection(insights.reputation, insights, tier),
-          nansenSection(insights.nansen),
         )
       : section(
           "Creator",
