@@ -72,7 +72,7 @@ export const spotPriceSchema = z.object({
     .nullable(),
   sparkline: z.array(decimalText).max(48),
   source: z.literal("kuru-mainnet"),
-  sparklineSource: z.literal("binance-1h").nullable(),
+  sparklineSource: z.enum(["kuru-book-1h", "binance-1h"]).nullable(),
   lastTradeAt: z.iso.datetime().nullable(),
 });
 export const spotPricesSchema = z.object({

@@ -1,6 +1,8 @@
 import { spotPrices } from "../../../../lib/prices";
 
 export const dynamic = "force-dynamic";
+// Cold reads fetch 25 historical order-book snapshots per market.
+export const maxDuration = 30;
 /** Public display prices (Kuru mainnet last trade + 24h change). */
 export async function GET() {
   try {
