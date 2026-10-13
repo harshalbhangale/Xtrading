@@ -8,6 +8,7 @@ import { addPostBadge } from "./creator-badge";
 import { el, safeLink, send, shadowHost } from "./dom";
 import { openDrawer } from "./drawer";
 import { observeFollowing } from "./follow-observer";
+import { inlineMarket, inlineTrade } from "./inline-trade";
 import { postImages } from "./post-media";
 import { scanProfile } from "./profile";
 
@@ -50,6 +51,18 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
   if (article.querySelector(".cmb-signal-host")) return;
   const { signal, route } = parsed.data;
   const { host, root } = shadowHost("cmb-signal-host");
+  host.dataset.postId = postId;
+  if (
+    inlineMarket(signal) &&
+    route.status === "available" &&
+    route.instrument === "spot"
+  ) {
+    root.append(inlineTrade(signal, route));
+    host.addEventListener("click", (event) => event.stopPropagation());
+    rendered.add(article);
+    textNode.after(host);
+    return;
+  }
   const open = el(
     "button",
     { class: "btn", type: "button" },
@@ -127,9 +140,12 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
   // Clicks inside the bar must not open the post.
   host.addEventListener("click", (e) => e.stopPropagation());
   textNode.after(host);
+  rendered.add(article);
 }
 
 const seen = new WeakMap<HTMLElement, string>();
+const seenText = new WeakMap<HTMLElement, string>();
+const rendered = new WeakSet<HTMLElement>();
 const visible = new IntersectionObserver(
   (entries) => {
     for (const entry of entries) {
@@ -152,9 +168,20 @@ function scanPosts() {
     const id = postIdentity(article);
     if (!id) continue;
     const key = `${id.handle}:${id.postId}`;
-    if (seen.get(article) === key) continue;
+    const text =
+      article
+        .querySelector<HTMLElement>('[data-testid="tweetText"]')
+        ?.innerText.trim() ?? "";
+    if (
+      seen.get(article) === key &&
+      seenText.get(article) === text &&
+      (!rendered.has(article) || article.querySelector(".cmb-signal-host"))
+    )
+      continue;
     // X recycles article nodes while scrolling; clear our UI when the post changes.
     seen.set(article, key);
+    seenText.set(article, text);
+    rendered.delete(article);
     for (const stale of article.querySelectorAll(
       ".cmb-signal-host, .cmb-badge-host",
     ))

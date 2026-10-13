@@ -204,4 +204,37 @@ a { color: inherit; }
 @media (max-width: 720px) {
   .drawer { top: auto; bottom: 0; width: 100vw; height: 88dvh; border: 1px solid var(--line); border-radius: 18px 18px 0 0; }
 }
+
+:host(.cmb-signal-host) { display: block; width: 100%; }
+.inline-card { font: 14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color: var(--foreground); background: var(--surface); border: 1px solid var(--line); border-radius: 18px; margin: 12px 0 4px; overflow: hidden; }
+.inline-card [hidden] { display: none !important; }
+.inline-header { display: flex; align-items: center; gap: 12px; padding: 16px; }
+.asset-icon { width: 42px; height: 42px; background: var(--raised); border: 1px solid var(--line); border-radius: 50%; display: grid; place-items: center; font-size: 26px; flex-shrink: 0; }
+.inline-asset { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.inline-asset strong { font-size: 17px; }
+.inline-price, .inline-note { font-size: 12px; color: var(--muted); margin: 4px 0; }
+.inline-buy,.inline-close { cursor: pointer; border-radius: 99px; padding: 8px 15px; font: 700 14px/1.3 inherit; border: 1px solid var(--line); white-space: nowrap; }
+.inline-buy { background: var(--foreground); color: var(--surface); }
+.inline-close { background: transparent; color: var(--foreground); }
+.inline-panel { padding: 16px; border-top: 1px solid var(--line); }
+.inline-controls { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.inline-sides { display: flex; border-radius: 99px; border: 1px solid var(--line); padding: 3px; }
+.inline-sides button { padding: 7px 16px; cursor: pointer; border: 0; border-radius: 99px; color: var(--muted); background: transparent; font-weight: 700; }
+.inline-sides button[aria-pressed="true"] { background: var(--foreground); color: var(--surface); }
+.inline-network { border: 1px solid var(--line); background: var(--surface); color: var(--foreground); border-radius: 99px; padding: 8px; font: inherit; font-size: 12px; max-width: 100%; }
+.inline-pay,.inline-receive { display: block; border-radius: 16px; border: 1px solid var(--line); padding: 14px; margin-bottom: 8px; background: var(--raised); }
+.inline-pay:focus-within { border-color: #1d9bf0; outline: 1px solid #1d9bf0; }
+.inline-value { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.inline-amount { border: none; background: transparent; color: var(--foreground); min-width: 0; width: 100%; font-family: inherit; font-weight: 700; line-height: 1.5; outline: none; font-size: 30px; }
+.inline-output { font-size: 27px; overflow-wrap: anywhere; }
+.inline-symbol { font-size: 17px; font-weight: 700; flex-shrink: 0; }
+.inline-submit { width: 100%; border: 0; border-radius: 99px; margin-top: 12px; padding: 14px; background: var(--foreground); color: var(--surface); font-size: 16px; font-weight: 700; cursor: pointer; }
+.inline-submit:disabled { opacity: .4; cursor: not-allowed; }
+.inline-analytics { padding: 12px 16px; border-top: 1px solid var(--line); }
+.inline-analytics summary { cursor: pointer; font-weight: 600; font-size: 12px; }
+.inline-evidence { padding-top: 8px; }
+.inline-footer { display: flex; justify-content: space-between; gap: 8px; padding: 8px 16px; color: var(--muted); font-size: 11px; }
+.inline-fee { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--muted); margin-top: 10px; }
+.inline-card a { color: #1d9bf0; }
+.inline-card button:focus-visible,.inline-card select:focus-visible,.inline-card summary:focus-visible { outline: 2px solid #1d9bf0; outline-offset: 3px; }
 `;

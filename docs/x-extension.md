@@ -2,15 +2,17 @@
 
 The extension is the primary product surface. On x.com it adds:
 
-1. **Signal bars** under detected trading calls or explicit token-address mentions: asset, direction, spot/perp and venue, with **View post** and separate buy/sell review links. Address-only mentions are not scored calls.
+1. **Inline spot cards** under supported trading calls: ticker and live book price, expanding into Buy/Sell amounts, explicit testnet/mainnet choice and secure wallet review. Unknown addresses and explicit perp calls retain a details entry; address-only mentions are not scored calls.
 2. **A profile-header card** on X profile pages with separate recorded binding, refundable stake, detected-call count and pending score; it links to the creator dashboard. Untracked accounts show missing evidence honestly.
-3. **A call-check drawer**, opened only when the user clicks: the post, separate creator identity/stake/call evidence, Nansen wallet observations and the venue route, with **Review trade in app ↗**.
+3. **Expandable creator evidence**, separate from the swap form: linked account, call count/performance, sourced Nansen observations and creator dashboard. Details for unsupported/perp routes open inside the post rather than a fixed sidebar.
 4. **Expand calls & wallet activity** on the profile card: ongoing registered calls and indexed Kuru swaps. Creator-specific Perpl positions remain unavailable until the creator links their own account.
 5. **Optional viewed-follow sync** into Watchlist using local extension storage. It observes profiles and visible rows in your own following list, with no paid X following API. See [setup and limits](browser-following.md).
 
 Ordinary posts remain untouched and author names have no automatically inserted badges. Profile evidence refreshes every minute while the tab is visible; drawer evidence loads when opened.
 
-Signing never happens in the extension. The drawer opens `/dashboard/trade` with the route prefilled; the user sets amounts and approves in the app.
+Signing never happens in the extension. Spot cards open `/trade/inline` in a compact secure wallet window with the route, amount and explicit chain prefilled. The user reviews balances, gas, minimum received and any selected creator fee before approving. Perp review still uses the dashboard.
+
+Creator fees require opt-in payout registration and server enablement. Eligible mainnet buys offer 0.5% of bought-token output to the registered creator; testnet and ordinary fee-disabled swaps charge no creator fee. Identity control, call performance and actual wallet returns remain distinct. Source attribution is browser-supplied. Version 0.7.0 has automated expiry, stale-response, amount, fee-output and X-rerender coverage; real-X validation still needs Chrome reload.
 
 ## Flow
 

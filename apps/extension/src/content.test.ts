@@ -22,6 +22,7 @@ const response = (text: string) => ({
   llm: "unavailable",
 });
 let sendMessage = vi.fn<(message: { type: string }) => Promise<unknown>>();
+let mutation: () => void = () => {};
 const flush = async () => {
   for (let i = 0; i < 10; i++) await Promise.resolve();
 };
@@ -43,6 +44,9 @@ beforeEach(() => {
   vi.stubGlobal(
     "MutationObserver",
     class {
+      constructor(callback: () => void) {
+        mutation = callback;
+      }
       observe() {}
     },
   );
@@ -204,7 +208,7 @@ it("keeps address-only posts out of scored calls and disables unknown token trad
   expect(response(text).signal.isCall).toBe(false);
 });
 
-it("offers separate buy and sell review links for a configured spot market", async () => {
+it("expands buy and sell inline without opening a sidebar", async () => {
   const signal = response("buy $ETH").signal;
   sendMessage.mockResolvedValue({
     signal,
@@ -213,17 +217,31 @@ it("offers separate buy and sell review links for a configured spot market", asy
   });
   await import("./content");
   await flush();
-  const links = document
-    .querySelector(".cmb-signal-host")
-    ?.shadowRoot?.querySelectorAll<HTMLAnchorElement>(
-      'a[href*="/dashboard/trade?"]',
-    );
-  expect(links).toHaveLength(2);
-  expect(
-    Array.from(links ?? []).map((link) =>
-      new URL(link.href).searchParams.get("side"),
-    ),
-  ).toEqual(["buy", "sell"]);
+  const root = document.querySelector(".cmb-signal-host")?.shadowRoot;
+  expect(root?.querySelector(".inline-card")).not.toBeNull();
+  expect(root?.querySelector<HTMLElement>(".inline-panel")?.hidden).toBe(true);
+  root?.querySelector<HTMLElement>(".inline-buy")?.click();
+  expect(root?.querySelector<HTMLElement>(".inline-panel")?.hidden).toBe(false);
+  expect(root?.querySelectorAll(".inline-sides button")).toHaveLength(2);
+  expect(openDrawer).not.toHaveBeenCalled();
+});
+
+it("restores a card removed by an X rerender without duplicating it", async () => {
+  const signal = response("buy $ETH").signal;
+  sendMessage.mockResolvedValue({
+    signal,
+    route: deriveTradeRoute(signal, []),
+    llm: "unavailable",
+  });
+  await import("./content");
+  await flush();
+  document.querySelector(".cmb-signal-host")?.remove();
+  mutation();
+  await flush();
+  expect(document.querySelectorAll(".cmb-signal-host")).toHaveLength(1);
+  mutation();
+  await flush();
+  expect(document.querySelectorAll(".cmb-signal-host")).toHaveLength(1);
 });
 
 it("discards profile evidence if navigation changes before the response", async () => {

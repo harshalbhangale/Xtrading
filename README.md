@@ -1,6 +1,6 @@
 # Xtrading
 
-Creator evidence and spot/perp trading from X, built on Monad. The product includes a landing page, creator studio, user dashboard, Chrome extension and MCP server.
+Creator evidence and spot/perp trading from X, built on Monad. The product includes a landing page, creator studio, user dashboard, Chrome extension and MCP server. Supported spot tickers expand into an inline Buy/Sell card inside the post. Creator payouts are opt-in; staking is optional and separate.
 
 Identity binding works. Both stake contracts and mUSDC are deployed and verified on testnet. A wallet-approved 500 mUSDC deposit is confirmed and indexed by Envio; the authenticated stake page now reads indexed history. The X extension adds creator records on profile headers, trade-call detection (Groq, or rules without a key), a call-check drawer with the creator record and a Nansen wallet check, and reviewed Kuru spot / Perpl perp trades; providers without keys run in labelled demo mode. The MCP server is live. The Chainlink CRE settlement workflow for bonded calls has run end to end on a local Monad fork (success and slash paths); its testnet deployment is pending. Confirmed Kuru fills, a live Perpl order and a keyed Nansen run remain pending.
 
@@ -87,6 +87,20 @@ The dashboard sidebar has a Testnet / Mainnet switch, which is remembered per br
 
 Embedded Privy wallets confirm in Privy's dialog; external wallets (MetaMask, Rabby) receive the reviewed transaction through their own provider. The server never signs.
 
+## Inline trading and creator payments
+
+Extension 0.7.0 adds compact ticker cards, Buy/Sell expansion, explicit network selection, expiring book indications and a separate creator-record disclosure. `/trade/inline` is a compact wallet window without the dashboard sidebar. Quotes carry no authentication; balances, gas, allowance and minimum output are checked in authenticated review.
+
+Creators register the wallet already proved through their X binding at `/creator/earnings`. Eligible mainnet buys can include an explicitly selected 0.5% creator fee, deducted from bought-token output. The adapter builds one configured Kuru order-book route through the fixed Kuru Flow entrypoint, approves the exact USDC budget and enforces the buyer's net minimum. No fee is charged for unregistered creators, testnet trades or fee-disabled trades. Self-referral from the bound buyer wallet is rejected. Account linking proves control, not unique humanity. Source-post attribution remains browser-supplied and unverified.
+
+Fee execution requires both `KURU_MAINNET_ENABLED=true` and `CREATOR_FEES_ENABLED=true`. Mainnet fork tests verified buyer receipt, same-transaction creator payment, exact allowance consumption, and atomic failure with no payout. No real fee-paying wallet transaction has been completed yet. To rerun the three fork tests:
+
+```sh
+KURU_FEE_FORK_RPC=https://rpc.monad.xyz forge test --root contracts --match-contract KuruCreatorFeeForkTest --evm-version cancun -vv
+```
+
+Envio's new mainnet projection records actual `FeeCollected` and `KuruFlowSwap` events from block 112914000. The earnings API checks recipient scope, canonical block hashes and indexer freshness. Hosted redeployment and its GraphQL endpoint update are required before live earnings history is available. Registration and quotes never count as earnings. Testnet V2 builder-fee support is still pending.
+
 ## Bonded calls (Chainlink CRE)
 
 `contracts/src/CallSettlement.sol` holds opt-in call bonds, separate from refundable stake. A creator registers a call (asset, direction, target move, 1h–30d horizon, bond); its window starts at the registration block. Every hour, the workflow in `services/cre/settlement` reads due calls at a finalized block. It fetches the opens of the Binance 1-minute candles at the window start and expiry; each node fetches independently and the median is agreed. It then writes one signed report through the Chainlink forwarder. Success returns bond + reward, failure moves the bond into the reward pool, and a tie returns the bond. A missing price never slashes; the bond is refundable after three days.
@@ -112,7 +126,7 @@ The script forks Monad testnet about three hours back (anvil dev account, port 8
 IDENTITY_TEST_DATABASE_URL=postgresql://cmb:cmb_local@localhost:5433/call_my_bluff pnpm check
 ```
 
-Checks include formatting, TypeScript, application tests, local identity integration tests, Foundry and web/extension builds. Latest local results: 83 application tests and 29 Foundry tests passed; six database integration tests were skipped without a test database URL. CI provisions its own Postgres service.
+Checks include formatting, TypeScript, application tests, local identity integration tests, Foundry and web/extension builds. Six database integration tests are skipped without a test database URL; CI provisions its own Postgres service. Mainnet fork suites require their explicit RPC variables and do not run as ordinary offline checks.
 
 ## Developer documents
 

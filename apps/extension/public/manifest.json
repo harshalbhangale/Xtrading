@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Xtrading",
-  "description": "Creator records, trade-call detection, reviewed Kuru/Perpl trades and opt-in viewed-follow sync on X.",
-  "version": "0.6.0",
+  "description": "Inline Kuru trading from X, creator analytics and verified payout registration on Monad.",
+  "version": "0.7.0",
   "permissions": ["storage"],
   "background": {
     "service_worker": "background.js"

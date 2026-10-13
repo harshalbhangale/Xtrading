@@ -1,11 +1,14 @@
 import {
   creatorOverviewSchema,
+  inlineQuoteRequestSchema,
+  inlineQuoteSchema,
   normalizeHandle,
   postAvailabilitySchema,
   postSignalRequestSchema,
   postSignalResponseSchema,
   publicCallLedgerSchema,
   publicCreatorEvidenceSchema,
+  publicPayoutSchema,
 } from "@call-my-bluff/domain";
 import { appOrigin } from "./config";
 import { readFollowing, updateFollowing } from "./follow-storage";
@@ -115,6 +118,26 @@ function handleMessage(
     return cached(`availability:${postId}`, 120000, async () =>
       postAvailabilitySchema.parse(
         await getJson(`/api/posts/${postId}/availability`),
+      ),
+    );
+  }
+  if (message.type === "creator-payout" && typeof message.handle === "string") {
+    const handle = normalizeHandle(message.handle);
+    if (!handle) return Promise.resolve({ error: "invalid_handle" });
+    return cached(`payout:${handle}`, 10000, async () =>
+      publicPayoutSchema.parse(await getJson(`/api/creators/${handle}/payout`)),
+    );
+  }
+  if (message.type === "inline-quote") {
+    const input = inlineQuoteRequestSchema.safeParse(message.payload);
+    if (!input.success) return Promise.resolve({ error: "invalid_quote" });
+    return cached(`inline:${JSON.stringify(input.data)}`, 5000, async () =>
+      inlineQuoteSchema.parse(
+        await getJson("/api/markets/quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input.data),
+        }),
       ),
     );
   }

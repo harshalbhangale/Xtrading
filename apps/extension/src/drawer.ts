@@ -215,10 +215,13 @@ export async function openDrawer(
   const close = el("button", { "aria-label": "Close" }, "×");
   close.addEventListener("click", closeDrawer);
   const body = el("div", {});
+  const inlineRoot = document.querySelector(
+    `.cmb-signal-host[data-post-id="${postId}"]`,
+  )?.shadowRoot;
   const drawer = el(
     "aside",
     {
-      class: "drawer",
+      class: inlineRoot ? "inline-panel" : "drawer",
       role: "dialog",
       "aria-label": "Xtrading call details",
     },
@@ -226,7 +229,8 @@ export async function openDrawer(
     body,
   );
   shell.root.append(drawer);
-  document.body.append(shell.host);
+  if (inlineRoot) inlineRoot.append(shell.host);
+  else document.body.append(shell.host);
   close.focus();
   drawer.addEventListener("keydown", (event) => {
     if ((event as KeyboardEvent).key === "Escape") closeDrawer();

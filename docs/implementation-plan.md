@@ -1,6 +1,6 @@
 # Delivery checklist
 
-Updated 12 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added targets: Perpl API and Chainlink CRE. The Chrome extension is the priority product surface.
+Updated 13 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added targets: Perpl API and Chainlink CRE. The Chrome extension is the priority product surface.
 
 ## Done
 
@@ -146,3 +146,21 @@ Commit verified features separately and update this checklist as they land.
 - [x] Verify extension 0.5.0 after Chrome reload: a real Apex Calls address-only post showed its original image, full address, View post and unavailable trade buttons in the X drawer; the same post appeared in the production dashboard on 12 October 2026.
 - [ ] Extract explicit target/stop/timeframe from observed calls and evaluate historical price paths; publish the default observation-window policy for calls without a deadline.
 - [ ] Add confirmed token/network mappings for address-bearing posts. Solana execution is outside the current Monad MVP.
+
+## Inline trading and optional creator fees (0.7.0)
+
+- [x] Replace supported spot-call sidebar entry with compact ticker cards and in-post Buy/Sell expansion.
+- [x] Explicit testnet/mainnet selection, exact amount parsing, stale-response rejection and expiring indicative quotes.
+- [x] Keep creator analytics in a separate disclosure; unknown addresses remain unrouted.
+- [x] Compact secure wallet review, with authentication and signing on the app origin.
+- [x] Opt-in payout registry keyed by stable X ID and the already-proved wallet; RDS migration applied.
+- [x] Keep staking optional; preserve existing stake contracts and balances.
+- [x] Kuru-only mainnet Flow route with disclosed 0.5% output fee, exact approval, simulated net minimum, recipient version checks and self-referral rejection.
+- [x] Verify atomic buyer/creator payment and failed-trade conservation in three mainnet Foundry fork tests.
+- [x] Decode actual creator payment receipts; registration, indication and submitted transaction are not earnings.
+- [x] Envio mainnet fee/fill projection, canonical-block and freshness checks, authenticated earnings history.
+- [ ] Deploy the updated hosted indexer and configure its new GraphQL endpoint.
+- [ ] Register a creator payout wallet and verify account switching in the live UI.
+- [ ] Reload 0.7.0 and verify feed scrolling, theme changes and inline execution on real X.
+- [ ] Complete an approved funded wallet buy and reconcile buyer receipt, creator payment and indexed history.
+- [ ] Add testnet V2 creator builder fees separately; ordinary testnet swaps remain zero creator fee.
