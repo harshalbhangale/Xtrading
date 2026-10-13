@@ -227,28 +227,68 @@ async function sayDid(handle: string, insights: Insights): Promise<Metric> {
   if (check.mode === "demo") return none("Nansen demo mode");
   if (check.verdict === "not-applicable")
     return none(`n/a for ${latest.asset}`);
+  // Which post was checked, when it was posted, and the wallet window Nansen read.
+  const posted = postTime(latest.postId);
+  const day = (iso: string) =>
+    new Date(iso).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
+  const context = el(
+    "small",
+    { class: "metric-sub" },
+    `${latest.direction} ${latest.asset} post${posted ? ` · ${ago(posted)}` : ""} `,
+    safeLink(`https://x.com/${handle}/status/${latest.postId}`, "view ↗"),
+    check.window
+      ? ` · ${check.chain} wallet, ${day(check.window.from)}–${day(check.window.to)}`
+      : ` · ${check.chain} wallet`,
+  );
   if (check.verdict === "no-activity")
-    return { label, value: `No ${latest.asset} wallet activity` };
+    return {
+      label,
+      value: el(
+        "span",
+        {},
+        `No ${latest.asset} trades by this wallet in 30 days`,
+        context,
+      ),
+    };
   const bad = check.verdict === "contradiction";
   const text = bad
-    ? `Wallet contradicts ${latest.asset} call`
-    : `Wallet matches ${latest.asset} call`;
+    ? `Wallet net ${latest.direction === "bullish" ? "sold" : "bought"} ${latest.asset} vs the call (30 days)`
+    : `Wallet traded ${latest.asset} in line with the call (30 days)`;
   const tx = check.findings.find((finding) => finding.transactionHash);
-  const hasTx =
-    tx?.transactionHash && /^0x[0-9a-fA-F]{64}$/.test(tx.transactionHash);
+  const explorer = /test/i.test(check.chain)
+    ? "https://testnet.monadvision.com"
+    : "https://monadvision.com";
   return {
     label,
     tone: bad ? "bad" : "good",
-    value: hasTx
-      ? el(
-          "span",
-          {},
-          `${text} `,
-          safeLink(
-            `https://testnet.monadvision.com/tx/${tx.transactionHash}`,
-            "↗",
-          ),
-        )
-      : text,
+    value: el(
+      "span",
+      {},
+      text,
+      tx?.transactionHash && /^0x[0-9a-fA-F]{64}$/.test(tx.transactionHash)
+        ? safeLink(`${explorer}/tx/${tx.transactionHash}`, " tx ↗")
+        : null,
+      context,
+    ),
   };
+}
+
+/** Posting time from the X post ID (snowflake), so the age is the post's, not ours. */
+function postTime(postId: string) {
+  try {
+    const ms = Number((BigInt(postId) >> 22n) + 1288834974657n);
+    return ms > 1288834974657 && ms <= Date.now() + 60_000 ? ms : null;
+  } catch {
+    return null;
+  }
+}
+function ago(ms: number) {
+  const minutes = Math.max(0, Math.round((Date.now() - ms) / 60_000));
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
 }

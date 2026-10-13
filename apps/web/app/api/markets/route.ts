@@ -1,6 +1,7 @@
 import { kuruMarketKeys } from "@call-my-bluff/integrations/kuru";
 import { reply } from "../../../lib/identity-http";
 import { kuruMarketSnapshot, perplSnapshot } from "../../../lib/markets";
+import { perpLimits } from "../../../lib/perpl-trade";
 export const dynamic = "force-dynamic";
 export async function GET() {
   const [perpl, ...books] = await Promise.allSettled([
@@ -20,7 +21,7 @@ export async function GET() {
     ),
     perpl:
       perpl.status === "fulfilled"
-        ? perpl.value
+        ? { ...perpl.value, limits: perpLimits() }
         : { venue: "Perpl", status: "unavailable" },
   });
 }

@@ -9,8 +9,11 @@ import {
   tradeReviewPath,
 } from "@call-my-bluff/domain";
 import { z } from "zod";
+import { markPath } from "./badge";
 import { appOrigin } from "./config";
-import { el, safeLink, send, shadowHost, shortAddress } from "./dom";
+import { el, safeLink, send, shadowHost, shortAddress, svg } from "./dom";
+import { perpTicket } from "./perp-ticket";
+import { spotTicket } from "./spot-ticket";
 
 const insightsSchema = z.object({
   handle: z.string(),
@@ -225,7 +228,30 @@ export async function openDrawer(
       role: "dialog",
       "aria-label": "Xtrading call details",
     },
-    el("header", {}, el("strong", {}, `@${signal.handle} · call check`), close),
+    el(
+      "header",
+      {},
+      el(
+        "div",
+        { class: "brand" },
+        el(
+          "span",
+          { class: "brand-mark", "aria-hidden": "true" },
+          svg(
+            "svg",
+            { viewBox: "0 0 100 100" },
+            svg("path", { fill: "currentColor", d: markPath }),
+          ),
+        ),
+        el(
+          "div",
+          {},
+          el("strong", {}, "Xtrading"),
+          el("small", {}, `@${signal.handle} · call check`),
+        ),
+      ),
+      close,
+    ),
     body,
   );
   shell.root.append(drawer);
@@ -269,38 +295,43 @@ export async function openDrawer(
   if (signal.source === "heuristic")
     call.querySelector("h3")?.append(el("span", { class: "tag" }, "RULES"));
   const href = tradeUrl(postId, signal, route);
-  const trade = section(
-    "Trade",
-    route.status === "available"
-      ? el(
-          "div",
-          {},
-          row("Venue", `${route.venue} · ${route.instrument}`),
-          row("Market", route.market),
-          row("Side", route.side ?? "Choose in review"),
-          el("p", { class: "note" }, route.note),
-        )
-      : el("p", {}, route.reason),
-    href
-      ? safeLink(
-          href,
-          `Review ${route.status === "available" ? route.venue : ""} trade in app ↗`,
-          "cta",
-        )
-      : el("span", { class: "cta disabled" }, "No testnet market"),
-    postActions(signal, route),
-    el(
-      "p",
-      { class: "note" },
-      "Amounts, slippage and leverage are set in the app. Signing happens only in your app wallet. Not financial advice.",
-    ),
-  );
+  const trade =
+    route.status === "available" && route.instrument === "perp"
+      ? section("Trade · Perpl perp", perpTicket(postId, signal, route))
+      : route.status === "available" && route.venue === "Kuru"
+        ? section("Trade · Kuru spot", spotTicket(postId, signal, route))
+        : section(
+            "Trade",
+            route.status === "available"
+              ? el(
+                  "div",
+                  {},
+                  row("Venue", `${route.venue} · ${route.instrument}`),
+                  row("Market", route.market),
+                  row("Side", route.side ?? "Choose in review"),
+                  el("p", { class: "note" }, route.note),
+                )
+              : el("p", {}, route.reason),
+            href
+              ? safeLink(
+                  href,
+                  `Review ${route.status === "available" ? route.venue : ""} trade in app ↗`,
+                  "cta",
+                )
+              : el("span", { class: "cta disabled" }, "No testnet market"),
+            postActions(signal, route),
+            el(
+              "p",
+              { class: "note" },
+              "Amounts, slippage and leverage are set in the app. Signing happens only in your app wallet. Not financial advice.",
+            ),
+          );
   const loading = el(
     "div",
     { class: "section" },
     el("p", { class: "note" }, "Loading creator record and Nansen check…"),
   );
-  const network = el("div", { class: "section" });
+  const network = el("div", { class: "section network" });
   const choices = el("div", {
     class: "network-switch",
     role: "group",
@@ -316,7 +347,7 @@ export async function openDrawer(
       "button",
       {
         type: "button",
-        class: "btn secondary",
+        class: "seg",
         "aria-pressed": String(chainId === 10143),
       },
       label,

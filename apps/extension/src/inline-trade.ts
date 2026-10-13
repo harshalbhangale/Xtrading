@@ -163,6 +163,7 @@ export function inlineTrade(signal: PostSignal, route: TradeRoute) {
     sequence++;
     clearTimeout(timer);
     clearTimeout(expiryTimer);
+    price.textContent = "Market data unavailable";
     review.setAttribute("disabled", "");
     result.textContent = "—";
     pay.textContent =

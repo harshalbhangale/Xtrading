@@ -174,6 +174,9 @@ export async function kuruMarketSnapshot(key: KuruMarketKey) {
   };
 }
 
+const price = (value: number | undefined) =>
+  value === undefined || value <= 0 ? null : String(value);
+
 export async function perplSnapshot() {
   // Fixed public discovery endpoint only. No credentials, trading forwarding or arbitrary proxy.
   const response = await fetch("https://testnet.perpl.xyz/api/v1/pub/context", {
@@ -203,9 +206,30 @@ export async function perplSnapshot() {
         symbol: market.symbol,
         exchange: instance.address,
         collateral,
+        name: market.name ?? `${market.symbol} Perp`,
+        sizeUnits: market.size_units ?? market.symbol,
         priceDecimals: market.config.price_decimals,
         sizeDecimals: market.config.size_decimals,
         open: market.config.is_open,
+        // Integer strings scaled by priceDecimals; null when Perpl reports none.
+        quote: {
+          mark: price(market.state?.mrk),
+          mid: price(market.state?.mid),
+          bid: price(market.state?.bid),
+          ask: price(market.state?.ask),
+          previous: price(market.state?.prv),
+          at: market.state?.at?.t
+            ? new Date(market.state.at.t).toISOString()
+            : null,
+        },
+        // Perpl's base maximum leverage for the market (initial_margin / 100).
+        marketMaxLeverage: market.config.initial_margin
+          ? Math.floor(market.config.initial_margin / 100)
+          : null,
+        maintenanceMarginHundredths: market.config.maintenance_margin ?? null,
+        makerFeePpm: market.config.maker_fee ?? null,
+        takerFeePpm: market.config.taker_fee ?? null,
+        maxSlippageBps: market.order_max_market_slippage_bps ?? null,
       };
     }),
   };

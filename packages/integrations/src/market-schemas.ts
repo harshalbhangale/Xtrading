@@ -16,11 +16,31 @@ export const perplContextSchema = z.object({
       id: uint,
       instance_id: uint,
       symbol: z.string(),
+      name: z.string().max(80).optional(),
+      size_units: z.string().max(20).optional(),
+      order_max_market_slippage_bps: uint.max(10_000).optional(),
       config: z.object({
         is_open: z.boolean(),
         price_decimals: uint.max(36),
         size_decimals: uint.max(36),
+        // Margins are leverage-style hundredths: 1000 = 10x max (10% initial),
+        // 2000 = 20x (5% maintenance). Fees are micros (10^-6 of notional).
+        initial_margin: uint.max(100_000).optional(),
+        maintenance_margin: uint.max(100_000).optional(),
+        maker_fee: uint.max(1_000_000).optional(),
+        taker_fee: uint.max(1_000_000).optional(),
       }),
+      // Public market state; prices are integers scaled by price_decimals.
+      state: z
+        .object({
+          at: z.object({ t: uint.optional() }).partial().optional(),
+          mrk: uint.optional(),
+          mid: uint.optional(),
+          bid: uint.optional(),
+          ask: uint.optional(),
+          prv: uint.optional(),
+        })
+        .optional(),
     }),
   ),
 });

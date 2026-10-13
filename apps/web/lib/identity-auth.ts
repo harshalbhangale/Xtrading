@@ -4,10 +4,7 @@ import { normalizeHandle } from "@call-my-bluff/domain";
 import { PrivyClient } from "@privy-io/node";
 
 let client: PrivyClient | undefined;
-export async function authenticatedUser(request: Request) {
-  const bearer = request.headers.get("authorization");
-  if (!bearer || !/^Bearer [^\s]+$/.test(bearer) || bearer.length > 8192)
-    throw new IdentityError("authentication_required", 401);
+function privy() {
   const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
   const appSecret = process.env.PRIVY_APP_SECRET;
   if (!appId || !appSecret)
@@ -18,13 +15,26 @@ export async function authenticatedUser(request: Request) {
     timeout: 10_000,
     maxRetries: 0,
   });
+  return client;
+}
+export async function authenticatedUser(request: Request) {
+  const bearer = request.headers.get("authorization");
+  if (!bearer || !/^Bearer [^\s]+$/.test(bearer) || bearer.length > 8192)
+    throw new IdentityError("authentication_required", 401);
   let userId: string;
   try {
-    userId = (await client.utils().auth().verifyAccessToken(bearer.slice(7)))
+    userId = (await privy().utils().auth().verifyAccessToken(bearer.slice(7)))
       .user_id;
-  } catch {
+  } catch (error) {
+    if (error instanceof IdentityError) throw error;
     throw new IdentityError("invalid_session", 401);
   }
+  return privyUser(userId);
+}
+
+/** Current Privy user by ID: linked X account and wallets, read fresh from Privy. */
+export async function privyUser(userId: string) {
+  const client = privy();
   try {
     const user = await client.users()._get(userId);
     if (user.id !== userId) throw new Error("User mismatch");
