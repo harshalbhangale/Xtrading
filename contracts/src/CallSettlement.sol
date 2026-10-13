@@ -13,7 +13,9 @@ interface IReceiver is IERC165 {
 }
 
 /// @title CallSettlement
-/// @notice Opt-in bonded calls settled by a Chainlink CRE workflow (directional-return-v1).
+/// @notice Calls settled by a Chainlink CRE workflow (directional-return-v1): an onchain,
+///         tamper-proof scorecard. Deployed with minBond = maxBond = 0 it records outcomes only
+///         and holds no creator funds; with a positive range it also locks optional bonds.
 /// @dev A call's window starts when it is registered onchain, so terms are committed before any
 ///      outcome is known. Entry and exit prices both come from the workflow report and must be
 ///      observed within PRICE_TOLERANCE of the window's start and expiry. A missing price never
@@ -136,7 +138,7 @@ contract CallSettlement is IReceiver, Ownable, ReentrancyGuard {
     constructor(IERC20 token_, address forwarder_, uint128 minBond_, uint128 maxBond_, bytes32[] memory assets)
         Ownable(msg.sender)
     {
-        if (address(token_).code.length == 0 || forwarder_ == address(0) || minBond_ == 0 || maxBond_ < minBond_) {
+        if (address(token_).code.length == 0 || forwarder_ == address(0) || maxBond_ < minBond_) {
             revert InvalidConfiguration();
         }
         token = token_;
@@ -198,7 +200,8 @@ contract CallSettlement is IReceiver, Ownable, ReentrancyGuard {
         ) revert InvalidTerms();
         if (reward > rewardPool) revert InsufficientRewardPool();
 
-        _pull(msg.sender, bond);
+        // Bond-free calls move no tokens; the settlement is the record.
+        if (bond > 0) _pull(msg.sender, bond);
         rewardPool -= reward;
         reservedRewards += reward;
         lockedBonds += bond;

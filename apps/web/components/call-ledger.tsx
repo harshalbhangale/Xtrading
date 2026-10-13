@@ -36,8 +36,8 @@ const outcomes = {
 const bondOutcomes = {
   open: "awaiting Chainlink settlement",
   success: "Chainlink: correct",
-  failure: "Chainlink: wrong · bond slashed",
-  tie: "Chainlink: flat · bond returned",
+  failure: "Chainlink: wrong",
+  tie: "Chainlink: flat",
   refunded: "refunded · no price settled",
 } as const;
 const usdc = (units: string) => formatUnits(BigInt(units), 6);
@@ -66,7 +66,7 @@ export function CallSummary({
       · {calls.length - resolved.length} open. Creator-registered within 24h of
       posting; posts they did not register are not covered.
       {bonds?.status === "indexed" &&
-        ` ${bonded} bonded onchain (Envio, block ${bonds.progressBlock}).`}
+        ` ${bonded} recorded on Chainlink (Envio, block ${bonds.progressBlock}).`}
       {bonds?.status === "unavailable" &&
         " Onchain bond status is unavailable right now."}
     </p>
@@ -82,7 +82,9 @@ function BondLine({ bond }: { bond: IndexedCallBond }) {
         target="_blank"
         rel="noopener noreferrer"
       >
-        Bonded {usdc(bond.bond)} mUSDC ↗
+        {BigInt(bond.bond) > 0n
+          ? `Bonded ${usdc(bond.bond)} mUSDC ↗`
+          : "Recorded on Chainlink ↗"}
       </a>
       <br />
       {bond.settledTx ? (
@@ -92,8 +94,12 @@ function BondLine({ bond }: { bond: IndexedCallBond }) {
           rel="noopener noreferrer"
         >
           {bondOutcomes[bond.status]}
+          {bond.status === "failure" &&
+            BigInt(bond.bond) > 0n &&
+            " · bond slashed"}
           {bond.status === "success" &&
             bond.payout &&
+            BigInt(bond.payout) > 0n &&
             ` · paid ${usdc(bond.payout)}`}{" "}
           ↗
         </a>

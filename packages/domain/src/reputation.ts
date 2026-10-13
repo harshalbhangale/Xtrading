@@ -166,7 +166,10 @@ export function kolFlags(input: {
       callIds: [],
       transactions: [],
     });
-  const slashed = input.calls.filter((c) => c.bond?.status === "failure");
+  // Only bonds with money at stake; bond-free records are ordinary wrong calls.
+  const slashed = input.calls.filter(
+    (c) => c.bond?.status === "failure" && BigInt(c.bond.bond) > 0n,
+  );
   if (slashed.length)
     flags.push({
       kind: "slashed_bond",

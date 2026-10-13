@@ -1,0 +1,13 @@
+{
+  "chainId": 10143,
+  "contract": "0x836aa86C5B013f2fbbE0Fc960E88677D4C106BB9",
+  "deployer": "0x7003FF28E983eDF1266370c03A598300f9e1f733",
+  "deployTransaction": "0xa2be13e1944d8ce81e9a6a38df440b0298fe026b70745e237f9fc868bf0269ba",
+  "deployBlock": "70580728",
+  "mode": "bond-free scorecard: minBond = maxBond = 0; records Chainlink CRE outcomes, holds no creator funds",
+  "token": "0x78928c53A623585317f9102B88C2d76Df66b6825",
+  "forwarder": "0xB9F79d863261869B234c481D1f9A7af84AeAd192",
+  "forwarderKind": "CRE simulation (MockKeystoneForwarder); setForwarder to 0xF8344CFd5c43616a4366C34E3EEE75af79a74482 for a deployed workflow",
+  "assets": ["BTC", "ETH", "SOL"],
+  "replaces": "contracts/deployments/call-settlement-monad-testnet.json (bonded version, now retired)"
+}

@@ -8,6 +8,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { CallLedger, CallSummary } from "./call-ledger";
+import { CallRecord } from "./call-record";
 
 const errors: Record<string, string> = {
   binding_required: "Bind your X account to a wallet first.",
@@ -213,7 +214,12 @@ export default function ConfiguredCalls() {
       ) : (
         <>
           <CallSummary calls={calls} bonds={bonds} />
-          <CallLedger calls={calls} />
+          <CallLedger
+            calls={calls}
+            action={(call) =>
+              call.status === "open" ? <CallRecord callId={call.id} /> : null
+            }
+          />
         </>
       )}
     </>
