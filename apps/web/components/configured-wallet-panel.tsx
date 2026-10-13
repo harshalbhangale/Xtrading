@@ -5,7 +5,12 @@ import {
   transferReviewSchema,
   walletBalancesSchema,
 } from "@call-my-bluff/integrations/wallet";
-import { useCreateWallet, usePrivy, useWallets } from "@privy-io/react-auth";
+import {
+  useCreateWallet,
+  useLinkAccount,
+  usePrivy,
+  useWallets,
+} from "@privy-io/react-auth";
 import QRCode from "qrcode";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -97,6 +102,12 @@ export default function ConfiguredWalletPanel() {
   const { ready, authenticated, login, getAccessToken, user } = usePrivy();
   const { wallets, ready: walletsReady } = useWallets();
   const { createWallet } = useCreateWallet();
+  // Links MetaMask (or any browser wallet) to this login with a signature, then shows it here.
+  const { linkWallet } = useLinkAccount({
+    onSuccess: ({ linkedAccount }) => {
+      if (linkedAccount.type === "wallet") setSelected(linkedAccount.address);
+    },
+  });
   const { sendTransaction } = useWalletSend();
   const [selected, setSelected] = useState<string>("");
   const [balances, setBalances] = useState<Balances | null>(null);
@@ -449,6 +460,17 @@ export default function ConfiguredWalletPanel() {
         </span>
       </header>
 
+      <div className="wlt-link">
+        <button
+          type="button"
+          className="wlt-link-button"
+          disabled={busy}
+          onClick={() => linkWallet()}
+        >
+          + Link MetaMask
+        </button>
+        <span>Sign once to add your browser wallet to this portfolio.</span>
+      </div>
       {uniqueWallets.length > 1 && (
         <label className="wlt-field wlt-switch">
           <span>Wallet</span>
