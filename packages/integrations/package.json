@@ -15,11 +15,9 @@
     "./call-evaluation": "./src/call-evaluation.ts",
     "./signals": "./src/signals.ts",
     "./token-references": "./src/token-references.ts",
-    "./perpl": "./src/perpl.ts",
     "./creator-fees": "./src/creator-fees.ts",
     "./envio-events": "./src/envio-events.ts",
-    "./perpl-account": "./src/perpl-account.ts",
-    "./perpl-close": "./src/perpl-close.ts"
+    "./perpl-exchange": "./src/perpl-exchange.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

@@ -1,183 +1,222 @@
 "use client";
+import { formatUsd, fromUnits } from "@call-my-bluff/domain";
 import { usePrivy } from "@privy-io/react-auth";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { formatUnits } from "viem";
 import { z } from "zod";
 import PerpCloseReview from "./perp-close-review";
+import { usePerplSteps } from "./use-perpl-steps";
 
-const amount = z.string().regex(/^-?[0-9]+$/);
+const amount = z.string().regex(/^[0-9]+$/);
 const schema = z.object({
-  accountId: z.number(),
   wallet: z.string(),
-  availableCollateral: amount,
-  forwarding: z.boolean(),
-  frozen: z.boolean(),
-  source: z.string(),
-  observedAt: z.string(),
-  markets: z.array(
+  exchange: z.string(),
+  walletCollateral: amount,
+  account: z
+    .object({
+      id: amount,
+      available: amount,
+      locked: amount,
+      frozen: z.boolean(),
+    })
+    .nullable(),
+  positions: z.array(
     z.object({
       marketId: z.number(),
       symbol: z.string(),
       priceDecimals: z.number(),
       sizeDecimals: z.number(),
-    }),
-  ),
-  positions: z.array(
-    z.object({
-      marketId: z.number(),
-      positionId: z.string(),
       side: z.enum(["long", "short"]),
       size: amount,
       entryPrice: amount,
+      markPrice: amount,
       collateral: amount,
-      leverageHundredths: z.number(),
     }),
   ),
-  fills: z.array(
-    z.object({
-      marketId: z.number(),
-      requestId: z.number(),
-      filledSize: amount,
-      fillPrice: amount,
-      fee: amount,
-      transactionHash: z.string().nullable(),
-    }),
-  ),
+  source: z.string(),
+  observedAt: z.string(),
 });
+const withdrawSchema = z.object({
+  wallet: z.string(),
+  steps: z
+    .array(
+      z.object({
+        kind: z.literal("withdraw"),
+        label: z.string(),
+        to: z.custom<`0x${string}`>(
+          (v) => typeof v === "string" && /^0x[0-9a-fA-F]{40}$/.test(v),
+        ),
+        data: z.custom<`0x${string}`>(
+          (v) => typeof v === "string" && /^0x[0-9a-fA-F]*$/.test(v),
+        ),
+      }),
+    )
+    .length(1),
+});
+
+/** The signed-in user's own Perpl testnet account, read from the Exchange contract. */
 export default function ConfiguredPerpAccount() {
   const { ready, authenticated, user, getAccessToken } = usePrivy();
+  const runSteps = usePerplSteps();
   const [state, setState] = useState<z.infer<typeof schema> | null>(null);
   const [notice, setNotice] = useState("");
+  const [withdraw, setWithdraw] = useState("");
+  const [withdrawNotice, setWithdrawNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const owner = useRef(user?.id);
+  owner.current = user?.id;
+  const load = useCallback(async () => {
+    if (!ready || !authenticated) return;
+    const who = owner.current;
+    try {
+      const token = await getAccessToken();
+      const r = await fetch("/api/trades/perp/account", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (!r.ok)
+        throw new Error(
+          r.status === 403
+            ? "Bind your X account to your wallet to see your Perpl account."
+            : "Perpl account data is unavailable.",
+        );
+      const value = schema.parse(await r.json());
+      if (owner.current === who) {
+        setState(value);
+        setNotice("");
+      }
+    } catch (e) {
+      if (owner.current === who) {
+        setState(null);
+        setNotice(e instanceof Error ? e.message : "Account unavailable.");
+      }
+    }
+  }, [ready, authenticated, getAccessToken]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: Clear private exchange state when the signed-in account changes.
   useEffect(() => {
-    let cancelled = false,
-      loading = false;
     setState(null);
     setNotice("");
-    const load = async () => {
-      if (!ready || !authenticated || loading) return;
-      loading = true;
-      try {
-        const token = await getAccessToken();
-        const r = await fetch("/api/trades/perp/account", {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
-        });
-        if (!r.ok)
-          throw new Error(
-            r.status === 403
-              ? "Exchange account data is available to the configured team operator after wallet binding."
-              : "Perpl account data is unavailable.",
-          );
-        const value = schema.parse(await r.json());
-        if (!cancelled) {
-          setState(value);
-          setNotice("");
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setState(null);
-          setNotice(e instanceof Error ? e.message : "Account unavailable.");
-        }
-      } finally {
-        loading = false;
-      }
-    };
     void load();
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") void load();
     }, 30000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [ready, authenticated, user?.id, getAccessToken]);
+    return () => clearInterval(timer);
+  }, [load, user?.id]);
+
+  async function withdrawToWallet() {
+    const who = owner.current;
+    setBusy(true);
+    setWithdrawNotice("");
+    try {
+      const token = await getAccessToken();
+      const response = await fetch("/api/trades/perp/withdraw/prepare", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ amount: withdraw.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(
+          typeof data.error === "string"
+            ? data.error.replaceAll("_", " ")
+            : "Withdrawal unavailable.",
+        );
+      const review = withdrawSchema.parse(data);
+      await runSteps(review.wallet, review.steps, (text) => {
+        if (owner.current === who) setWithdrawNotice(text);
+      });
+      if (owner.current !== who) return;
+      setWithdraw("");
+      setWithdrawNotice("Withdrawn to your wallet. Balances refreshed.");
+      void load();
+    } catch (e) {
+      if (owner.current === who)
+        setWithdrawNotice(
+          e instanceof Error ? e.message : "Withdrawal failed.",
+        );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!authenticated) return null;
-  if (!state) return <p>{notice || "Loading Perpl account…"}</p>;
-  const market = (id: number) => state.markets.find((m) => m.marketId === id);
+  if (!state) return <p>{notice || "Loading your Perpl account…"}</p>;
+  const ausd = (value: string) => formatUnits(BigInt(value), 6);
   return (
     <section className="dashboard-panel">
-      <h2>Perpl testnet · Account #{state.accountId}</h2>
+      <h2>
+        Your Perpl testnet account
+        {state.account ? ` · #${state.account.id}` : ""}
+      </h2>
       <p>
-        {state.source} · Checked {state.observedAt}
+        Wallet {state.wallet} · {state.source} · Checked {state.observedAt}
       </p>
+      {state.account ? (
+        <p>
+          {ausd(state.account.available)} AUSD available ·{" "}
+          {ausd(state.account.locked)} AUSD locked in orders ·{" "}
+          {state.account.frozen ? "Frozen" : "Not frozen"}
+        </p>
+      ) : (
+        <p>
+          No Perpl account yet. Your first order opens one from your wallet
+          (minimum deposit set by Perpl).
+        </p>
+      )}
+      <p>{ausd(state.walletCollateral)} test AUSD in your wallet.</p>
       <p>
-        {formatUnits(BigInt(state.availableCollateral), 6)} AUSD available ·
-        Forwarding {state.forwarding ? "on" : "off"} ·{" "}
-        {state.frozen ? "Frozen" : "Not frozen"}
+        Orders, closes and withdrawals are signed by your own wallet and act
+        only on this account. Xtrading holds no Perpl key.
       </p>
-      <p>
-        Orders execute on this team exchange account. Its collateral is separate
-        from your wallet balance.
-      </p>
-      <h3>Open positions ({state.positions.length})</h3>
-      {!state.positions.length && <p>No open positions reported.</p>}
-      {state.positions.map((p) => {
-        const m = market(p.marketId);
-        return (
-          <div key={p.positionId}>
-            <p>
-              {m?.symbol || `Market ${p.marketId}`} · {p.side} · Size{" "}
-              {m
-                ? formatUnits(BigInt(p.size), m.sizeDecimals)
-                : `${p.size} base units`}{" "}
-              · Entry{" "}
-              {m
-                ? formatUnits(BigInt(p.entryPrice), m.priceDecimals)
-                : `${p.entryPrice} price units`}{" "}
-              · {p.leverageHundredths / 100}x ·{" "}
-              {formatUnits(BigInt(p.collateral), 6)} AUSD collateral
-            </p>
-            <PerpCloseReview positionId={p.positionId} />
-          </div>
-        );
-      })}
-      <h3>Recent fills</h3>
-      {!state.fills.length && <p>No filled orders reported.</p>}
-      {state.fills.map((f) => {
-        const m = market(f.marketId);
-        return (
-          <p key={`${f.requestId}:${f.marketId}`}>
-            {m?.symbol || `Market ${f.marketId}`} · Filled{" "}
-            {m
-              ? formatUnits(BigInt(f.filledSize), m.sizeDecimals)
-              : `${f.filledSize} base units`}{" "}
-            · Fee {formatUnits(BigInt(f.fee), 6)} AUSD{" "}
-            {f.transactionHash && (
-              <a
-                className="text-link"
-                href={`https://testnet.monadvision.com/tx/${f.transactionHash}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                View transaction ↗
-              </a>
-            )}
+      {state.account && (
+        <>
+          <h3>Open positions ({state.positions.length})</h3>
+          {!state.positions.length && <p>No open positions.</p>}
+          {state.positions.map((p) => (
+            <div key={p.marketId}>
+              <p>
+                {p.symbol} · {p.side} ·{" "}
+                {fromUnits(BigInt(p.size), p.sizeDecimals)} {p.symbol} · Entry{" "}
+                {formatUsd(BigInt(p.entryPrice), p.priceDecimals)} · Mark{" "}
+                {formatUsd(BigInt(p.markPrice), p.priceDecimals)} ·{" "}
+                {ausd(p.collateral)} AUSD collateral
+              </p>
+              <PerpCloseReview
+                marketId={p.marketId}
+                onDone={() => void load()}
+              />
+            </div>
+          ))}
+          <h3>Withdraw to your wallet</h3>
+          <p>
+            Closing frees margin into this Perpl account, not your wallet.
+            Withdraw free AUSD here; your wallet signs it.
           </p>
-        );
-      })}
-      <p>
-        Positions are current account state, not proof of which X post caused a
-        trade. A close may fill partially: check order status and remaining size
-        before another action.
-      </p>
-      <h3>Withdraw remaining AUSD</h3>
-      <p>
-        Perpl API keys cannot withdraw. Closing releases remaining margin into
-        the exchange account, not your wallet. Use the account owner wallet{" "}
-        <code style={{ overflowWrap: "anywhere" }}>{state.wallet}</code> on
-        Perpl testnet to approve a withdrawal. This differs from your linked
-        Xtrading wallet. Check the recipient and amount before signing, then
-        verify the wallet balance and withdrawal receipt.
-      </p>
-      <a
-        className="text-link"
-        href="https://testnet.perpl.xyz/"
-        target="_blank"
-        rel="noreferrer"
-      >
-        Open official Perpl testnet for withdrawal ↗
-      </a>
+          <div className="perp-withdraw">
+            <input
+              inputMode="decimal"
+              maxLength={20}
+              placeholder={`Up to ${ausd(state.account.available)}`}
+              aria-label="AUSD to withdraw"
+              value={withdraw}
+              disabled={busy}
+              onChange={(e) => setWithdraw(e.target.value)}
+            />
+            <button
+              className="button secondary-button"
+              type="button"
+              disabled={busy || !withdraw.trim()}
+              onClick={() => void withdrawToWallet()}
+            >
+              {busy ? "Waiting for wallet…" : "Withdraw AUSD"}
+            </button>
+          </div>
+          {withdrawNotice && <p role="status">{withdrawNotice}</p>}
+        </>
+      )}
     </section>
   );
 }

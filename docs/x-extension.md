@@ -5,7 +5,7 @@ The extension is the primary product surface. On x.com it adds:
 1. **Inline spot cards** under supported trading calls: ticker and live book price, expanding into Buy/Sell amounts, explicit testnet/mainnet choice and secure wallet review. Unknown addresses and explicit perp calls retain a details entry; address-only mentions are not scored calls.
 2. **A profile-header card** on X profile pages with separate recorded binding, refundable stake, detected-call count and pending score; it links to the creator dashboard. Untracked accounts show missing evidence honestly.
 3. **Expandable creator evidence**, separate from the swap form: linked account, call count/performance, sourced Nansen observations and creator dashboard. Details for unsupported/perp routes open inside the post rather than a fixed sidebar.
-4. **Expand calls & wallet activity** on the profile card: ongoing registered calls and indexed Kuru swaps. Creator-specific Perpl positions remain unavailable until the creator links their own account.
+4. **Expand calls & wallet activity** on the profile card: ongoing registered calls and indexed Kuru swaps. Creator-specific Perpl positions are not shown yet; orders already trade the creator's own wallet account.
 5. **Optional viewed-follow sync** into Watchlist using local extension storage. It observes profiles and visible rows in your own following list, with no paid X following API. See [setup and limits](browser-following.md).
 
 Ordinary posts receive no trade cards. Bound authors can show a quiet identity badge; a badge does not establish performance or unique humanity. Profile evidence refreshes every minute while the tab is visible; expanded evidence loads when opened.
@@ -29,7 +29,7 @@ Trade ▸ → GET /api/creators/:handle/insights?asset&direction → evidence + 
 |---|---|---|---|
 | Groq (call extraction) | `GROQ_API_KEY`, optional `GROQ_MODEL` (default `openai/gpt-oss-120b`, strict JSON-schema output, temperature 0) | Structured-output extraction | Deterministic rules extractor, labelled `RULES` / "rule-extracted" |
 | Nansen | `NANSEN_API_KEY` | `POST /api/v1/profiler/dex-trades` for the bound wallet on Monad mainnet, 30 days | Deterministic demo finding labelled `DEMO DATA`; never stored |
-| Perpl | `PERPL_API_KEY`, `PERPL_API_KEY_SECRET`, `PERPL_ACCOUNT_ID` | Ed25519-signed `POST /v1/trading/orders` (IOC market order) | Order validated and shown as "Demo order validated"; nothing is sent |
+| Perpl | none beyond `MONAD_RPC_URL` | The user's own wallet signs `execOrder` on Perpl's testnet Exchange (IOC, limit at mark ± slippage) for its own exchange account; the server reads the result from the receipt | — (the server holds no Perpl key) |
 | Kuru | none beyond RPC | Existing live testnet simulation and Privy-signed transactions | — |
 
 `GET /api/health` reports `modes` (credential presence only). The extension popup shows them.
@@ -40,7 +40,7 @@ Trade ▸ → GET /api/creators/:handle/insights?asset&direction → evidence + 
 - No venue substitution: an asset without a configured Kuru spot market or an open Perpl market shows "No testnet market".
 - Reputation counts calls extracted from posts seen by extension users (`post_signals`, methodology `signal-v1`). The score stays pending until calls are evaluated against sourced expiry prices.
 - A Nansen sale is an observation, not proof of deception; one wallet never covers all activity. The bound wallet is a testnet embedded wallet, so live mainnet checks often return "no matching activity".
-- Perpl orders require a signed-in user with a current binding, explicit confirmation, server caps (`PERPL_MAX_LEVERAGE`, `PERPL_MAX_SIZE`) and one submission per user/post/side per minute. "Submitted" is not "filled". The configured Perpl key trades the configured account; per-user Perpl accounts are future work.
+- Perpl orders require a signed-in user with a current binding and server caps (`PERPL_MAX_LEVERAGE`, `PERPL_MAX_SIZE`). The server returns unsigned steps (exact AUSD approval, account opening or top-up when needed, then `execOrder`); the bound wallet signs each one and trades its own Perpl account. The result is read from the order transaction's events and must come from the bound wallet. In the extension this needs a browser wallet that is the bound wallet; otherwise the order is finished in the app.
 
 ## Limits and protections
 

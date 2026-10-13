@@ -31,8 +31,10 @@ const bullish =
   /\b(buy|buying|bought|long(?:ing)?|bullish|moon(?:ing)?|pump(?:ing)?|send(?:ing)? it|accumulat\w*|ape\w*|breakout|higher|load(?:ing)? up|undervalued|bid(?:ding)?|strong|bottom is in)\b|📈|🚀/i;
 const bearish =
   /\b(sell|selling|sold|short(?:ing)?|bearish|dump(?:ing)?|top is in|exit(?:ing)?|lower|overvalued|rug\w*|fade|weak|i'?m out|taking profits?)\b|📉/i;
+// "go long", "short ETH", perps, futures, leverage or "10x" mean a perp position;
+// "long term" / "short-term" / "long run" describe a horizon, not a position.
 const perpCue =
-  /\b(long|short|longs|shorts|perps?|perpetuals?|futures|leverage[d]?)\b|\b([1-9][0-9]{0,2})\s?x\b/i;
+  /\b(long|short|longs|shorts|longing|shorting)\b(?![\s-]*(?:term|run)\b)|\b(perps?|perpetuals?|futures|leverage[d]?)\b|\b([1-9][0-9]{0,2})\s?x\b/i;
 const tradeCue = /\b(trade|trading|entry|target|tp|sl|stop loss)\b/i;
 const horizon =
   /\b(today|tonight|tomorrow|this (?:week|month|year)|next (?:week|month)|eoy|eow|q[1-4]|(?:by|before) (?:end of )?[a-z]+|[0-9]{1,3}\s?(?:h|hrs?|hours?|d|days?|w|weeks?|months?))\b/i;

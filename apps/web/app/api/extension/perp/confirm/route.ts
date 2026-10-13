@@ -5,18 +5,19 @@ import {
   jsonBody,
   reply,
 } from "../../../../../lib/identity-http";
-import { perpRequestSchema, submitPerp } from "../../../../../lib/perpl-trade";
+import { confirmPerp, perpConfirmSchema } from "../../../../../lib/perpl-trade";
 import { allow, clientKey } from "../../../../../lib/rate-limit";
 export const dynamic = "force-dynamic";
 
 // Called by the extension's service worker with an Extension session, never a cookie.
+// Reads back an order the user's browser wallet already sent; nothing is signed here.
 export async function POST(request: Request) {
   try {
-    if (!allow(`extension-perp:submit:${clientKey(request)}`, 20))
+    if (!allow(`extension-perp:confirm:${clientKey(request)}`, 30))
       return reply({ error: "rate_limited" }, 429);
-    const body = perpRequestSchema.safeParse(await jsonBody(request));
+    const body = perpConfirmSchema.safeParse(await jsonBody(request));
     if (!body.success) throw new IdentityError("invalid_body");
-    return reply(await submitPerp(request, body.data, extensionContext));
+    return reply(await confirmPerp(request, body.data, extensionContext));
   } catch (error) {
     return identityFailure(error);
   }

@@ -6,16 +6,16 @@ import {
   requireOrigin,
 } from "../../../../../../lib/identity-http";
 import {
-  closeSubmitSchema,
-  submitPerpClose,
+  preparePerpWithdraw,
+  withdrawRequestSchema,
 } from "../../../../../../lib/perpl-trade";
 export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     requireOrigin(request);
-    const input = closeSubmitSchema.safeParse(await jsonBody(request));
+    const input = withdrawRequestSchema.safeParse(await jsonBody(request));
     if (!input.success) throw new IdentityError("invalid_body");
-    return reply(await submitPerpClose(request, input.data));
+    return reply(await preparePerpWithdraw(request, input.data));
   } catch (error) {
     return identityFailure(error);
   }

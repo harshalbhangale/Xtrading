@@ -2,9 +2,11 @@ import {
   decimalAtoms,
   displayAtoms,
   inlineQuoteSchema,
+  type PostSignal,
   publicPayoutSchema,
 } from "@call-my-bluff/domain";
 import { getAddress } from "viem";
+import { callInsights } from "./call-insights";
 import { appOrigin } from "./config";
 import { directTrade } from "./direct-trade";
 import { assetUrl, el, safeLink, send } from "./dom";
@@ -37,8 +39,8 @@ const tokenImages: Record<Asset | "USDC", string> = {
   USDC: "brand/tokens/usdc.png",
 };
 
-function tokenIcon(asset: Asset | "USDC", size = 40) {
-  const image = tokenImages[asset];
+export function tokenIcon(asset: string, size = 40) {
+  const image = tokenImages[asset as Asset | "USDC"];
   if (image)
     return el("img", {
       class: "swap-icon",
@@ -48,25 +50,32 @@ function tokenIcon(asset: Asset | "USDC", size = 40) {
       alt: "",
       style: `width:${size}px;height:${size}px;border-radius:50%`,
     });
-  const colors = {
+  const colors: Record<string, string> = {
     ETH: "#627EEA",
     BTC: "#F7931A",
     MON: "#836EF9",
     USDC: "#2775CA",
+    SOL: "#9945FF",
   };
-  const glyph = { ETH: "Ξ", BTC: "₿", MON: "M", USDC: "$" }[asset];
+  const glyphs: Record<string, string> = {
+    ETH: "Ξ",
+    BTC: "₿",
+    MON: "M",
+    USDC: "$",
+  };
+  const glyph = glyphs[asset] ?? asset.slice(0, 1);
   return el(
     "span",
     {
       class: "swap-icon",
-      style: `width:${size}px;height:${size}px;background:${colors[asset]};font-size:${Math.round(size * 0.48)}px`,
+      style: `width:${size}px;height:${size}px;background:${colors[asset] ?? "#536471"};font-size:${Math.round(size * 0.48)}px`,
       "aria-hidden": "true",
     },
     glyph,
   );
 }
 
-function logo() {
+export function logo() {
   try {
     const url = assetUrl("brand/xtrading-wordmark.png");
     return el("img", {
@@ -98,6 +107,8 @@ export function swapCard(input: {
   article?: HTMLElement;
   /** Under X's own ticker card: X already shows the header, so start hidden. */
   attached?: boolean;
+  /** The post's classification, when it was read as a call. */
+  signal?: PostSignal;
 }) {
   const { asset, name } = assets[input.market];
   let chainId: 143 | 10143 = 143,
@@ -569,7 +580,16 @@ export function swapCard(input: {
       ),
       panel,
     );
-  } else card.append(header, panel);
+  } else
+    card.append(
+      header,
+      callInsights({
+        postId: input.postId,
+        handle: input.handle,
+        signal: input.signal,
+      }),
+      panel,
+    );
   renderTokens();
   return { card, buy };
 }

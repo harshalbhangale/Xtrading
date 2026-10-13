@@ -13,6 +13,8 @@ import { z } from "zod";
 import { appOrigin } from "./config";
 import { el, send } from "./dom";
 import { tradeUrl } from "./drawer";
+import { type PerplWalletStep, signPerplSteps } from "./perp-wallet";
+import { hasBrowserWallet } from "./wallet";
 
 const integer = z.string().regex(/^[0-9]{1,30}$/);
 const marketSchema = z.object({
@@ -51,8 +53,15 @@ const errors: Record<string, string> = {
   leverage_above_market_max: "Leverage is above this market's maximum.",
   slippage_above_market_max: "Slippage is above this market's maximum.",
   size_above_cap: "Size is above the cap.",
-  duplicate_order: "Same order sent less than a minute ago.",
   market_closed: "Market is closed.",
+  market_unpriced: "No mark price right now. Try again shortly.",
+  collateral_insufficient:
+    "Not enough test AUSD in your wallet. Claim some from the faucet in the app.",
+  perpl_account_frozen: "Your Perpl account is frozen.",
+  perpl_exchange_mismatch: "Perpl's exchange address changed. Not sending.",
+  transaction_pending: "Transaction not found yet.",
+  transaction_not_from_wallet: "That transaction was not sent by your wallet.",
+  order_not_found: "No order from your account in that transaction.",
   perpl_unavailable: "Perpl is unavailable. Try again.",
   rate_limited: "Too many requests. Wait a moment.",
   extension_sessions_unconfigured:
@@ -62,9 +71,9 @@ const explain = (code: string) => errors[code] ?? code.replaceAll("_", " ");
 type Call<T> = { result?: T; failure?: string } | null;
 
 /**
- * Trader-style perp ticket inside the X drawer. Connected users review and submit
- * here (perp orders run server-side on the operator account); everyone else gets a
- * prefilled hand-off to the app.
+ * Trader-style perp ticket inside the X drawer. Connected users review here and
+ * sign with their own browser wallet, trading their own Perpl account; without a
+ * browser wallet (e.g. a Privy embedded wallet) the order is finished in the app.
  */
 export function perpTicket(
   postId: string,
@@ -191,6 +200,12 @@ function render(
     target: "_blank",
     rel: "noopener noreferrer",
   });
+  go.addEventListener("click", (event) => {
+    const href = go.getAttribute("href");
+    if (!href) return;
+    event.preventDefault();
+    openWalletWindow(href);
+  });
   const trade = el("button", { type: "button", class: "ticket-go" });
   const panel = el("div", { class: "ticket-panel" });
   const slippageBps = Math.min(100, market.maxSlippageBps ?? 100);
@@ -273,100 +288,164 @@ function render(
     ),
   );
 
+  // The app's perp window, prefilled and set to review on open; Privy signs there.
+  function walletWindowUrl(order: Record<string, unknown>) {
+    const url = new URL("/trade/perp", appOrigin);
+    for (const key of ["marketId", "side", "leverage", "size"])
+      url.searchParams.set(key, String(order[key]));
+    url.searchParams.set("slippage", String(order.slippageBps));
+    if (typeof order.sourcePostId === "string")
+      url.searchParams.set("postId", order.sourcePostId);
+    url.searchParams.set("handle", signal.handle);
+    url.searchParams.set("review", "1");
+    return url.href;
+  }
+  function openWalletWindow(href: string) {
+    window.open(href, "xtrading-perp", "popup,width=480,height=820");
+  }
+  type Prepared = {
+    wallet: string;
+    execution: string;
+    requestId: string;
+    limitPrice: string;
+    steps: PerplWalletStep[];
+  };
   async function review(order: Record<string, unknown>) {
     panel.replaceChildren(el("p", { class: "note" }, "Checking order…"));
     trade.hidden = true;
-    const prepared = await send<Call<{ mode: string; execution: string }>>({
-      type: "perp-prepare",
-      order,
-    });
+    const [prepared, walletPresent] = await Promise.all([
+      send<Call<Prepared>>({ type: "perp-prepare", order }),
+      hasBrowserWallet(),
+    ]);
     if (!root.isConnected) return;
     if (!prepared?.result) return fail(prepared?.failure ?? "unavailable");
-    const confirm = el(
-      "button",
-      { type: "button", class: `ticket-go ${side}` },
-      `Confirm ${side === "long" ? "Long" : "Short"}`,
-    );
+    const review = prepared.result;
     const back = el("button", { type: "button", class: "ticket-back" }, "Back");
     back.addEventListener("click", () => {
       panel.replaceChildren();
       trade.hidden = false;
     });
-    confirm.addEventListener("click", () => void place(order));
+    // Primary: the Xtrading (Privy) wallet signs in a small window over X.
+    const privy = el(
+      "button",
+      { type: "button", class: `ticket-go ${side}` },
+      `Sign with Xtrading wallet ↗`,
+    );
+    privy.addEventListener("click", () => {
+      openWalletWindow(walletWindowUrl(order));
+      status.textContent =
+        "Sign in the Xtrading window. Your timeline stays open.";
+    });
+    // Secondary: a browser wallet on X, only when it is the bound wallet.
+    const browser = walletPresent
+      ? el("button", { type: "button", class: "ticket-back" }, "Browser wallet")
+      : null;
+    browser?.addEventListener("click", () => void place(order, review));
+    const status = el("p", { class: "note" });
     panel.replaceChildren(
       el(
         "p",
         { class: "ticket-mode" },
-        el("strong", {}, prepared.result.mode === "live" ? "LIVE" : "DEMO"),
-        ` · ${prepared.result.execution}`,
+        el("strong", {}, "YOUR WALLET"),
+        ` · ${review.wallet.slice(0, 6)}…${review.wallet.slice(-4)} trades your own Perpl testnet account. Xtrading never signs or holds keys.`,
       ),
-      el("div", { class: "ticket-confirm" }, confirm, back),
+      el(
+        "ol",
+        { class: "ticket-steps" },
+        ...review.steps.map((step) => el("li", {}, step.label)),
+      ),
+      el(
+        "p",
+        { class: "note" },
+        `Limit ${usd(BigInt(review.limitPrice))} (mark ± ${(slippageBps / 100).toFixed(2)}%), immediate-or-cancel.`,
+      ),
+      el("div", { class: "ticket-confirm" }, privy, browser, back),
+      status,
     );
   }
-  async function place(order: Record<string, unknown>) {
-    panel.replaceChildren(el("p", { class: "note" }, "Submitting…"));
-    const placed = await send<
-      Call<{ status: string; requestId: number; message: string }>
-    >({ type: "perp-submit", order: { ...order, confirm: true } });
+  async function place(order: Record<string, unknown>, review: Prepared) {
+    const line = el("p", { class: "note" }, "Starting…");
+    panel.replaceChildren(line);
+    let hash: string;
+    try {
+      hash = await signPerplSteps({
+        wallet: review.wallet,
+        steps: review.steps,
+        onStatus: (text) => {
+          line.textContent = text;
+        },
+      });
+    } catch (error) {
+      if (!root.isConnected) return;
+      trade.hidden = false;
+      panel.replaceChildren(
+        el(
+          "p",
+          { class: "ticket-hint error" },
+          error instanceof Error ? error.message : "Wallet request failed.",
+        ),
+      );
+      return;
+    }
+    line.textContent = "Reading the result from chain…";
+    // The receipt is already mined; retry briefly in case the app's RPC lags.
+    type Confirmed = Call<{
+      status: string;
+      filledSize?: string;
+      averagePrice?: string | null;
+      message: string;
+    }>;
+    let confirmed: Confirmed = null;
+    for (let attempt = 0; attempt < 5 && root.isConnected; attempt++) {
+      confirmed = await send<NonNullable<Confirmed>>({
+        type: "perp-confirm",
+        order: {
+          transactionHash: hash,
+          requestId: review.requestId,
+          sourcePostId: order.sourcePostId ?? null,
+        },
+      });
+      if (confirmed?.failure !== "transaction_pending") break;
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
     if (!root.isConnected) return;
-    if (!placed?.result) return fail(placed?.failure ?? "unavailable");
-    const outcome = el("p", { class: "note" }, placed.result.message);
+    trade.hidden = false;
+    const result = confirmed?.result;
+    const link = el(
+      "a",
+      {
+        href: `https://testnet.monadvision.com/tx/${hash}`,
+        target: "_blank",
+        rel: "noopener noreferrer",
+      },
+      "tx ↗",
+    );
+    if (!result) {
+      panel.replaceChildren(
+        el("p", { class: "ticket-mode" }, el("strong", {}, "Sent")),
+        el(
+          "p",
+          { class: "note" },
+          `Sent from your wallet; the result could not be read back (${explain(confirmed?.failure ?? "unavailable")}). `,
+          link,
+        ),
+      );
+      return;
+    }
+    const filled =
+      result.filledSize && result.filledSize !== "0"
+        ? `${fromUnits(BigInt(result.filledSize), market.sizeDecimals)} ${market.symbol}${result.averagePrice ? ` @ ${usd(BigInt(result.averagePrice))}` : ""} · `
+        : "";
     panel.replaceChildren(
       el(
         "p",
-        { class: `ticket-mode ${placed.result.status}` },
-        el(
-          "strong",
-          {},
-          placed.result.status === "submitted"
-            ? "Submitted"
-            : placed.result.status === "demo"
-              ? "Demo validated"
-              : "Rejected",
-        ),
+        {
+          class: `ticket-mode ${result.status === "filled" || result.status === "partially-filled" ? "submitted" : "rejected"}`,
+        },
+        el("strong", {}, result.status.replace("-", " ")),
       ),
-      outcome,
+      el("p", { class: "note" }, filled, result.message, " ", link),
     );
-    trade.hidden = false;
-    if (placed.result.status === "submitted")
-      void track(placed.result.requestId, outcome);
-  }
-  // Forwarding is not execution: read the fill and position back from Perpl.
-  async function track(requestId: number, line: HTMLElement) {
-    for (let attempt = 0; attempt < 15 && root.isConnected; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const status = await send<
-        Call<{
-          order: {
-            status: string;
-            filledSize: string;
-            fillPrice: string;
-            transactionHash: string | null;
-          } | null;
-        }>
-      >({ type: "perp-status", requestId });
-      const order = status?.result?.order;
-      if (!order) continue;
-      line.replaceChildren(
-        `${order.status} · ${fromUnits(BigInt(order.filledSize), market.sizeDecimals)} ${market.symbol}`,
-        order.fillPrice !== "0"
-          ? ` @ ${formatUsd(BigInt(order.fillPrice), market.priceDecimals)}`
-          : "",
-        order.transactionHash
-          ? el(
-              "a",
-              {
-                href: `https://testnet.monadvision.com/tx/${order.transactionHash}`,
-                target: "_blank",
-                rel: "noopener noreferrer",
-              },
-              " · tx ↗",
-            )
-          : "",
-      );
-      if (!["pending", "open", "partially-filled"].includes(order.status))
-        return;
-    }
   }
   function fail(code: string) {
     if (code === "not_connected" || code === "invalid_session") {
@@ -468,14 +547,10 @@ function render(
       : `Enter a size to ${side} ${market.symbol}`;
     go.className = `ticket-go ${side}${ready ? "" : " disabled"}`;
     go.textContent = ready
-      ? `${label} in app ↗`
+      ? `${label} · Xtrading wallet ↗`
       : `Enter a size to ${side} ${market.symbol}`;
-    if (ready && href) {
-      const url = new URL(href);
-      url.searchParams.set("side", side);
-      url.searchParams.set("leverage", String(leverage));
-      url.searchParams.set("size", fromUnits(units ?? 0n, market.sizeDecimals));
-      go.setAttribute("href", url.href);
+    if (ready && href && current) {
+      go.setAttribute("href", walletWindowUrl(current));
       go.removeAttribute("aria-disabled");
     } else {
       go.removeAttribute("href");

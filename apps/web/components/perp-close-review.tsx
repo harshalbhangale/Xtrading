@@ -1,56 +1,74 @@
 "use client";
+import { formatUsd, fromUnits } from "@call-my-bluff/domain";
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useRef, useState } from "react";
-import { formatUnits } from "viem";
 import { z } from "zod";
+import { usePerplSteps } from "./use-perpl-steps";
 
+const integer = z.string().regex(/^[0-9]+$/);
+const step = z.object({
+  kind: z.literal("order"),
+  label: z.string(),
+  to: z.custom<`0x${string}`>(
+    (v) => typeof v === "string" && /^0x[0-9a-fA-F]{40}$/.test(v),
+  ),
+  data: z.custom<`0x${string}`>(
+    (v) => typeof v === "string" && /^0x[0-9a-fA-F]*$/.test(v),
+  ),
+});
 const reviewSchema = z.object({
-  reviewToken: z.string(),
-  accountId: z.number(),
+  wallet: z.string(),
   market: z.string(),
   side: z.enum(["long", "short"]),
-  size: z.string().regex(/^[0-9]+$/),
+  size: integer,
   sizeDecimals: z.number(),
-  collateral: z.string().regex(/^-?[0-9]+$/),
-  estimatedFee: z
-    .string()
-    .regex(/^[0-9]+$/)
-    .nullable(),
+  priceDecimals: z.number(),
+  limitPrice: integer,
   slippageBps: z.number(),
-  expiresAt: z.string(),
-  requestId: z.number(),
+  requestId: integer,
+  steps: z.array(step).length(1),
   note: z.string(),
+  expiresAt: z.string(),
 });
+const resultSchema = z.object({
+  status: z.enum(["filled", "partially-filled", "not-filled", "reverted"]),
+  filledSize: integer.optional(),
+  message: z.string(),
+  transactionHash: z.string(),
+});
+
+/** Full, reduce-only close of one of the user's own positions, signed by their wallet. */
 export default function PerpCloseReview({
-  positionId,
+  marketId,
+  onDone,
 }: {
-  positionId: string;
+  marketId: number;
+  onDone: () => void;
 }) {
   const { getAccessToken, user } = usePrivy();
+  const runSteps = usePerplSteps();
   const [review, setReview] = useState<z.infer<typeof reviewSchema> | null>(
     null,
   );
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
-  const [requestId, setRequestId] = useState<number | null>(null);
-  const owner = useRef(`${user?.id}:${positionId}`);
-  owner.current = `${user?.id}:${positionId}`;
+  const owner = useRef(`${user?.id}:${marketId}`);
+  owner.current = `${user?.id}:${marketId}`;
   // biome-ignore lint/correctness/useExhaustiveDependencies: Clear a private review on account or position change.
   useEffect(() => {
     setReview(null);
     setNotice("");
-    setRequestId(null);
     setBusy(false);
-  }, [user?.id, positionId]);
-  async function call(path: string, body?: unknown) {
+  }, [user?.id, marketId]);
+  async function call(path: string, body: unknown) {
     const token = await getAccessToken();
     const response = await fetch(path, {
-      method: body ? "POST" : "GET",
+      method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
-        ...(body ? { "Content-Type": "application/json" } : {}),
+        "Content-Type": "application/json",
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: JSON.stringify(body),
       cache: "no-store",
     });
     const data = await response.json();
@@ -66,134 +84,94 @@ export default function PerpCloseReview({
     const who = owner.current;
     setBusy(true);
     setNotice("");
-    setReview(null);
     try {
       const value = reviewSchema.parse(
         await call("/api/trades/perp/close/prepare", {
-          positionId,
+          marketId,
           slippageBps: 50,
         }),
       );
-      if (owner.current !== who) return;
-      setReview(value);
+      if (owner.current === who) setReview(value);
     } catch (e) {
-      if (owner.current !== who) return;
-      setNotice(e instanceof Error ? e.message : "Close review unavailable");
+      if (owner.current === who)
+        setNotice(e instanceof Error ? e.message : "Close unavailable");
     } finally {
-      if (owner.current === who) setBusy(false);
+      setBusy(false);
     }
   }
-  async function submit() {
-    const who = owner.current;
+  async function sign() {
     if (!review) return;
-    setRequestId(review.requestId);
-    setBusy(true);
-    try {
-      const result = z
-        .object({
-          status: z.enum(["submitted", "rejected", "unknown"]),
-          requestId: z.number(),
-          message: z.string(),
-        })
-        .parse(
-          await call("/api/trades/perp/close/submit", {
-            reviewToken: review.reviewToken,
-            confirm: true,
-          }),
-        );
-      if (owner.current !== who) return;
-      setNotice(result.message);
-      setRequestId(result.requestId);
+    if (Date.parse(review.expiresAt) <= Date.now()) {
       setReview(null);
-    } catch (e) {
-      if (owner.current !== who) return;
-      setReview(null);
-      setNotice(
-        e instanceof Error
-          ? e.message
-          : "Close uncertain; check account before retrying.",
-      );
-    } finally {
-      if (owner.current === who) setBusy(false);
+      setNotice("Review expired. Review the close again.");
+      return;
     }
-  }
-  async function check() {
     const who = owner.current;
-    if (!requestId) return;
     setBusy(true);
     try {
-      const result = z
-        .object({
-          order: z
-            .object({
-              status: z.string(),
-              filledSize: z.string(),
-              transactionHash: z.string().nullable(),
-            })
-            .nullable(),
-        })
-        .parse(await call(`/api/trades/perp/status?rq=${requestId}`));
-      if (owner.current !== who) return;
-      setNotice(
-        result.order
-          ? `Close order: ${result.order.status}. Filled ${result.order.filledSize} base units. Refresh the account to check remaining position and collateral.`
-          : "No order found yet. Do not submit another close until the outcome is known.",
+      const hashes = await runSteps(review.wallet, review.steps, (text) => {
+        if (owner.current === who) setNotice(text);
+      });
+      const result = resultSchema.parse(
+        await call("/api/trades/perp/confirm", {
+          transactionHash: hashes.order,
+          requestId: review.requestId,
+          sourcePostId: null,
+        }),
       );
-    } catch (e) {
       if (owner.current !== who) return;
-      setNotice(e instanceof Error ? e.message : "Status unavailable");
+      setReview(null);
+      setNotice(
+        `${result.status.replace("-", " ")}: ${result.message} ${result.transactionHash.slice(0, 10)}…`,
+      );
+      onDone();
+    } catch (e) {
+      if (owner.current === who)
+        setNotice(e instanceof Error ? e.message : "Close failed.");
     } finally {
-      if (owner.current === who) setBusy(false);
+      setBusy(false);
     }
   }
   return (
-    <div>
-      <button
-        type="button"
-        className="button button-secondary"
-        disabled={busy || requestId !== null}
-        onClick={prepare}
-      >
-        Review full close
-      </button>
-      {review && (
-        <section aria-label="Close position review">
+    <div className="perp-close">
+      {!review ? (
+        <button
+          className="button secondary-button"
+          type="button"
+          disabled={busy}
+          onClick={() => void prepare()}
+        >
+          {busy ? "Checking…" : "Review full close"}
+        </button>
+      ) : (
+        <div className="perp-close-review">
           <p>
-            <strong>
-              Close {formatUnits(BigInt(review.size), review.sizeDecimals)}{" "}
-              {review.market} {review.side}
-            </strong>{" "}
-            · Account #{review.accountId} · Monad testnet
+            Close {review.side}{" "}
+            {fromUnits(BigInt(review.size), review.sizeDecimals)}{" "}
+            {review.market} · limit{" "}
+            {formatUsd(BigInt(review.limitPrice), review.priceDecimals)} (mark ±{" "}
+            {(review.slippageBps / 100).toFixed(2)}%)
           </p>
-          <p>
-            Current collateral {formatUnits(BigInt(review.collateral), 6)} AUSD
-            · Estimated close fee{" "}
-            {review.estimatedFee === null
-              ? "unavailable"
-              : `${formatUnits(BigInt(review.estimatedFee), 6)} AUSD`}{" "}
-            · Max slippage {review.slippageBps / 100}%
-          </p>
-          <p>{review.note}</p>
-          <p>Review expires {review.expiresAt}. No mainnet funds are used.</p>
+          <p className="small-note">{review.note}</p>
           <button
-            type="button"
             className="button"
+            type="button"
             disabled={busy}
-            onClick={submit}
+            onClick={() => void sign()}
           >
-            Confirm close on testnet
+            {busy ? "Waiting for wallet…" : "Sign close in wallet"}
           </button>{" "}
-          <button type="button" disabled={busy} onClick={() => setReview(null)}>
-            Cancel
+          <button
+            className="button secondary-button"
+            type="button"
+            disabled={busy}
+            onClick={() => setReview(null)}
+          >
+            Back
           </button>
-        </section>
+        </div>
       )}
       {notice && <p role="status">{notice}</p>}
-      {requestId !== null && (
-        <button type="button" disabled={busy} onClick={check}>
-          Check close order status
-        </button>
-      )}
     </div>
   );
 }

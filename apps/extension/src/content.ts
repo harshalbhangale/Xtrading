@@ -9,6 +9,7 @@ import { el, safeLink, send, shadowHost } from "./dom";
 import { openDrawer } from "./drawer";
 import { observeFollowing } from "./follow-observer";
 import { inlineMarket, inlineTrade } from "./inline-trade";
+import { perpCard } from "./perp-card";
 import { postImages } from "./post-media";
 import { scanProfile } from "./profile";
 import { cashtagMarket, swapCard } from "./swap-card";
@@ -66,6 +67,17 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
     }
     const card = inlineTrade({ ...signal, signal }, route, article);
     host.dataset.inline = "true";
+    root.append(card);
+    card.dataset.mounted = "true";
+    host.addEventListener("click", (event) => event.stopPropagation());
+    rendered.add(article);
+    textNode.after(host);
+    return;
+  }
+  if (route.status === "available" && route.instrument === "perp") {
+    // Same X-style card as spot; X's ticker Buy is spot, so it never replaces this.
+    const card = perpCard({ postId, signal, route });
+    host.dataset.inline = "perp";
     root.append(card);
     card.dataset.mounted = "true";
     host.addEventListener("click", (event) => event.stopPropagation());

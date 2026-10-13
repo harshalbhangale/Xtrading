@@ -1787,6 +1787,13 @@
   font-size: 12px;
   line-height: 1.5;
 }
+.pt-steps {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
 .pt-review-actions {
   display: flex;
   gap: 8px;
@@ -1913,4 +1920,25 @@ html.popup-mode .dashboard-panel {
   padding: 0;
   border: 0;
   background: none;
+}
+.perp-close {
+  margin: 4px 0 12px;
+}
+.perp-close-review p {
+  margin: 6px 0;
+}
+.perp-withdraw {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.perp-withdraw input {
+  flex: 1;
+  min-width: 140px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--raised);
+  color: inherit;
+  font: inherit;
 }

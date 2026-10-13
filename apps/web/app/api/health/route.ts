@@ -15,8 +15,8 @@ export function GET() {
       modes: {
         llm: llmMode(),
         nansen: process.env.NANSEN_API_KEY ? "live" : "demo",
-        // Live orders additionally require an operator X account.
-        perpl: process.env.PERPL_API_KEY ? "operator-only" : "demo",
+        // Orders are signed by each user's own wallet on Perpl testnet; no server key.
+        perpl: "wallet",
       },
     },
     { headers: { "Cache-Control": "no-store" } },
