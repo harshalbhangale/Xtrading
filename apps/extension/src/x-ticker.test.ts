@@ -65,7 +65,12 @@ describe("attachToXTicker", () => {
     expect(attachToXTicker(article, post)).toBe(true);
     expect(attachToXTicker(article, post)).toBe(true);
     expect(article.querySelectorAll(".cmb-xticker-host")).toHaveLength(1);
-    expect(article.querySelectorAll(".row .cmb-xbuy-host")).toHaveLength(1);
+    const buyHost = article.querySelector(".cmb-xbuy-host") as HTMLElement;
+    expect(buyHost.parentElement).toBe(article.querySelector("a"));
+    expect(article.querySelector(".row .cmb-xbuy-host")).toBeNull();
+    expect(buyHost.style.position).toBe("absolute");
+    expect(buyHost.style.right).toBe("12px");
+    expect(buyHost.style.bottom).toBe("10px");
     const container = article.querySelector(".x-container");
     expect(container?.nextElementSibling?.classList).toContain(
       "cmb-xticker-host",

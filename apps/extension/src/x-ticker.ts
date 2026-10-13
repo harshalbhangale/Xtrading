@@ -47,17 +47,20 @@ export function findXTicker(article: HTMLElement): XTickerCard | null {
   return null;
 }
 
-/** Deepest-first flex row that holds X's sparkline; the Buy button joins it. */
-function cardRow(link: HTMLElement) {
-  const rows = [...link.querySelectorAll<HTMLElement>("div")].filter((d) => {
-    const style = getComputedStyle(d);
-    return (
-      style.display.includes("flex") &&
-      !style.flexDirection.startsWith("column") &&
-      d.querySelector("svg")
-    );
-  });
-  return rows[0] ?? link;
+/**
+ * X's sparkline row is a wrapping flex line. A button appended there drops
+ * onto the next line and sits in the middle of the card. Pin it to the card
+ * instead, in the empty corner under the chart.
+ */
+function placeBuy(link: HTMLElement, host: HTMLElement) {
+  if (getComputedStyle(link).position === "static")
+    link.style.position = "relative";
+  host.style.position = "absolute";
+  host.style.right = "12px";
+  host.style.bottom = "10px";
+  host.style.zIndex = "2";
+  host.style.margin = "0";
+  link.append(host);
 }
 
 const route = (card: XTickerCard): TradeRoute => ({
@@ -116,10 +119,7 @@ export function attachToXTicker(
         if (type === "click" || type === "keydown") event.preventDefault();
         event.stopPropagation();
       });
-    button.host.style.flex = "0 0 auto";
-    button.host.style.alignSelf = "center";
-    button.host.style.marginLeft = "8px";
-    cardRow(card.link).append(button.host);
+    placeBuy(card.link, button.host);
   };
   mountButton();
   host.addEventListener("cmb:rebutton", mountButton);
