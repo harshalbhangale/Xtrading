@@ -8,6 +8,11 @@ import {
   perplWalletSchema,
   projectPerplAccount,
 } from "@call-my-bluff/integrations/perpl-account";
+import {
+  buildPerplCloseOrder,
+  signCloseReview,
+  verifyCloseReview,
+} from "@call-my-bluff/integrations/perpl-close";
 import { stakeUnits } from "@call-my-bluff/integrations/stake";
 import { z } from "zod";
 import { identityContext } from "./identity-http";
@@ -358,7 +363,14 @@ export async function perpStatus(
 ) {
   const { user, service } = await context(request);
   const binding = await service.current(user.privyUserId);
-  if (!binding || perplMode(binding.xUserId) !== "live")
+  if (
+    !binding ||
+    binding.xUserId !== user.xAccount?.xUserId ||
+    !user.wallets.some(
+      (w) => w.toLowerCase() === binding.wallet.toLowerCase(),
+    ) ||
+    perplMode(binding.xUserId) !== "live"
+  )
     throw new IdentityError("perpl_operator_only", 403);
   if (!Number.isSafeInteger(requestId) || requestId <= 0)
     throw new IdentityError("invalid_request_id");
@@ -443,4 +455,165 @@ export async function perpAccount(
       sizeDecimals: m.sizeDecimals,
     })),
   };
+}
+
+export const closeRequestSchema = z
+  .object({
+    positionId: z.string().regex(/^[0-9]{1,20}$/),
+    slippageBps: z.number().int().min(1).max(500),
+  })
+  .strict();
+export const closeSubmitSchema = z
+  .object({
+    reviewToken: z.string().min(1).max(4096),
+    confirm: z.literal(true),
+  })
+  .strict();
+
+export async function preparePerpClose(
+  request: Request,
+  input: z.infer<typeof closeRequestSchema>,
+) {
+  const state = await perpAccount(request);
+  if (state.frozen || !state.forwarding)
+    throw new IdentityError("perpl_account_unavailable", 409);
+  const position = state.positions.find(
+    (p) => p.positionId === input.positionId,
+  );
+  if (!position) throw new IdentityError("position_not_open", 409);
+  const snapshot = await perplSnapshot();
+  const market = snapshot.markets.find((m) => m.marketId === position.marketId);
+  if (!market?.open) throw new IdentityError("market_closed", 409);
+  if (market.maxSlippageBps && input.slippageBps > market.maxSlippageBps)
+    throw new IdentityError("slippage_above_market_max", 409);
+  const { user } = await identityContext(request);
+  const c = config();
+  const review = {
+    accountId: state.accountId,
+    positionId: position.positionId,
+    marketId: position.marketId,
+    side: position.side,
+    size: position.size,
+    leverageHundredths: position.leverageHundredths,
+    slippageBps: input.slippageBps,
+    requestId: Math.max(Date.now(), state.lastRequestId + 1),
+    expiresAt: Date.now() + 60000,
+    owner: user.privyUserId,
+  };
+  const mark = market.quote.mark;
+  const notional =
+    mark === null
+      ? null
+      : (BigInt(mark) * BigInt(position.size) * 1000000n) /
+        10n ** BigInt(market.priceDecimals + market.sizeDecimals);
+  const fee =
+    notional === null || market.takerFeePpm === null
+      ? null
+      : (notional * BigInt(market.takerFeePpm) + 999999n) / 1000000n;
+  return {
+    reviewToken: signCloseReview(review, c.secret),
+    accountId: state.accountId,
+    market: market.symbol,
+    positionId: position.positionId,
+    side: position.side,
+    size: position.size,
+    sizeDecimals: market.sizeDecimals,
+    collateral: position.collateral,
+    estimatedFee: fee?.toString() ?? null,
+    slippageBps: input.slippageBps,
+    expiresAt: new Date(review.expiresAt).toISOString(),
+    requestId: review.requestId,
+    note: "Full close-only IOC order. May fill partially. Returned exchange collateral depends on realized PnL, fees and funding; this does not withdraw to a wallet.",
+  };
+}
+
+export async function submitPerpClose(
+  request: Request,
+  input: z.infer<typeof closeSubmitSchema>,
+) {
+  const { user } = await identityContext(request);
+  const c = config();
+  let review: ReturnType<typeof verifyCloseReview>;
+  try {
+    review = verifyCloseReview(input.reviewToken, c.secret, user.privyUserId);
+  } catch {
+    throw new IdentityError("invalid_close_review", 409);
+  }
+  const state = await perpAccount(request);
+  if (state.frozen || !state.forwarding || state.accountId !== review.accountId)
+    throw new IdentityError("perpl_account_unavailable", 409);
+  const position = state.positions.find(
+    (p) => p.positionId === review.positionId,
+  );
+  if (
+    !position ||
+    position.size !== review.size ||
+    position.side !== review.side ||
+    position.marketId !== review.marketId ||
+    position.leverageHundredths !== review.leverageHundredths
+  )
+    throw new IdentityError("position_changed_review_again", 409);
+  if (state.lastRequestId >= review.requestId)
+    throw new IdentityError("request_already_forwarded_check_status", 409);
+  const snapshot = await perplSnapshot();
+  const market = snapshot.markets.find((m) => m.marketId === review.marketId);
+  if (
+    !market?.open ||
+    (market.maxSlippageBps && review.slippageBps > market.maxSlippageBps)
+  )
+    throw new IdentityError("market_unavailable", 409);
+  if (!allow(`perp-close:${review.accountId}:${review.positionId}`, 1, 60000))
+    throw new IdentityError("duplicate_order", 409);
+  const order = buildPerplCloseOrder(review);
+  const target = "/v1/trading/orders";
+  const body = JSON.stringify({ d: [order] });
+  const { headers } = signPerplRequest({
+    chainId: 10143,
+    method: "POST",
+    target,
+    body,
+    apiKey: c.apiKey,
+    secretHex: c.secret,
+  });
+  try {
+    const response = await fetch(`${c.apiUrl}${target}`, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body,
+      redirect: "error",
+      cache: "no-store",
+      signal: AbortSignal.timeout(15000),
+    });
+    const result = z
+      .object({
+        status: z.object({ code: z.number() }).optional(),
+        statuses: z.array(z.object({ code: z.number() })).optional(),
+      })
+      .safeParse(await response.json().catch(() => null));
+    const status = result.success
+      ? (result.data.statuses?.[0] ?? result.data.status)
+      : null;
+    if (!status)
+      return {
+        status: "unknown",
+        requestId: review.requestId,
+        message:
+          "Response uncertain. Check this request's status before retrying.",
+      };
+    return {
+      status: response.ok && status.code === 0 ? "submitted" : "rejected",
+      requestId: review.requestId,
+      message:
+        response.ok && status.code === 0
+          ? "Accepted for forwarding. Check actual fill and remaining position; this is not a withdrawal."
+          : "Close order rejected. Refresh the account before reviewing again.",
+    };
+  } catch {
+    return {
+      status: "unknown",
+      requestId: review.requestId,
+      message:
+        "Submission uncertain. Check this request's status before retrying.",
+    };
+  }
 }

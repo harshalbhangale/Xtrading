@@ -18,7 +18,8 @@
     "./perpl": "./src/perpl.ts",
     "./creator-fees": "./src/creator-fees.ts",
     "./envio-events": "./src/envio-events.ts",
-    "./perpl-account": "./src/perpl-account.ts"
+    "./perpl-account": "./src/perpl-account.ts",
+    "./perpl-close": "./src/perpl-close.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

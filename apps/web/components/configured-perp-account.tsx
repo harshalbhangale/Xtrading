@@ -3,6 +3,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
 import { z } from "zod";
+import PerpCloseReview from "./perp-close-review";
 
 const amount = z.string().regex(/^-?[0-9]+$/);
 const schema = z.object({
@@ -114,18 +115,21 @@ export default function ConfiguredPerpAccount() {
       {state.positions.map((p) => {
         const m = market(p.marketId);
         return (
-          <p key={p.positionId}>
-            {m?.symbol || `Market ${p.marketId}`} · {p.side} · Size{" "}
-            {m
-              ? formatUnits(BigInt(p.size), m.sizeDecimals)
-              : `${p.size} base units`}{" "}
-            · Entry{" "}
-            {m
-              ? formatUnits(BigInt(p.entryPrice), m.priceDecimals)
-              : `${p.entryPrice} price units`}{" "}
-            · {p.leverageHundredths / 100}x ·{" "}
-            {formatUnits(BigInt(p.collateral), 6)} AUSD collateral
-          </p>
+          <div key={p.positionId}>
+            <p>
+              {m?.symbol || `Market ${p.marketId}`} · {p.side} · Size{" "}
+              {m
+                ? formatUnits(BigInt(p.size), m.sizeDecimals)
+                : `${p.size} base units`}{" "}
+              · Entry{" "}
+              {m
+                ? formatUnits(BigInt(p.entryPrice), m.priceDecimals)
+                : `${p.entryPrice} price units`}{" "}
+              · {p.leverageHundredths / 100}x ·{" "}
+              {formatUnits(BigInt(p.collateral), 6)} AUSD collateral
+            </p>
+            <PerpCloseReview positionId={p.positionId} />
+          </div>
         );
       })}
       <h3>Recent fills</h3>
@@ -154,9 +158,26 @@ export default function ConfiguredPerpAccount() {
       })}
       <p>
         Positions are current account state, not proof of which X post caused a
-        trade. Closing positions and withdrawing remaining collateral still need
-        a reviewed exit flow.
+        trade. A close may fill partially: check order status and remaining size
+        before another action.
       </p>
+      <h3>Withdraw remaining AUSD</h3>
+      <p>
+        Perpl API keys cannot withdraw. Closing releases remaining margin into
+        the exchange account, not your wallet. Use the account owner wallet{" "}
+        <code style={{ overflowWrap: "anywhere" }}>{state.wallet}</code> on
+        Perpl testnet to approve a withdrawal. This differs from your linked
+        Xtrading wallet. Check the recipient and amount before signing, then
+        verify the wallet balance and withdrawal receipt.
+      </p>
+      <a
+        className="text-link"
+        href="https://testnet.perpl.xyz/"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Open official Perpl testnet for withdrawal ↗
+      </a>
     </section>
   );
 }
