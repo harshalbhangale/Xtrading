@@ -1,7 +1,7 @@
 # Verified deployments: contracts/deployments/{monad-testnet,mock-stake-monad-testnet}.json.
 # Kuru Spot V2: https://kuru-testnet-docs.mintlify.site/deployments/testnet (SDK 0.2.0 ABIs).
 name: call-my-bluff-stakes
-description: Testnet creator stakes and spot swaps; mainnet Kuru Flow creator payments
+description: Xtrading creator stakes and spot swaps on testnet; Kuru Flow creator payments on mainnet
 rollback_on_reorg: true
 field_selection:
   transaction_fields:
