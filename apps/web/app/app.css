@@ -253,6 +253,7 @@
   color: var(--muted);
   max-width: 680px;
   margin: 0;
+  text-wrap: pretty;
 }
 .dashboard-panel {
   background: var(--surface);

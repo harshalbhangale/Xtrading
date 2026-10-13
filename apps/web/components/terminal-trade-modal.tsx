@@ -1,6 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { TradeControl } from "./trade-control";
 
@@ -16,7 +16,9 @@ export default function TerminalTradeModal({
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const params = new URL(href, "https://xtradingnow.xyz").searchParams;
-  const perp = params.get("instrument") === "perp";
+  // Spot and perp share one pop-up; the link only picks the starting tab.
+  const [perp, setPerp] = useState(params.get("instrument") === "perp");
+  params.set("instrument", perp ? "perp" : "spot");
   params.set("chainId", perp ? "10143" : "143");
   params.delete("popup");
   useEffect(() => {
@@ -78,6 +80,24 @@ export default function TerminalTradeModal({
             ×
           </button>
         </header>
+        <div className="trade-modal-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={!perp}
+            onClick={() => setPerp(false)}
+          >
+            Spot <small>Kuru · mainnet</small>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={perp}
+            onClick={() => setPerp(true)}
+          >
+            Perps <small>Perpl · testnet</small>
+          </button>
+        </div>
         {params.get("handle") && (
           <p>
             From @{params.get("handle")}
@@ -95,9 +115,13 @@ export default function TerminalTradeModal({
           </p>
         )}
         {perp ? (
-          <PerpTrade initialParams={params.toString()} />
+          <PerpTrade key="perp" initialParams={params.toString()} />
         ) : (
-          <TradeControl chainId={143} initialParams={params.toString()} />
+          <TradeControl
+            key="spot"
+            chainId={143}
+            initialParams={params.toString()}
+          />
         )}
       </dialog>
     </div>,

@@ -96,8 +96,11 @@ const age = (ms: number) =>
     : ms < 86_400_000
       ? `${Math.round(ms / 3_600_000)}h`
       : `${Math.round(ms / 86_400_000)}d`;
-const pct = (bps: number) =>
-  `${bps > 0 ? "+" : bps < 0 ? "−" : ""}${Math.abs(bps / 100).toFixed(1)}%`;
+/** Signed percent; values that round to 0.0 carry no sign. */
+const pct = (bps: number) => {
+  const tenths = Math.round(bps / 10);
+  return `${tenths > 0 ? "+" : tenths < 0 ? "−" : ""}${Math.abs(tenths / 10).toFixed(1)}%`;
+};
 /** Display price: small values keep significant digits, larger ones two decimals. */
 const usd = (value: string) => {
   const n = Number(value);
@@ -614,6 +617,7 @@ export default function ConfiguredTerminal() {
             const s = item.signal;
             const faded = fades.includes(s.handle);
             const isFollowed = followed?.includes(s.handle);
+            const tradable = Boolean(item.trade.buy || item.trade.sell);
             return (
               <Fragment key={s.postId}>
                 {item.extra && !items[index - 1]?.extra && (
@@ -634,7 +638,8 @@ export default function ConfiguredTerminal() {
                     <nav>
                       <button
                         type="button"
-                        className="text-link"
+                        className="term-report"
+                        title="Report this post as deleted on X"
                         onClick={() => void reportDeleted(s.postId)}
                       >
                         ⚑ Report deleted
@@ -658,7 +663,9 @@ export default function ConfiguredTerminal() {
                     {s.capturedText || s.summary || "(no text)"}
                   </p>
                   <div className="term-chips">
-                    {s.instrument && <span>{s.instrument.toUpperCase()}</span>}
+                    {s.instrument && tradable && (
+                      <span>{s.instrument.toUpperCase()}</span>
+                    )}
                     {s.asset && (
                       <span
                         className={
@@ -678,6 +685,7 @@ export default function ConfiguredTerminal() {
                         {s.leverage ? ` · ${s.leverage}x` : ""}
                       </span>
                     )}
+                    {s.asset && !tradable && <span>Not tradable on Monad</span>}
                     <span>{s.confidence} confidence</span>
                     {!s.isCall && <span>not a call</span>}
                   </div>
@@ -692,14 +700,14 @@ export default function ConfiguredTerminal() {
                         aria-pressed={Boolean(isFollowed)}
                         onClick={() => void follow(s.handle)}
                       >
-                        ▲ {isFollowed ? "Following" : "Follow"}
+                        {isFollowed ? "✓ Following" : "▲ Follow"}
                       </button>
                       <button
                         type="button"
                         aria-pressed={faded}
                         onClick={() => fade(s.handle)}
                       >
-                        ▼ {faded ? "Fading" : "Fade"}
+                        {faded ? "✓ Fading" : "▼ Fade"}
                       </button>
                     </div>
                     {item.trade.buy && (

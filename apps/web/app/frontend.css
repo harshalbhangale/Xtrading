@@ -877,7 +877,7 @@ textarea:focus-visible {
 .terminal {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr) 280px;
-  gap: 20px;
+  gap: 32px;
   align-items: start;
 }
 .term-left,
@@ -1003,9 +1003,25 @@ textarea:focus-visible {
 }
 .term-card nav {
   display: flex;
+  align-items: center;
   gap: 12px;
   font: 11px var(--mono);
   text-transform: uppercase;
+}
+.term-report {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.term-report:hover,
+.term-report:focus-visible {
+  color: var(--ink);
+  opacity: 1;
 }
 .term-avatar {
   display: grid;
@@ -1264,6 +1280,7 @@ p.term-resolution {
     0 0 0 1px rgba(198, 242, 90, 0.18),
     0 8px 24px rgba(198, 242, 90, 0.18);
   color: #10160a;
+  font: inherit;
   text-align: left;
   text-decoration: none;
   cursor: pointer;

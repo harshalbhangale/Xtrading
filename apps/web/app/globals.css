@@ -508,6 +508,39 @@ code {
   gap: 16px;
   margin-bottom: 20px;
 }
+.trade-modal-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.trade-modal-tabs button {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.trade-modal-tabs button small {
+  font: 11px var(--mono, monospace);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+.trade-modal-tabs button[aria-selected="true"] {
+  background: #c6f25a;
+  color: #10160a;
+}
 .trade-modal-heading h2 {
   margin: 0 0 6px;
 }
