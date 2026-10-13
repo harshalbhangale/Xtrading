@@ -97,8 +97,8 @@ read -r PP SP BASE BD QUOTE QD _ < <(cast call $BOOK \
 [[ "$(cast call $ENTRY 'getRouter()(address)' --rpc-url $RPC)" == "$ROUTER" ]] || die "Kuru Flow router changed"
 [[ "$FEE_BPS" =~ ^(10|50|100|200)$ ]] || die "fee must be a tier rate"
 
-if [[ "$MODE" == "--fork" ]]; then
-  # Rehearsal funding only: 5 MON for gas, then real USDC by selling 200 MON on the fork.
+if [[ "$MODE" == "--fork" && -z "$PK" ]]; then
+  # Rehearsal funding for the anvil dev account only; a real key rehearses with real balances.
   if ! ge "$(mon "$SENDER")" 3000000000000000000; then
     cast rpc anvil_setBalance "$SENDER" 0x4563918244F40000 --rpc-url $RPC >/dev/null
     cast rpc anvil_setBalance "$SENDER" 0xD8D726B7177A800000 --rpc-url $RPC >/dev/null # 4000 MON

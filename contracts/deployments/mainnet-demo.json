@@ -1,0 +1,35 @@
+{
+  "approve-book": {
+    "status": "success",
+    "transactionHash": "0xc2de59ecede3de1db96ae875b103de57d53457fee1a7f8764d3f75a6f84a3514",
+    "blockNumber": "112958242"
+  },
+  "buy": {
+    "status": "success",
+    "transactionHash": "0x54a19b582bc439194c7eb6d1494b6336e0c5b96d18abdb9d672b8dfa0d6013fc",
+    "blockNumber": "112958254",
+    "spendUsdc": "1000000",
+    "expectedMonWei": "39824771007500000000"
+  },
+  "sell": {
+    "status": "success",
+    "transactionHash": "0x496c1559e65f0086727ab1ca04b92f9ddb80d812b9b1d2421c57981e9ee6db1d",
+    "blockNumber": "112958261",
+    "spendMonWei": "39824771007500000000",
+    "expectedUsdc": "999004"
+  },
+  "approve-flow": {
+    "status": "success",
+    "transactionHash": "0x419458b051d9c744ddb7648d17ccc56c7bf519225ebb8b862f1827395b2deee8",
+    "blockNumber": "112958267"
+  },
+  "creator-fee-buy": {
+    "status": "success",
+    "transactionHash": "0x450e00b927f5b1dc9703b7bbb9fc7ffa52835dfe88ac596632633eb6c1b9d64c",
+    "blockNumber": "112958280",
+    "spendUsdc": "1000000",
+    "feeBps": 10,
+    "creator": "0x51bDFC2a4D1C3B04A89f8CA928bd377B767Df424",
+    "creatorPaidMonWei": "39826357083100000"
+  }
+}
