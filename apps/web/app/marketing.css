@@ -16,7 +16,8 @@
   width: 140px;
 }
 .xp-header nav {
-  margin-inline: auto;
+  margin-left: 48px;
+  margin-right: auto;
   gap: 32px;
 }
 .xp-button {
