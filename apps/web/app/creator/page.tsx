@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CreatorStatus } from "../../components/creator-status";
 import { AccountSummary } from "../../components/dashboard/account-summary";
 import { ActionCard, PageHeading, Panel } from "../../components/dashboard/ui";
+import { MyReputation } from "../../components/my-reputation";
 
 export const metadata: Metadata = { title: "Creator studio" };
 
@@ -11,7 +12,7 @@ export default function CreatorPage() {
     <>
       <PageHeading
         title="Creator studio"
-        description="Link X and your wallet, register calls and build a measurable record."
+        description="Link X and your wallet, register calls and climb from Xtrading Pro to Ultra. Your tier sets your share of buyers' profit. No staking required."
       />
       <AccountSummary audience="creator" signedOutPrompt={false} />
       <Panel
@@ -24,14 +25,15 @@ export default function CreatorPage() {
         <CreatorStatus />
       </Panel>
       <Panel
-        title="Reward eligibility"
-        description="Five distinct correct calls must each be backed by a confirmed profitable user trade after costs."
+        title="Your tier"
+        description="Progress toward the next fee tier. You earn only when buyers sell at a profit."
+        action={
+          <Link className="text-link" href="/creator/reputation">
+            Tiers & red flags
+          </Link>
+        }
       >
-        <p className="small-note">
-          Profit verification is not available yet. Correct price predictions
-          alone do not establish eligibility; no reward is promised or
-          activated.
-        </p>
+        <MyReputation />
       </Panel>
       <div className="dashboard-two-column">
         <Panel
@@ -49,6 +51,13 @@ export default function CreatorPage() {
               <dd>
                 Your stable X ID bound to a wallet by a signed, single-use
                 message. Proves ownership, not skill.
+              </dd>
+            </div>
+            <div>
+              <dt>Reputation tier</dt>
+              <dd>
+                Xtrading Pro, Max or Ultra, earned from scored calls and demoted
+                by evidence-backed red flags. Sets your share of buyers' profit.
               </dd>
             </div>
             <div>

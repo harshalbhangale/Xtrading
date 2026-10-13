@@ -88,7 +88,7 @@ function NavMenu({
   );
 }
 
-export function SiteHeader({ testnet }: { testnet: boolean }) {
+export function SiteHeader(_props: { testnet: boolean }) {
   const path = usePathname();
   if (isChromeless(path)) return null;
   return (
@@ -104,7 +104,7 @@ export function SiteHeader({ testnet }: { testnet: boolean }) {
       <div className="header-actions">
         <span className="network">
           <i />
-          Monad {testnet ? "testnet" : "mainnet"}
+          Monad · mainnet & testnet
         </span>
         {process.env.NEXT_PUBLIC_PRIVY_APP_ID ? (
           <ConfiguredActions />

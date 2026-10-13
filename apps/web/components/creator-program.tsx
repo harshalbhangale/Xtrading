@@ -6,39 +6,42 @@ import { useId, useState } from "react";
 const tiers = [
   {
     name: "Pro",
-    price: "10 USDC",
+    share: "5%",
     mark: "Ⅰ",
-    tagline: "Put your name on the record.",
+    tagline: "Your first proven calls.",
     criteria: [
-      "X account and payout wallet linked",
-      "Public call history with source posts",
-      "Proposed monthly price, not a stake",
+      "5 or more scored calls",
+      "At least half of them right",
+      "No serious red flags (each one costs a tier)",
     ],
-    reward: "Proposed at 10 USDC a month on Monad. Billing is not live.",
+    reward:
+      "Earn 5% of a buyer's realized profit on positions bought from your post.",
   },
   {
     name: "Max",
-    price: "20 USDC",
+    share: "10%",
     mark: "Ⅱ",
-    tagline: "A stronger public record.",
+    tagline: "A record that holds up.",
     criteria: [
-      "Everything in Pro",
-      "Evaluated calls with sample size and time window",
-      "Wins, losses and unavailable posts stay visible",
+      "15 or more scored calls",
+      "At least 60% right",
+      "Positive median return across scored calls",
     ],
-    reward: "Proposed at 20 USDC a month on Monad after the record qualifies.",
+    reward:
+      "Earn 10% of a buyer's realized profit on positions bought from your post.",
   },
   {
     name: "Ultra",
-    price: "30 USDC",
+    share: "15%",
     mark: "Ⅲ",
-    tagline: "The highest proposed plan.",
+    tagline: "Sustained, verifiable conviction.",
     criteria: [
-      "Everything in Max",
-      "Sustained results under published evaluation rules",
-      "Resolved evidence disputes",
+      "30 or more scored calls",
+      "At least 65% right",
+      "Positive median return at the 7-day horizon",
     ],
-    reward: "Proposed at 30 USDC a month on Monad. Price follows the record.",
+    reward:
+      "Earn 15% of a buyer's realized profit on positions bought from your post.",
   },
 ] as const;
 
@@ -76,24 +79,25 @@ export function CreatorProgram() {
           </span>
           <i>→</i>
           <span>
-            ⇄<small>ELIGIBLE BUY</small>
+            ⇄<small>PROFITABLE SELL</small>
           </span>
           <i>→</i>
           <span>
-            ↗<small>CREATOR FEE</small>
+            ↗<small>PROFIT SHARE</small>
           </span>
         </div>
         <div>
-          <p className="xp-eyebrow">POST → BUY → EARN</p>
+          <p className="xp-eyebrow">POST → BUY → PROFIT → EARN</p>
           <h3>
-            Your audience trades.
+            Your audience wins.
             <br />
-            You share in the fees.
+            Then you earn.
           </h3>
           <p>
-            Link your X account, verify wallet ownership and register a payout
-            wallet. Eligible fee-enabled buys can pay a creator fee, disclosed
-            to the buyer before wallet approval.
+            Buying from your post is free. When a buyer sells that position for
+            a profit, you earn a share of the profit, never of the trade, shown
+            to the buyer before wallet approval. No staking, no subscription:
+            link X, prove your wallet and climb the tiers.
           </p>
           <p className="x-program-note">
             Payout registration is available. Fee execution depends on
@@ -107,21 +111,18 @@ export function CreatorProgram() {
       </div>
       <div className="x-tier-header">
         <div>
-          <p className="xp-eyebrow">THE NEXT CHAPTER / REPUTATION TIERS</p>
+          <p className="xp-eyebrow">EARNED, NOT BOUGHT / REPUTATION TIERS</p>
           <h3>Xtrading Pro. Max. Ultra.</h3>
         </div>
-        <span className="x-roadmap-tag">PROPOSED · NOT BILLED</span>
+        <span className="x-roadmap-tag">EARNED FROM SCORED CALLS</span>
       </div>
       <p className="x-tier-intro">
-        A creator subscription replaces a new stake. Pro, Max and Ultra are
-        proposed at 10, 20 and 30 USDC a month on Monad. The price can rise only
-        when the public record qualifies. This page does not submit a USDC
-        transfer.
+        Tiers are achievements, not plans. Scored calls move you up; evidence of
+        bad behaviour, like a deleted call or trading against your own call,
+        moves you down. Your tier sets your share of buyers' realized profit.
+        Live on Monad mainnet and testnet.
       </p>
-      <fieldset
-        className="x-tier-grid"
-        aria-label="Explore proposed creator tiers"
-      >
+      <fieldset className="x-tier-grid" aria-label="Explore creator tiers">
         {tiers.map((item, index) => (
           <button
             key={item.name}
@@ -136,7 +137,7 @@ export function CreatorProgram() {
             </span>
             <small>XTRADING</small>
             <strong>{item.name}</strong>
-            <em className="x-tier-price">{item.price} / month proposed</em>
+            <em className="x-tier-price">{item.share} of buyer profit</em>
             <p>{item.tagline}</p>
             <span className="x-tier-open">
               Explore eligibility <b>↗</b>
@@ -147,7 +148,7 @@ export function CreatorProgram() {
       <div id={panelId} className="x-tier-details">
         <div>
           <p className="xp-eyebrow">
-            {tier.name.toUpperCase()} / PROPOSED ELIGIBILITY
+            {tier.name.toUpperCase()} / HOW TO EARN IT
           </p>
           <h4>{tier.reward}</h4>
         </div>
@@ -161,11 +162,9 @@ export function CreatorProgram() {
         </ul>
       </div>
       <p className="x-program-note">
-        These prices are a proposal. When billing is live, payment is USDC on
-        Monad. A payment does not raise a score, verify an X account, or prove
-        that followers made money. New stake deposits are closed. A previous
-        deposit can still be withdrawn, and that balance stays separate from
-        this subscription.
+        A tier does not verify a person or promise profit; it summarises scored
+        calls under the published methodology. No profit, no fee. Track your
+        progress in the creator studio.
       </p>
       <div className="x-integrity-panel">
         <div className="x-post-trail" aria-hidden="true">
@@ -188,17 +187,18 @@ export function CreatorProgram() {
           </div>
         </div>
         <div>
-          <span className="x-roadmap-tag">MONITORING / PLANNED</span>
+          <span className="x-roadmap-tag">
+            MONITORING / LIVE FOR MISSING POSTS
+          </span>
           <h3>
             A losing call shouldn’t
             <br />
             vanish from the record.
           </h3>
           <p>
-            The planned post monitor keeps timestamped snapshots of registered
-            source posts and checks for edits or disappearance. Post history
-            sits beside evaluated call outcomes, so cherry-picked winners don’t
-            tell the whole story.
+            Registered call posts are archived at registration and re-checked on
+            X. A call that disappears after going wrong is flagged and costs a
+            tier, so cherry-picked winners don’t tell the whole story.
           </p>
           <div className="x-flow-tags">
             <span>Original snapshot</span>
@@ -207,12 +207,13 @@ export function CreatorProgram() {
             <span>Outcome evidence</span>
           </div>
           <p className="x-program-note">
-            Monitoring cannot prevent deletion on X. An unavailable post is not
-            proof of deletion or fraud; access failures stay distinct and flags
-            require review. No live monitoring feed is connected here.
+            Monitoring cannot prevent deletion on X. A flag needs two
+            consecutive misses; failed lookups stay distinct, and deleted,
+            protected or suspended posts look the same from outside. Edit
+            history is not tracked yet.
           </p>
-          <Link href="/creators" className="xp-text-link">
-            Explore existing creator records <span>↗</span>
+          <Link href="/creators?view=flagged" className="xp-text-link">
+            See creators with red flags <span>↗</span>
           </Link>
         </div>
       </div>

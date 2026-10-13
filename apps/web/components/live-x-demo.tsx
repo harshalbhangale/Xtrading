@@ -1,9 +1,11 @@
 "use client";
 
 import {
+  type KolAssessment,
   type PublicCreatorEvidence,
   postSignalResponseSchema,
   publicCreatorEvidenceSchema,
+  tierName,
   tradeReviewPath,
 } from "@call-my-bluff/domain";
 import Link from "next/link";
@@ -23,6 +25,7 @@ export function LiveXDemo() {
   const [url, setUrl] = useState("");
   const [post, setPost] = useState<PublicPost | null>(null);
   const [evidence, setEvidence] = useState<PublicCreatorEvidence | null>(null);
+  const [reputation, setReputation] = useState<KolAssessment | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -66,6 +69,7 @@ export function LiveXDemo() {
     const controller = new AbortController();
     pending.current = controller;
     setEvidence(null);
+    setReputation(null);
     setAnalysis(null);
     setChecking(true);
     setContextError("");
@@ -75,6 +79,13 @@ export function LiveXDemo() {
       }).then(async (response) => {
         if (!response.ok) throw new Error("Creator evidence unavailable.");
         return publicCreatorEvidenceSchema.parse(await response.json());
+      }),
+      fetch(`/api/creators/${post.authorHandle}/reputation`, {
+        signal: controller.signal,
+      }).then(async (response) => {
+        if (!response.ok) throw new Error("Reputation unavailable.");
+        return ((await response.json()) as { assessment: KolAssessment })
+          .assessment;
       }),
       fetch("/api/signals/classify", {
         method: "POST",
@@ -92,8 +103,9 @@ export function LiveXDemo() {
       }),
     ]);
     if (controller.signal.aborted) return;
-    const [record, signal] = results;
+    const [record, tier, signal] = results;
     if (record?.status === "fulfilled") setEvidence(record.value);
+    if (tier?.status === "fulfilled") setReputation(tier.value);
     if (signal?.status === "fulfilled") setAnalysis(signal.value);
     if (results.some((result) => result.status === "rejected"))
       setContextError(
@@ -205,7 +217,7 @@ export function LiveXDemo() {
                   ? "Reading the post and checking its creator…"
                   : "The record, beside the post."}
               </p>
-              <span>Identity · Call results · Trade review</span>
+              <span>Identity · Tier · Red flags · Trade review</span>
             </div>
           ) : (
             <>
@@ -218,15 +230,21 @@ export function LiveXDemo() {
                 </strong>
               </div>
               <div className="x-context-line">
-                <span>Refundable stake</span>
+                <span>Reputation tier</span>
                 <strong>
-                  {evidence?.stake.status === "active"
-                    ? "Active"
-                    : evidence?.stake.status === "withdrawal-pending"
-                      ? "Withdrawal pending"
-                      : evidence?.stake.status === "inactive"
-                        ? "Inactive"
-                        : "Unavailable"}
+                  {reputation
+                    ? (tierName(reputation.tier) ?? "No tier yet")
+                    : "Unavailable"}
+                </strong>
+              </div>
+              <div className="x-context-line">
+                <span>Red flags</span>
+                <strong>
+                  {reputation
+                    ? reputation.flags.length
+                      ? reputation.flags.map((flag) => flag.title).join(" · ")
+                      : "None found"
+                    : "Unavailable"}
                 </strong>
               </div>
               <div className="x-context-line">
@@ -277,8 +295,8 @@ export function LiveXDemo() {
         </div>
       </div>
       <p className="x-demo-footnote">
-        Monad testnet · You review and sign in the trading workspace. Identity,
-        call results and wallet returns remain separate.
+        Monad mainnet & testnet · You review and sign in the trading workspace.
+        Identity, tier and wallet returns remain separate.
       </p>
     </div>
   );

@@ -15,6 +15,7 @@ import { evaluateExpiredCall } from "@call-my-bluff/integrations/call-evaluation
 import {
   CALL_HORIZONS,
   CALL_METHODOLOGY,
+  checkPostAvailability,
   fetchPublicPost,
   observePrice,
   PRICE_TOLERANCE_SECONDS,
@@ -255,8 +256,86 @@ async function indexedBonds(ids: string[]) {
   }
 }
 
+const RECHECK_AFTER_MS = 6 * 3600_000;
+const RECHECKS_PER_REQUEST = 3;
+/**
+ * Re-checks whether registered posts are still publicly served, oldest check
+ * first, and appends the observation to the call (last six kept). Bounded per
+ * request; "unavailable" means the lookup failed, not that the post is gone.
+ */
+async function recheckAvailability(rows: CallRow[]) {
+  const database = getDatabase();
+  if (!database) return rows;
+  const now = Date.now();
+  const due = rows
+    .map((row) => ({
+      row,
+      evidence: callEvidenceSchema.safeParse(row.evidence),
+    }))
+    .filter(
+      ({ row, evidence }) => row.status !== "excluded" && evidence.success,
+    )
+    .map(({ row, evidence }) => {
+      const checks = evidence.data?.availability ?? [];
+      const last = checks.at(-1);
+      return { row, checks, last: last ? Date.parse(last.checkedAt) : 0 };
+    })
+    .filter(({ last }) => now - last >= RECHECK_AFTER_MS)
+    .sort((a, b) => a.last - b.last)
+    .slice(0, RECHECKS_PER_REQUEST);
+  const updated = new Map<string, CallRow>();
+  await Promise.all(
+    due.map(async ({ row, checks }) => {
+      const result = await checkPostAvailability(row.postId);
+      const next = [
+        ...checks,
+        { status: result.status, checkedAt: result.checkedAt },
+      ].slice(-6);
+      // Touch only the availability key so concurrent evaluation is not lost.
+      const [saved] = await database.db
+        .update(calls)
+        .set({
+          evidence: sql`jsonb_set(${calls.evidence}, '{availability}', ${JSON.stringify(next)}::jsonb)`,
+        })
+        .where(eq(calls.id, row.id))
+        .returning();
+      if (saved) updated.set(row.id, saved);
+    }),
+  );
+  return rows.map((row) => updated.get(row.id) ?? row);
+}
+
+/** Records one on-demand availability check against a stored call. */
+export async function recordAvailability(
+  callId: string,
+  result: {
+    status: "available" | "not-publicly-available" | "unavailable";
+    checkedAt: string;
+  },
+) {
+  const database = getDatabase();
+  if (!database) return;
+  const [row] = await database.db
+    .select({ evidence: calls.evidence })
+    .from(calls)
+    .where(eq(calls.id, callId))
+    .limit(1);
+  const evidence = callEvidenceSchema.safeParse(row?.evidence);
+  if (!evidence.success) return;
+  const next = [...(evidence.data.availability ?? []), result].slice(-6);
+  await database.db
+    .update(calls)
+    .set({
+      evidence: sql`jsonb_set(${calls.evidence}, '{availability}', ${JSON.stringify(next)}::jsonb)`,
+    })
+    .where(eq(calls.id, callId));
+}
+
 /** Public call ledger for a handle; null when the handle has no unique binding. */
-export async function publicCallLedger(input: string) {
+export async function publicCallLedger(
+  input: string,
+  options: { recheck?: boolean } = {},
+) {
   const handle = normalizeHandle(input);
   const database = getDatabase();
   if (!handle || !database) return null;
@@ -272,7 +351,9 @@ export async function publicCallLedger(input: string) {
     .where(eq(calls.creatorId, owners[0].id))
     .orderBy(desc(calls.publishedAt))
     .limit(50);
-  const evaluated = await evaluateDue(rows);
+  const evaluated = options.recheck
+    ? await recheckAvailability(await evaluateDue(rows))
+    : await evaluateDue(rows);
   const list: PublicCall[] = [];
   for (const row of evaluated) {
     const evidence = callEvidenceSchema.safeParse(row.evidence);

@@ -12,7 +12,11 @@ const copy = {
   },
   Kuru: {
     lines: ["FROM THE POST.", "TO YOUR", "POSITION."],
-    body: "Kuru brings configured spot markets to the flow.\nInspect the call, review the amount,\nthen approve with your own wallet.",
+    body: "Kuru spot, on mainnet and testnet.\nBuy or sell from the post with a simulated minimum,\nthen approve with your own wallet.",
+  },
+  Perpl: {
+    lines: ["LONG IT.", "SHORT IT.", "SIZE IT."],
+    body: "Perpl perps from the same call.\nLeverage and size caps are checked first.\nPositions can be liquidated; you confirm.",
   },
   Privy: {
     lines: ["YOUR IDENTITY.", "YOUR WALLET.", "YOUR MOVE."],
@@ -25,6 +29,10 @@ const copy = {
   Nansen: {
     lines: ["LOOK BEYOND", "THE POST.", "CHECK THE WALLET."],
     body: "Nansen adds sourced wallet context.\nInspect the network, timestamp and coverage.\nSee the observations behind the summary.",
+  },
+  Chainlink: {
+    lines: ["CALLS SETTLE", "THEMSELVES.", "ON THE HOUR."],
+    body: "A Chainlink CRE workflow prices expired calls.\nNodes agree on the median, then settle onchain.\nWrong bonded calls are slashed. No admin.",
   },
 } as const;
 type Mode = keyof typeof copy;
@@ -118,7 +126,16 @@ export function KineticHero({
             <span className="x-stack-hint">/ EXPLORE EACH LAYER</span>
           </span>
           <div>
-            {(["Kuru", "Privy", "Envio", "Nansen"] as const).map((sponsor) => (
+            {(
+              [
+                "Kuru",
+                "Perpl",
+                "Privy",
+                "Envio",
+                "Nansen",
+                "Chainlink",
+              ] as const
+            ).map((sponsor) => (
               <button
                 key={sponsor}
                 type="button"

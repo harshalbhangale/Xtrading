@@ -23,7 +23,7 @@ export const roles: Record<
     summary: "For anyone reading trade calls on X.",
     icon: "trade",
     points: [
-      "Check a creator’s linked identity and call history",
+      "Check a creator’s tier, red flags and call history",
       "Review Kuru spot and Perpl perp trades before you sign",
       "Track your confirmed fills and wallet activity",
     ],
@@ -39,8 +39,8 @@ export const roles: Record<
     icon: "calls",
     points: [
       "Bind your X account to a wallet with a signed message",
-      "Register calls. A previous deposit can still be withdrawn",
-      "Proposed plans are 10, 20 and 30 USDC a month on Monad",
+      "Register calls that are priced and scored at expiry",
+      "Climb Xtrading Pro, Max and Ultra to earn a share of buyers’ profit",
     ],
     method: "Requires signing in with your X account.",
     href: "/creator",

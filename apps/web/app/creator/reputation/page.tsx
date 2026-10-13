@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import {
-  EmptyState,
-  PageHeading,
-  Panel,
-} from "../../../components/dashboard/ui";
+import { PageHeading, Panel } from "../../../components/dashboard/ui";
+import { MyReputation } from "../../../components/my-reputation";
 
 export const metadata: Metadata = { title: "Reputation" };
 
@@ -12,13 +9,13 @@ export default function ReputationPage() {
     <>
       <PageHeading
         title="Reputation"
-        description="Call performance under a published methodology, with sample size and coverage alongside every number."
+        description="Earn Xtrading Pro, Max and Ultra from scored calls. Your tier sets your share of buyers' realized profit; red flags demote. No staking required."
       />
-      <Panel title="Performance">
-        <EmptyState
-          title="No score yet."
-          description="A score appears only once enough registered calls have expired and been evaluated. Until then nothing is shown, not a zero."
-        />
+      <Panel
+        title="Your tier"
+        description="Scored under the published methodology, with sample size beside every number."
+      >
+        <MyReputation full />
       </Panel>
     </>
   );

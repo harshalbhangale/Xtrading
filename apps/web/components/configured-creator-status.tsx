@@ -1,7 +1,9 @@
 "use client";
 import {
   identityStatusSchema,
+  type KolAssessment,
   publicCallLedgerSchema,
+  tierName,
 } from "@call-my-bluff/domain";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
@@ -14,6 +16,7 @@ type State =
   | {
       kind: "ready";
       identity: Identity;
+      reputation: KolAssessment | null;
       calls: number | null;
     };
 
@@ -34,18 +37,23 @@ export default function ConfiguredCreatorStatus() {
       });
       if (!response.ok) throw new Error("identity unavailable");
       const identity = identityStatusSchema.parse(await response.json());
+      let reputation: KolAssessment | null = null;
       let calls: number | null = null;
       if (identity.bindingCurrent && identity.binding) {
         const handle = identity.binding.handle;
-        const ledger = await fetch(`/api/creators/${handle}/calls`, {
-          cache: "no-store",
-        });
+        const [public_, ledger] = await Promise.all([
+          fetch(`/api/creators/${handle}/reputation`, { cache: "no-store" }),
+          fetch(`/api/creators/${handle}/calls`, { cache: "no-store" }),
+        ]);
+        if (public_.ok)
+          reputation = ((await public_.json()) as { assessment: KolAssessment })
+            .assessment;
         if (ledger.ok) {
           const parsed = publicCallLedgerSchema.safeParse(await ledger.json());
           if (parsed.success) calls = parsed.data.calls.length;
         }
       }
-      if (!cancelled) setState({ kind: "ready", identity, calls });
+      if (!cancelled) setState({ kind: "ready", identity, reputation, calls });
     })().catch(() => {
       if (!cancelled) setState({ kind: "error" });
     });
@@ -73,6 +81,14 @@ export default function ConfiguredCreatorStatus() {
             href: "/creator/calls",
             action: "Register a call",
           },
+          {
+            title: "Reach Xtrading Pro",
+            done: false,
+            detail:
+              "5 scored calls, at least half right, unlocks a 5% share of buyers' profit.",
+            href: "/creator/reputation",
+            action: "See tiers",
+          },
         ]}
         onSignIn={() => login({ loginMethods: ["twitter"] })}
       />
@@ -86,7 +102,7 @@ export default function ConfiguredCreatorStatus() {
       </p>
     );
 
-  const { identity, calls } = state;
+  const { identity, reputation, calls } = state;
   const bound = identity.bindingCurrent && identity.binding;
   const steps: Step[] = [
     {
@@ -112,6 +128,17 @@ export default function ConfiguredCreatorStatus() {
             : `${calls} registered.`,
       href: "/creator/calls",
       action: calls ? "View calls" : "Register a call",
+    },
+    {
+      title: "Earn a fee tier",
+      done: Boolean(reputation?.tier),
+      detail: reputation?.tier
+        ? `${tierName(reputation.tier)} · ${reputation.profitShareBps / 100}% of buyers' realized profit${reputation.next ? ` · ${Math.floor(reputation.progressBps / 100)}% to ${reputation.next.name}` : ""}.`
+        : reputation?.next
+          ? `${Math.floor(reputation.progressBps / 100)}% of the way to ${reputation.next.name} (5% of buyers' realized profit).`
+          : "Xtrading Pro (5%), Max (10%) and Ultra (15%) of buyers' realized profit, earned from scored calls.",
+      href: "/creator/reputation",
+      action: "Track progress",
     },
   ];
   return (

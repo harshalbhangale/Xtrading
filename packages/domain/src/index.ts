@@ -254,6 +254,16 @@ export const callEvidenceSchema = z.object({
   outcome: z.enum(["success", "failure", "tie"]).nullable(),
   returnBps: signedIntegerSchema.nullable(),
   lastAttemptAt: z.iso.datetime().nullable(),
+  // Repeated public-availability checks of the post (oEmbed), newest last.
+  availability: z
+    .array(
+      z.object({
+        status: z.enum(["available", "not-publicly-available", "unavailable"]),
+        checkedAt: z.iso.datetime(),
+      }),
+    )
+    .max(6)
+    .optional(),
 });
 export type CallEvidence = z.infer<typeof callEvidenceSchema>;
 export const bondOutcomes = [
@@ -305,6 +315,7 @@ export const publicCallLedgerSchema = z.object({
     .optional(),
   observedAt: z.iso.datetime(),
 });
+export * from "./reputation";
 export * from "./signals";
 
 const txHashSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);

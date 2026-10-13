@@ -67,11 +67,11 @@ export default function LandingPage() {
               "Explore creator records",
             ],
             [
-              "02 / CALL RESULTS",
-              "How did the calls perform?",
-              "A complete call history with outcomes and sample size. Actual user profits require separate trade evidence.",
-              "/for-creators",
-              "Build your record",
+              "02 / REPUTATION",
+              "Has the call held up?",
+              "Scored calls earn Xtrading Pro, Max and Ultra. Deleted calls and trading against your own call are flagged.",
+              "/creators?view=flagged",
+              "See red flags",
             ],
             [
               "03 / EXECUTION",
@@ -86,7 +86,7 @@ export default function LandingPage() {
                 kind={
                   n?.includes("IDENTITY")
                     ? "identity"
-                    : n?.includes("CALL RESULTS")
+                    : n?.includes("REPUTATION")
                       ? "stake"
                       : "execution"
                 }
@@ -114,8 +114,8 @@ export default function LandingPage() {
             <span className="xp-eyebrow">USER LOGIN</span>
             <h3>Follow calls and trade</h3>
             <p>
-              Check any creator’s identity and call history, then review Kuru
-              spot or Perpl perp trades before your wallet opens.
+              Check any creator’s tier, red flags and call history, then review
+              Kuru spot or Perpl perp trades before your wallet opens.
             </p>
             <b>Open the dashboard →</b>
           </Link>
@@ -124,7 +124,7 @@ export default function LandingPage() {
             <h3>Build a public record</h3>
             <p>
               Bind your X account to a wallet and register calls that are scored
-              at expiry.
+              at expiry. Climb the tiers to earn from buyers’ profit.
             </p>
             <b>Open the creator studio →</b>
           </Link>

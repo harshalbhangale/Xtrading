@@ -64,9 +64,9 @@ export default function ForCreatorsPage() {
             "Attach the source post and define the asset, direction, target and deadline. Terms stay fixed and all outcomes remain visible.",
           ],
           [
-            "03 / SUBSCRIBE AS THE RECORD GROWS",
+            "03 / EARN AS THE RECORD GROWS",
             "Pro, Max, then Ultra.",
-            "Proposed at 10, 20 and 30 USDC a month on Monad. The price follows published results. Billing is not live, and a USDC payment cannot buy a higher score.",
+            "Scored calls unlock 5%, 10% and 15% of buyers' realized profit on positions bought from your post. Red flags demote. No staking and no subscription.",
           ],
         ].map(([n, title, copy]) => (
           <article className="xp-detail-card" key={n}>
@@ -81,8 +81,8 @@ export default function ForCreatorsPage() {
           <strong>A clear record beats an ambiguous badge.</strong>
           <p>
             Account ownership, call outcomes and actual user profit are separate
-            records. Keep the full history visible, including incorrect calls. A
-            paid plan cannot buy a higher reputation score.
+            records. Keep the full history visible, including incorrect calls.
+            Tiers are earned from scored calls; they cannot be bought.
           </p>
         </div>
         <Link href="/creator" className="xp-button">
@@ -92,11 +92,13 @@ export default function ForCreatorsPage() {
       <section className="xp-faq">
         <h2>Before your first call.</h2>
         <details>
-          <summary>When would the subscription price go up?</summary>
+          <summary>How do I move up a tier?</summary>
           <p>
-            Only after the public record qualifies for the next plan. Pro, Max
-            and Ultra are proposed at 10, 20 and 30 USDC a month on Monad.
-            Billing is not live, so this page does not submit a transfer.
+            Xtrading Pro needs 5 scored calls with at least half right; Max
+            needs 15 with 60% right and a positive median return; Ultra needs 30
+            with 65% right and a positive median at 7 days. Each serious red
+            flag, such as a deleted call or trading against your own call, costs
+            one tier. Track progress in the creator studio.
           </p>
         </details>
         <details>

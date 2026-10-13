@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CreatorSearch } from "../../components/creator-search";
 import { PageHeading, Panel } from "../../components/dashboard/ui";
+import { TierBadge } from "../../components/kol-reputation";
+import { kolRecord } from "../../lib/kol-record";
 import {
   publicCreatorEvidence,
   recentBoundHandles,
@@ -10,11 +12,27 @@ import {
 export const metadata: Metadata = { title: "Creators" };
 export const dynamic = "force-dynamic";
 
-export default async function CreatorsPage() {
+export default async function CreatorsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const flaggedOnly = (await searchParams).view === "flagged";
   const handles = await recentBoundHandles();
-  const records = handles
-    ? await Promise.all(handles.map((handle) => publicCreatorEvidence(handle)))
+  const all = handles
+    ? await Promise.all(
+        handles.map(async (handle) => {
+          const [evidence, record] = await Promise.all([
+            publicCreatorEvidence(handle),
+            kolRecord(handle).catch(() => null),
+          ]);
+          return evidence ? { ...evidence, record } : null;
+        }),
+      )
     : [];
+  const records = flaggedOnly
+    ? all.filter((r) => r?.record?.assessment.flags.length)
+    : all;
   return (
     <>
       <PageHeading
@@ -26,13 +44,37 @@ export default async function CreatorsPage() {
       </Panel>
       <Panel
         title="Bound accounts"
-        description="Most recent bindings first. Binding proves account ownership, not skill."
-        action={<span className="tag">Monad testnet</span>}
+        description="Most recent bindings first. Tiers come from scored calls; red flags come from evidence and demote tiers."
+        action={
+          <nav className="preview-selector" aria-label="Filter creators">
+            <Link
+              href="/creators"
+              aria-current={flaggedOnly ? undefined : "page"}
+            >
+              All
+            </Link>
+            <Link
+              href="/creators?view=flagged"
+              aria-current={flaggedOnly ? "page" : undefined}
+            >
+              Red flags
+            </Link>
+          </nav>
+        }
       >
         {handles === null ? (
           <div className="dashboard-empty">
             <h3>The registry is unavailable right now.</h3>
             <p>Handle lookup above still works.</p>
+          </div>
+        ) : records.length === 0 && flaggedOnly ? (
+          <div className="dashboard-empty">
+            <h3>No bound creator has a red flag right now.</h3>
+            <p>
+              Flags appear when a registered post stops being public, a creator
+              trades against their own call, most calls are wrong or a bond is
+              slashed.
+            </p>
           </div>
         ) : records.length === 0 ? (
           <div className="dashboard-empty">
@@ -51,7 +93,9 @@ export default async function CreatorsPage() {
               <thead>
                 <tr>
                   <th scope="col">Creator</th>
-                  <th scope="col">Identity</th>
+                  <th scope="col">Tier</th>
+                  <th scope="col">Record</th>
+                  <th scope="col">Red flags</th>
                   <th scope="col">Bound</th>
                 </tr>
               </thead>
@@ -66,9 +110,29 @@ export default async function CreatorsPage() {
                           </Link>
                         </td>
                         <td>
-                          {record.identity.status === "bound"
-                            ? "Binding recorded"
+                          <TierBadge
+                            tier={record.record?.assessment.tier ?? null}
+                          />
+                        </td>
+                        <td>
+                          {record.record
+                            ? record.record.assessment.scored
+                              ? `${record.record.assessment.hits}/${record.record.assessment.scored} right · ${record.record.assessment.open} open`
+                              : `${record.record.assessment.open} open · none scored`
                             : "Unavailable"}
+                        </td>
+                        <td>
+                          {record.record?.assessment.flags.length ? (
+                            <span className="flag-count">
+                              {record.record.assessment.flags
+                                .map((flag) => flag.title)
+                                .join(" · ")}
+                            </span>
+                          ) : record.record ? (
+                            "None found"
+                          ) : (
+                            "—"
+                          )}
                         </td>
                         <td>
                           {record.identity.linkedAt

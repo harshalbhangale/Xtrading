@@ -2,6 +2,7 @@ import { calls } from "@call-my-bluff/database";
 import { checkPostAvailability } from "@call-my-bluff/integrations/calls";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { recordAvailability } from "../../../../../lib/calls";
 import { getDatabase } from "../../../../../lib/database";
 import { reply } from "../../../../../lib/identity-http";
 import { allow, clientKey } from "../../../../../lib/rate-limit";
@@ -28,7 +29,9 @@ export async function GET(
       .where(eq(calls.id, id.data))
       .limit(1);
     if (!call) return reply({ error: "call_not_found" }, 404);
-    return reply(await checkPostAvailability(call.postId));
+    const result = await checkPostAvailability(call.postId);
+    await recordAvailability(id.data, result).catch(() => undefined);
+    return reply(result);
   } catch {
     return reply({ error: "post_check_unavailable" }, 503);
   }

@@ -129,7 +129,8 @@
 }
 .x-stack > div {
   display: flex;
-  gap: 33px;
+  flex-wrap: wrap;
+  gap: 12px 28px;
   margin-top: 15px;
   align-items: center;
 }

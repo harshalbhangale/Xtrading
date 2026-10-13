@@ -5,8 +5,13 @@ import { notFound } from "next/navigation";
 import { CallLedger, CallSummary } from "../../../components/call-ledger";
 import { CreatorOverviewPanel } from "../../../components/creator-overview";
 import { PageHeading, Panel } from "../../../components/dashboard/ui";
-import { publicCallLedger } from "../../../lib/calls";
+import {
+  KolFlags,
+  TierLadder,
+  TierProgress,
+} from "../../../components/kol-reputation";
 import { creatorReputation } from "../../../lib/insights";
+import { kolRecord } from "../../../lib/kol-record";
 import { publicCreatorEvidence } from "../../../lib/public-creator";
 
 export const dynamic = "force-dynamic";
@@ -28,11 +33,12 @@ export default async function CreatorPage({
 }) {
   const handle = normalizeHandle((await params).handle);
   if (!handle) notFound();
-  const [evidence, ledger, detected] = await Promise.all([
+  const [evidence, record, detected] = await Promise.all([
     publicCreatorEvidence(handle),
-    publicCallLedger(handle).catch(() => null),
+    kolRecord(handle, { recheck: true }).catch(() => null),
     creatorReputation(handle).catch(() => null),
   ]);
+  const ledger = record?.ledger ?? null;
   const identity = evidence?.identity;
   const bound = identity?.status === "bound";
   return (
@@ -45,7 +51,7 @@ export default async function CreatorPage({
         title={`@${handle}`}
         description={
           bound
-            ? "This X account is bound to a wallet. Identity, call performance and wallet returns are shown separately."
+            ? "This X account is bound to a wallet. Identity, reputation tier, red flags and wallet returns are shown separately."
             : "No verified binding for this handle. Nothing here should be read as a claim about this account."
         }
         action={
@@ -59,6 +65,17 @@ export default async function CreatorPage({
           </a>
         }
       />
+      {record && (
+        <Panel
+          title="Accountability"
+          description="Red flags come from evidence only: registered posts that stopped being public, trades against the creator's own calls, wrong-call rate and slashed bonds."
+        >
+          <KolFlags
+            assessment={record.assessment}
+            calls={ledger?.calls ?? []}
+          />
+        </Panel>
+      )}
       <Panel title="Ongoing calls & wallet activity">
         <CreatorOverviewPanel key={handle} handle={handle} />
       </Panel>
@@ -88,6 +105,22 @@ export default async function CreatorPage({
             </dl>
           ) : (
             <p className="small-note">No binding recorded.</p>
+          )}
+        </Panel>
+        <Panel
+          title="Reputation tier"
+          description="Earned from scored calls; red flags demote. The tier sets this creator's share of buyers' realized profit."
+        >
+          {record ? (
+            <>
+              <TierProgress assessment={record.assessment} />
+              <details>
+                <summary>All tiers</summary>
+                <TierLadder current={record.assessment.tier} />
+              </details>
+            </>
+          ) : (
+            <p className="small-note">Reputation is unavailable right now.</p>
           )}
         </Panel>
       </div>
