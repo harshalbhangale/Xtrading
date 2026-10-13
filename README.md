@@ -33,8 +33,7 @@ The extension, trader dashboard, creator studio and agent access in screenshots:
 
 - **One-click trades on X.** The Chrome extension adds a trade card to cashtags and ticker cards inside X. Pick an amount, approve in your wallet, and you're done. You never leave the post.
 - **Spot on Kuru.** MON, WETH and cbBTC against USDC on Kuru's order books on Monad. Quotes are simulated against the live book, so the minimum output you approve is what the chain will enforce.
-- **Perps on Perpl.** When a call is explicitly long or short, you can trade it as a perp on Perpl, with leverage and size caps.
-- **Your wallet, your signature.** Sign in with X through Privy and get an embedded wallet, or bring MetaMask or Rabby. Every transaction is shown to you and signed by you. Xtrading never holds keys and never signs anything.
+- **Perps on Perpl.** When a call is long or short, you can trade it as a perp on Perpl, with leverage and size caps.
 
 ### Check the caller first
 
