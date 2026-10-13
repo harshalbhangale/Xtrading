@@ -19,6 +19,7 @@ import {
 import { monad, monadTestnet } from "viem/chains";
 import { TokenLogo } from "./token-logo";
 import { useWalletSend } from "./use-wallet-send";
+import WalletHistory from "./wallet-portfolio";
 
 type Balances = ReturnType<typeof walletBalancesSchema.parse>;
 type Review = ReturnType<typeof transferReviewSchema.parse>;
@@ -730,6 +731,7 @@ export default function ConfiguredWalletPanel() {
           )}
         </p>
       )}
+      <WalletHistory wallet={address} />
     </div>
   );
 }

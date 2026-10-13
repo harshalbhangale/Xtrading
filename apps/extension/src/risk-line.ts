@@ -40,7 +40,7 @@ export function riskVerdict(check: NansenCheck | null): RiskVerdict {
 }
 
 /** Nansen's own page for the checked token, for details. */
-function nansenLink(check: NansenCheck | null) {
+export function nansenLink(check: NansenCheck | null) {
   const token = check?.token;
   if (token && /^0x[0-9a-fA-F]{40}$/.test(token.address))
     return `https://app.nansen.ai/token-god-mode?chain=${encodeURIComponent(token.chain)}&tokenAddress=${token.address}`;

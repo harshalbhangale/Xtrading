@@ -3,6 +3,18 @@ export const css = `
 :host { all: initial; }
 * { box-sizing: border-box; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
 a { color: inherit; }
+:host(.cmb-token-risk-host) { display: block; width: 100%; }
+.token-risk-warning { margin: 10px 0; padding: 14px 16px; border-radius: 14px;
+  background: #fff2ef; color: #611b16; border: 1px solid #db7568; font-size: 13px; line-height: 1.5; }
+.token-risk-title { display: block; color: #a8241b; font-size: 15px; }
+.token-risk-entry { margin-top: 10px; padding-top: 10px; border-top: 1px solid #db756866; }
+.token-risk-entry p { margin: 4px 0; }
+.token-risk-entry code { display: block; overflow-wrap: anywhere; font: 11px/1.6 ui-monospace, monospace; }
+.token-risk-source { margin-top: 4px; font-size: 11px; }
+.token-risk-source a { font-weight: 700; }
+.token-risk-scope { margin: 8px 0 0; font-size: 11px; }
+:host([data-theme="dark"]) .token-risk-warning { background: #241514; color: #f4b9b1; border-color: #aa4c42; }
+:host([data-theme="dark"]) .token-risk-title { color: #ff8072; }
 .badge { display: inline-flex; gap: 4px; vertical-align: middle; align-items: center; }
 .chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px;
   font: 600 11px/18px system-ui; border: 1px solid; white-space: nowrap; cursor: pointer; }
@@ -448,6 +460,19 @@ a { color: inherit; }
 .swap-footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 12px; color: var(--muted); font-size: 12px; padding-top: 12px; margin-top: 4px; border-top: 1px solid var(--line); }
 .swap-footer span { display: inline-flex; align-items: center; gap: 6px; }
 .swap-footer b { color: var(--foreground); }
+.flagged-card .seg button:disabled { cursor: default; }
+.flagged-zero { color: var(--muted); }
+.flagged-status { display: flex; align-items: flex-start; gap: 10px; margin: 6px 0 0; font-size: 15px; line-height: 1.4; color: var(--muted); }
+.flagged-status > span:nth-child(2) { flex: 1; }
+.flagged-status .risk-link { font-size: 12px; white-space: nowrap; }
+.flagged-mark { flex: none; width: 16px; height: 16px; margin-top: 2px; background: radial-gradient(circle, currentColor 1.6px, transparent 2px) 0 0/5.33px 5.33px; }
+.flagged-status.risky { color: #f4212e; }
+.flagged-status.risky b { font-weight: 800; }
+.flagged-status.clean { color: var(--foreground); }
+.flagged-status.checking .flagged-mark { opacity: .5; }
+.flagged-card .swap-submit:disabled { opacity: 1; background: #4a4f54; color: #0f1419; cursor: not-allowed; }
+:host([data-theme="light"]) .flagged-card .swap-submit:disabled { background: #cfd9de; color: #536471; }
+.flagged-footer { justify-content: center; }
 .swap-logo { width: 16px; height: 16px; border-radius: 4px; }
 .swap-row-end { display: inline-flex; align-items: center; gap: 8px; }
 .swap-wallet { border: 1px solid var(--line); border-radius: 99px; padding: 7px 12px; font: 600 13px ui-monospace,SFMono-Regular,Menlo,monospace; }

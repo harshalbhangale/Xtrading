@@ -39,17 +39,29 @@ export function tierChip(value: KolReputation | null) {
   );
 }
 
-/** Red-flag pill when evidence-backed serious flags exist. */
+/** Two consecutive missing-public-post checks; null means no checked coverage. */
+export function deletedTweetCount(value: KolReputation | null) {
+  const coverage = value?.postAvailability;
+  return coverage && coverage.checked > 0 ? coverage.missing : null;
+}
+
+export function deletedTweetsLabel(value: KolReputation | null) {
+  const count = deletedTweetCount(value);
+  return count === null ? "Unavailable — no checked posts" : String(count);
+}
+
+/** Count tweets, not flag categories. Unknown coverage never becomes zero. */
 export function flagChip(value: KolReputation | null) {
-  const flags = seriousFlags(value);
-  if (!flags.length) return null;
+  const count = deletedTweetCount(value);
+  if (count === null || count === 0) return null;
+  const coverage = value?.postAvailability;
   return el(
     "span",
     {
       class: "chip flag",
-      title: flags.map((f) => f.title).join(" · "),
+      title: `${count} captured posts were not publicly available in two consecutive checks, out of ${coverage?.checked} checked posts. Protected or suspended posts can look deleted. Not a complete X timeline.`,
     },
-    `⚑ ${flags.length}`,
+    `${count} deleted / unavailable tweet${count === 1 ? "" : "s"}`,
   );
 }
 

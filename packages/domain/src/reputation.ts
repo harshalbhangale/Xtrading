@@ -281,6 +281,17 @@ export function tierName(id: TierId | null) {
 export const kolReputationSchema = z.object({
   handle: z.string(),
   bound: z.boolean(),
+  // Captured-post coverage, separate from registered-call scores and wallet returns.
+  postAvailability: z
+    .object({
+      indexed: z.number().int().nonnegative(),
+      checked: z.number().int().nonnegative(),
+      missing: z.number().int().nonnegative(),
+      suspected: z.number().int().nonnegative(),
+      observedAt: z.iso.datetime(),
+    })
+    .nullable()
+    .optional(),
   assessment: z.object({
     scored: z.number().int().nonnegative(),
     hits: z.number().int().nonnegative(),

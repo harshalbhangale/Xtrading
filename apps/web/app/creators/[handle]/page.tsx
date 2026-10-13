@@ -5,11 +5,13 @@ import { notFound } from "next/navigation";
 import { CallLedger, CallSummary } from "../../../components/call-ledger";
 import { CreatorOverviewPanel } from "../../../components/creator-overview";
 import { PageHeading, Panel } from "../../../components/dashboard/ui";
+import { DemoKolCase } from "../../../components/demo-kol-case";
 import {
   KolFlags,
   TierLadder,
   TierProgress,
 } from "../../../components/kol-reputation";
+import { DEMO_KOL_HANDLE } from "../../../lib/demo-kol";
 import { creatorReputation } from "../../../lib/insights";
 import { kolRecord } from "../../../lib/kol-record";
 import { publicCreatorEvidence } from "../../../lib/public-creator";
@@ -33,6 +35,7 @@ export default async function CreatorPage({
 }) {
   const handle = normalizeHandle((await params).handle);
   if (!handle) notFound();
+  if (handle === DEMO_KOL_HANDLE) return <DemoKolCase />;
   const [evidence, record, detected] = await Promise.all([
     publicCreatorEvidence(handle),
     kolRecord(handle, { recheck: true }).catch(() => null),

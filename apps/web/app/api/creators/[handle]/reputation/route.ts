@@ -12,6 +12,7 @@ export async function GET(
         ? {
             handle: record.handle,
             bound: record.bound,
+            postAvailability: record.postAvailability,
             assessment: record.assessment,
             calls: record.ledger?.calls ?? [],
             swapsStatus: record.swapsStatus,

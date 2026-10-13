@@ -1,7 +1,13 @@
 // @vitest-environment happy-dom
 import type { KolReputation } from "@call-my-bluff/domain";
 import { describe, expect, it } from "vitest";
-import { flagChip, tierChip, tierLabel } from "./reputation";
+import {
+  deletedTweetCount,
+  deletedTweetsLabel,
+  flagChip,
+  tierChip,
+  tierLabel,
+} from "./reputation";
 
 const base = (
   overrides: Partial<KolReputation["assessment"]> = {},
@@ -36,7 +42,7 @@ describe("reputation chips", () => {
       "No tier · 0.1% per buy",
     );
   });
-  it("counts only serious red flags", () => {
+  it("counts missing tweets rather than serious flag categories", () => {
     const flags = [
       {
         kind: "removed_post",
@@ -51,11 +57,42 @@ describe("reputation chips", () => {
         detail: "",
       },
     ];
-    const chip = flagChip(base({ flags }));
-    expect(chip?.textContent).toBe("⚑ 1");
-    expect(chip?.title).toBe("1 registered call no longer public");
-    expect(
-      flagChip(base({ flags: [flags[1] as (typeof flags)[number]] })),
-    ).toBeNull();
+    const record = {
+      ...base({ flags }),
+      postAvailability: {
+        indexed: 12,
+        checked: 10,
+        missing: 3,
+        suspected: 1,
+        observedAt: "2026-10-13T00:00:00.000Z",
+      },
+    };
+    const chip = flagChip(record);
+    expect(chip?.textContent).toBe("3 deleted / unavailable tweets");
+    expect(chip?.title).toContain("out of 10 checked posts");
+    expect(deletedTweetCount(record)).toBe(3);
+    expect(deletedTweetsLabel(record)).toBe("3");
+  });
+  it("keeps absent and unchecked coverage unavailable, distinct from a checked zero", () => {
+    expect(flagChip(base())).toBeNull();
+    expect(deletedTweetCount(base())).toBeNull();
+    expect(deletedTweetsLabel(null)).toContain("Unavailable");
+    const unchecked = {
+      ...base(),
+      postAvailability: {
+        indexed: 12,
+        checked: 0,
+        missing: 0,
+        suspected: 0,
+        observedAt: "2026-10-13T00:00:00.000Z",
+      },
+    };
+    expect(deletedTweetCount(unchecked)).toBeNull();
+    const checked = {
+      ...unchecked,
+      postAvailability: { ...unchecked.postAvailability, checked: 12 },
+    };
+    expect(deletedTweetsLabel(checked)).toBe("0");
+    expect(flagChip(checked)).toBeNull();
   });
 });
