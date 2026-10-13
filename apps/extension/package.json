@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@call-my-bluff/domain": "workspace:*",
+    "@call-my-bluff/integrations": "workspace:*",
+    "viem": "2.57.4",
     "zod": "4.6.5"
   },
   "devDependencies": {

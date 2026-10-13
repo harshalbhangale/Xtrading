@@ -38,10 +38,13 @@ it("never opens wallet review for invalid amounts and carries an explicit networ
   input.value = "1e6";
   input.dispatchEvent(new Event("input"));
   card.querySelector<HTMLElement>(".inline-submit")?.click();
+  await vi.advanceTimersByTimeAsync(1600);
   expect(open).not.toHaveBeenCalled();
   input.value = "10";
   input.dispatchEvent(new Event("input"));
   card.querySelector<HTMLElement>(".inline-submit")?.click();
+  // No browser wallet answers the probe, so it falls back to the review page.
+  await vi.advanceTimersByTimeAsync(1600);
   const url = new URL(String(open.mock.calls[0]?.[0]));
   expect(url.origin).toBe("https://xtradingnow.xyz");
   expect(url.pathname).toBe("/trade/inline");

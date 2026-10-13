@@ -432,4 +432,6 @@ a { color: inherit; }
 .swap-footer span { display: inline-flex; align-items: center; gap: 6px; }
 .swap-footer b { color: var(--foreground); }
 .swap-logo { width: 16px; height: 16px; border-radius: 4px; }
+.swap-row-end { display: inline-flex; align-items: center; gap: 8px; }
+.swap-wallet { border: 1px solid var(--line); border-radius: 99px; padding: 7px 12px; font: 600 13px ui-monospace,SFMono-Regular,Menlo,monospace; }
 `;
