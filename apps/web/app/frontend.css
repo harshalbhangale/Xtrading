@@ -1253,8 +1253,9 @@ p.term-resolution {
 .term-trade-cta {
   display: flex;
   align-items: center;
+  flex: 0 0 auto;
   gap: 12px;
-  width: 100%;
+  min-width: 250px;
   padding: 12px 14px;
   border: 1px solid #a6d63f;
   border-radius: 12px;
@@ -1264,6 +1265,7 @@ p.term-resolution {
     0 8px 24px rgba(198, 242, 90, 0.18);
   color: #10160a;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   transition:
     transform 150ms ease,
