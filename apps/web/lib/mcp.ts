@@ -59,6 +59,17 @@ function errorText(error: unknown) {
       : `Request refused: ${error.code}.`;
   return "The service is temporarily unavailable.";
 }
+/** An empty book side is reported as unavailable, never as a zero-output quote. */
+function noLiquidity(key: string, side: "buy" | "sell", sideEmpty: boolean) {
+  return {
+    market: `${key}/USDC`,
+    side,
+    status: "unavailable" as const,
+    reason: sideEmpty
+      ? `No ${side === "buy" ? "asks" : "bids"} resting on the ${key}/USDC book.`
+      : "The amount is too small to fill at the resting price.",
+  };
+}
 async function run(task: () => Promise<unknown>) {
   try {
     return json(await task());
@@ -174,6 +185,12 @@ export function xtradingMcp(request: Request) {
             ask: s.ask,
             takerFeeBps: s.takerFeeBps,
           });
+          if (output === 0n)
+            return noLiquidity(
+              key,
+              direction,
+              (direction === "buy" ? s.ask : s.bid) === 0n,
+            );
           return {
             market: `${key}/USDC`,
             chainId: 143,
@@ -185,7 +202,8 @@ export function xtradingMcp(request: Request) {
             note: "Mainnet top-of-book indication, not depth proof or a commitment. prepare_trade simulates the real swap and sets the minimum output.",
           };
         }
-        const { book, takerFeePps, block } = await kuruMarketSnapshot(key);
+        const { book, takerFeePps, block, state } =
+          await kuruMarketSnapshot(key);
         const estimate = bookEstimate({
           key,
           side: direction,
@@ -193,6 +211,12 @@ export function xtradingMcp(request: Request) {
           book,
           takerFeePps,
         });
+        if (estimate.output === 0n)
+          return noLiquidity(
+            key,
+            direction,
+            (direction === "buy" ? state.bestAsk : state.bestBid) === null,
+          );
         return {
           market: `${key}/USDC`,
           side: direction,
@@ -218,7 +242,39 @@ export function xtradingMcp(request: Request) {
         text: z.string().min(1).max(2000),
       },
     },
-    (input) => run(() => classifyPost({ ...input, images: [] })),
+    (input) =>
+      run(async () => {
+        const result = await classifyPost({ ...input, images: [] });
+        const { route } = result;
+        const key = market.safeParse(
+          route.status === "available" && route.venue === "Kuru"
+            ? route.marketId
+            : null,
+        );
+        if (
+          route.status !== "available" ||
+          !key.success ||
+          (route.side !== "buy" && route.side !== "sell")
+        )
+          return result;
+        // A spot route is offered only while its side of the book has liquidity.
+        const empty = await kuruMarketSnapshot(key.data).then(
+          ({ state }) =>
+            (route.side === "buy" ? state.bestAsk : state.bestBid) === null,
+          () => null,
+        );
+        if (empty === false) return result;
+        return {
+          ...result,
+          route: {
+            status: "unavailable" as const,
+            reason:
+              empty === null
+                ? `The Kuru ${route.market} book could not be read; no route is offered.`
+                : `No ${route.side === "buy" ? "asks" : "bids"} resting on the Kuru testnet ${route.market} book.`,
+          },
+        };
+      }),
   );
 
   server.registerTool(

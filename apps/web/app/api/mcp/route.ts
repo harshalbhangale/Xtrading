@@ -22,4 +22,16 @@ async function handle(request: Request) {
   }
 }
 
-export { handle as GET, handle as POST, handle as DELETE };
+// Stateless server: no standalone SSE stream (GET) and no session to end (DELETE).
+function methodNotAllowed() {
+  return Response.json(
+    {
+      jsonrpc: "2.0",
+      error: { code: -32000, message: "Method not allowed." },
+      id: null,
+    },
+    { status: 405, headers: { allow: "POST" } },
+  );
+}
+
+export { handle as POST, methodNotAllowed as GET, methodNotAllowed as DELETE };
