@@ -1,7 +1,9 @@
 import {
   type Address,
+  decodeEventLog,
   encodeFunctionData,
   erc20Abi,
+  type Hex,
   parseAbi,
   zeroAddress,
 } from "viem";
@@ -428,5 +430,63 @@ export function mainnetTradeStep(input: {
       args: [size, input.minimumOutput, false, false],
     }),
     value: native ? spend : 0n,
+  };
+}
+
+/** Fill event of the Kuru V1 mainnet order book; one per resting order crossed. */
+export const kuruV1TradeEventAbi = parseAbi([
+  "event Trade(uint40 orderId, address makerAddress, bool isBuy, uint256 price, uint96 updatedSize, address takerAddress, address txOrigin, uint96 filledSize)",
+]);
+
+/**
+ * Base filled and quote exchanged for one wallet's market order on a mainnet book,
+ * summed from the receipt's Trade events. Prices are 18-decimal quote per base.
+ * Returns null when the receipt has no fill for this wallet on this market.
+ */
+export function mainnetFillsFromLogs(input: {
+  key: KuruMarketKey;
+  wallet: Address;
+  logs: readonly { address: Address; data: Hex; topics: readonly Hex[] }[];
+}) {
+  const market = kuruMainnet.markets[input.key];
+  const wallet = input.wallet.toLowerCase();
+  let baseSize = 0n;
+  let quote18 = 0n;
+  let isBuy: boolean | null = null;
+  for (const log of input.logs) {
+    if (log.address.toLowerCase() !== market.market.toLowerCase()) continue;
+    let args: {
+      isBuy: boolean;
+      price: bigint;
+      txOrigin: Address;
+      takerAddress: Address;
+      filledSize: bigint;
+    };
+    try {
+      args = decodeEventLog({
+        abi: kuruV1TradeEventAbi,
+        data: log.data,
+        topics: log.topics as [Hex, ...Hex[]],
+      }).args;
+    } catch {
+      continue;
+    }
+    if (
+      args.txOrigin.toLowerCase() !== wallet &&
+      args.takerAddress.toLowerCase() !== wallet
+    )
+      continue;
+    baseSize += args.filledSize;
+    quote18 += args.filledSize * args.price;
+    isBuy = args.isBuy;
+  }
+  if (isBuy === null || baseSize === 0n) return null;
+  const baseScale = 10n ** BigInt(market.base.decimals);
+  const quoteScale = 10n ** BigInt(kuruMainnetUsdc.decimals);
+  return {
+    side: isBuy ? ("buy" as const) : ("sell" as const),
+    baseAmount: (baseSize * baseScale) / market.sizePrecision,
+    quoteAmount:
+      (quote18 * quoteScale) / (market.sizePrecision * MAINNET_PRICE_SCALE),
   };
 }

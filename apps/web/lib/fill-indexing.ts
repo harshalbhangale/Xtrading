@@ -46,7 +46,7 @@ const tokenSymbols = new Map<string, "USDC" | "WETH" | "WBTC" | "MON">([
   [kuruV2.markets.MON.base.address.toLowerCase(), "MON"],
 ]);
 
-async function boundWallet(request: Request) {
+export async function boundWallet(request: Request) {
   const { user, service } = await identityContext(request);
   const binding = await service.current(user.privyUserId);
   if (
