@@ -225,7 +225,481 @@ function people() {
   });
 }
 
-window.render = (name) => { svg.innerHTML = ""; seed = 7; ({ architecture, flow, people })[name](); };
+// ---- Helpers for the technical overview (docs/architecture.md) ----
+
+// Named nodes, so arrows can attach to a side of a box or diamond.
+let N = {};
+function node(id, x, y, w, h, o) { box(x, y, w, h, o); N[id] = { x, y, w, h }; }
+function decision(id, x, y, w, h, lines, { fill = C.orange } = {}) {
+  add(rc.polygon([[x + w / 2, y], [x + w, y + h / 2], [x + w / 2, y + h], [x, y + h / 2]], opt({ fill, fillStyle: "solid" })));
+  lines.forEach((l, i) => text(x + w / 2, y + h / 2 + (i - (lines.length - 1) / 2) * 21, l, { size: 17 }));
+  N[id] = { x, y, w, h };
+}
+function side(id, s, t = 0.5) {
+  const b = N[id];
+  return s === "l" ? [b.x - 2, b.y + b.h * t] : s === "r" ? [b.x + b.w + 2, b.y + b.h * t]
+    : s === "t" ? [b.x + b.w * t, b.y - 2] : [b.x + b.w * t, b.y + b.h + 2];
+}
+// Arrow from one node side to another; straight, or one elbow, or two.
+function link(a, as, b, bs, label, o = {}) {
+  const p = side(a, as, o.at), q = side(b, bs, o.bt);
+  let pts;
+  if (o.via) pts = [p, ...o.via, q];
+  else if (Math.abs(p[0] - q[0]) < 1 || Math.abs(p[1] - q[1]) < 1) pts = [p, q];
+  else if ("lr".includes(as) && "lr".includes(bs)) { const mx = o.mx ?? (p[0] + q[0]) / 2; pts = [p, [mx, p[1]], [mx, q[1]], q]; }
+  else if ("tb".includes(as) && "tb".includes(bs)) { const my = o.my ?? (p[1] + q[1]) / 2; pts = [p, [p[0], my], [q[0], my], q]; }
+  else if ("lr".includes(as)) pts = [p, [q[0], p[1]], q];
+  else pts = [p, [p[0], q[1]], q];
+  arrow(pts, label, o);
+}
+function note(x, y, str, { size = 16, anchor = "start" } = {}) { text(x, y, str, { size, anchor, color: C.muted }); }
+function size(W, H, title) {
+  svg.setAttribute("width", W); svg.setAttribute("height", H);
+  text(40, 40, title, { size: 32, anchor: "start" });
+}
+
+// A hand-drawn sequence diagram: participant cards, dashed lifelines, numbered messages.
+function sequence(title, parts, rows, { W = 1640, cardW = 250 } = {}) {
+  const top = 80, ph = 74, margin = 30, colW = (W - 2 * margin) / parts.length;
+  const X = {};
+  parts.forEach((p, i) => (X[p.id] = margin + colW * i + colW / 2));
+  const items = [];
+  let y = top + ph + 34;
+  const layout = (list) => {
+    for (const r of list) {
+      if (r.loop) {
+        const y0 = y; y += 40; layout(r.loop);
+        items.push({ kind: "frame", y0, y1: y + 2, label: r.label }); y += 24;
+      } else if (r.note) {
+        items.push({ kind: "note", r, y }); y += 66;
+      } else {
+        const lines = Array.isArray(r.label) ? r.label : [r.label];
+        const h = 22 + lines.length * 20 + (r.from === r.to ? 14 : 0);
+        items.push({ kind: "msg", r, lines, y: y + h - 10 }); y += h + 6;
+      }
+    }
+  };
+  layout(rows);
+  const H = y + 30;
+  size(W, H, title);
+  for (const it of items.filter((i) => i.kind === "frame")) {
+    add(rc.path(rrect(margin + 6, it.y0, W - 2 * margin - 12, it.y1 - it.y0, 12), opt({ fill: "#f8f9fa", fillStyle: "solid", strokeLineDash: [8, 6], strokeWidth: 1.3, roughness: 0.7 })));
+    text(margin + 22, it.y0 + 18, it.label, { size: 16, anchor: "start", color: "#495057" });
+  }
+  for (const p of parts)
+    add(rc.line(X[p.id], top + ph, X[p.id], H - 20, opt({ stroke: C.muted, strokeWidth: 1.2, strokeLineDash: [6, 7], roughness: 0.4 })));
+  for (const p of parts) {
+    const w = Math.min(colW - 24, cardW);
+    box(X[p.id] - w / 2, top, w, ph, { fill: p.fill ?? C.yellow, title: p.name, logo: p.logo, sub: p.sub, size: 19 });
+  }
+  let n = 1;
+  for (const it of items) {
+    if (it.kind === "note") {
+      const xs = it.r.over.map((id) => X[id]);
+      const x0 = Math.min(...xs) - 90, x1 = Math.max(...xs) + 90;
+      add(rc.path(rrect(x0, it.y, x1 - x0, 46, 8), opt({ fill: "#fff3bf", fillStyle: "solid", roughness: 0.8 })));
+      text((x0 + x1) / 2, it.y + 23, it.r.note, { size: 16 });
+    }
+    if (it.kind !== "msg") continue;
+    const { r, lines } = it, x1 = X[r.from], x2 = X[r.to], ay = it.y;
+    const o = { strokeWidth: 1.7, ...(r.dashed ? { strokeLineDash: [7, 6] } : {}) };
+    if (x1 === x2) {
+      arrow([[x1 + 14, ay - 22], [x1 + 60, ay - 22], [x1 + 60, ay + 4], [x1 + 4, ay + 4]], "", o);
+      lines.forEach((l, i) => {
+        const ly = ay - 9 - (lines.length - 1 - i) * 20;
+        const w = l.length * 7.6 + 12;
+        const bg = document.createElementNS(NS, "rect");
+        bg.setAttribute("x", x1 + 68); bg.setAttribute("y", ly - 11); bg.setAttribute("width", w); bg.setAttribute("height", 22); bg.setAttribute("fill", "#ffffff");
+        add(bg);
+        text(x1 + 74, ly, l, { size: 15, anchor: "start", color: "#343a40" });
+      });
+    } else {
+      const dir = Math.sign(x2 - x1);
+      arrow([[x1 + dir * 14, ay], [x2 - dir * 3, ay]], "", { dashed: r.dashed });
+      const mx = (x1 + x2) / 2;
+      lines.forEach((l, i) => {
+        const ly = ay - 15 - (lines.length - 1 - i) * 20;
+        const w = l.length * 7.6 + 12;
+        const bg = document.createElementNS(NS, "rect");
+        bg.setAttribute("x", mx - w / 2); bg.setAttribute("y", ly - 11); bg.setAttribute("width", w); bg.setAttribute("height", 22); bg.setAttribute("fill", "#ffffff");
+        add(bg);
+        text(mx, ly, l, { size: 15, color: "#343a40" });
+      });
+    }
+    add(rc.circle(x1, x1 === x2 ? ay - 22 : ay, 24, opt({ fill: C.ink, fillStyle: "solid", roughness: 0.6 })));
+    text(x1, (x1 === x2 ? ay - 22 : ay) + 1, String(n++), { size: 13, color: "#ffffff" });
+  }
+}
+
+function packages() {
+  size(1500, 660, "Repository and packages");
+  node("web", 330, 100, 360, 110, { fill: C.blue, title: "apps/web", sub: ["Next.js pages, API routes", "and the MCP server"], logo: "vercel.png" });
+  node("ext", 810, 100, 360, 110, { fill: C.blue, title: "apps/extension", sub: ["Chrome extension on X"], logo: "chrome.png" });
+  node("db", 60, 300, 360, 110, { title: "packages/database", sub: ["Drizzle schema, migrations,", "nonce-based wallet binding"] });
+  node("int", 570, 300, 360, 110, { title: "packages/integrations", sub: ["Kuru, Kuru Flow, Perpl, Nansen,", "Envio, X and price adapters"] });
+  node("dom", 570, 500, 360, 110, { fill: C.green, title: "packages/domain", sub: ["schemas, tiers, scoring rules,", "shared by every surface"] });
+  node("idx", 1080, 300, 360, 110, { fill: C.orange, title: "services/indexer", sub: ["Envio HyperIndex:", "config, schema, handlers"], logo: "envio.png" });
+  node("sol", 1080, 500, 360, 110, { fill: C.gray, title: "contracts", sub: ["Foundry fork tests of", "the Kuru Flow fee path"] });
+  link("web", "b", "db", "t", "", { at: 0.25 });
+  link("web", "b", "int", "t", "", { at: 0.75, bt: 0.3 });
+  link("ext", "b", "int", "t", "", { at: 0.25, bt: 0.7 });
+  link("int", "b", "dom", "t", "");
+  link("db", "b", "dom", "l", "", { at: 0.5 });
+  link("idx", "l", "int", "r", "same event shapes", { dashed: true, ly: 326 });
+  link("sol", "l", "int", "r", "", { dashed: true, at: 0.5, bt: 0.75 });
+  note(1260, 630, "the apps also import domain directly", { anchor: "middle" });
+}
+
+function identity() {
+  sequence("Sign in with X and bind a wallet", [
+    { id: "u", name: "Creator", logo: "x.png", fill: C.blue },
+    { id: "w", name: "Website", logo: "xtrading-icon.png" },
+    { id: "p", name: "Privy", logo: "privy.png", fill: C.violet },
+    { id: "s", name: "Xtrading API", logo: "vercel.png" },
+    { id: "d", name: "Postgres", logo: "aws.png", fill: C.gray },
+  ], [
+    { from: "u", to: "w", label: "Sign in with X" },
+    { from: "w", to: "p", label: ["X login, embedded", "wallet if needed"] },
+    { from: "p", to: "w", label: "access token", dashed: true },
+    { from: "w", to: "s", label: "POST /api/identity/challenge" },
+    { from: "s", to: "p", label: ["verify the token, read the", "linked X account and wallets"] },
+    { from: "s", to: "d", label: ["store the challenge:", "nonce, 5 min expiry"] },
+    { from: "s", to: "w", label: ["message: origin, chain,", "X user ID, wallet, nonce"], dashed: true },
+    { from: "u", to: "w", label: "review and sign it" },
+    { from: "w", to: "s", label: "POST /api/identity/bind" },
+    { from: "s", to: "d", label: ["lock, verify, consume the", "nonce, save the binding"] },
+    { from: "s", to: "w", label: "bound X ID, handle and wallet", dashed: true },
+  ]);
+}
+
+function extensionParts() {
+  size(1640, 700, "Inside the extension");
+  frame(30, 80, 580, 400, "x.com tab", { logo: "x.png" });
+  node("cs", 60, 135, 520, 100, { title: "Content script", sub: "finds posts, draws one card per post" });
+  node("wb", 60, 320, 240, 120, { fill: C.violet, title: "Wallet bridge", sub: ["runs in X's page,", "allow-listed methods"] });
+  node("mm", 340, 320, 240, 120, { fill: C.violet, title: "MetaMask / Rabby", sub: ["window.ethereum,", "user confirms"] });
+  node("sw", 690, 135, 370, 120, { fill: C.blue, title: "Service worker", sub: ["fixed message types, validates,", "caches, 4 requests at a time"], logo: "chrome.png" });
+  node("st", 690, 340, 370, 90, { fill: C.gray, title: "chrome.storage", sub: "watchlist and follows" });
+  node("api", 1170, 135, 440, 120, { title: "Xtrading API", sub: ["/api/* on xtradingnow.xyz,", "no cookies or tokens sent"], logo: "vercel.png" });
+  frame(1110, 310, 500, 190, "xtradingnow.xyz tab", { logo: "xtrading-icon.png" });
+  node("ab", 1135, 365, 450, 100, { fill: C.green, title: "App bridge", sub: "Watchlist page only" });
+  node("win", 690, 560, 370, 110, { fill: C.violet, title: "Xtrading window", sub: ["/trade/inline · /trade/perp,", "the Privy wallet signs"], logo: "privy.png" });
+  link("cs", "r", "sw", "l", "messages", { ly: 172 });
+  link("sw", "r", "api", "l", "fetch", { ly: 172 });
+  link("sw", "b", "st", "t", "");
+  link("ab", "l", "sw", "r", "messages", { via: [[1095, 415], [1095, 225]], bt: 0.75, lx: 1095, ly: 300 });
+  link("cs", "b", "wb", "t", "postMessage", { at: 0.23, bt: 0.5, lx: 250, ly: 280 });
+  link("wb", "r", "mm", "l", "");
+  link("cs", "r", "win", "l", "no browser wallet", { at: 0.8, dashed: true, via: [[645, 215], [645, 615]], lx: 645, ly: 520 });
+}
+
+function extensionCards() {
+  size(1640, 860, "What the extension draws under a post");
+  node("post", 40, 330, 250, 100, { fill: C.blue, title: "Post on screen", sub: "ID, author, text", logo: "x.png" });
+  decision("tick", 360, 70, 300, 160, ["X ticker card or a", "supported cashtag?"]);
+  node("cls", 380, 330, 260, 100, { title: "Classify the post", sub: "POST /api/signals/classify" });
+  decision("route", 720, 290, 300, 180, ["What does the", "signal route to?"]);
+  const rows = [
+    ["spot", "Kuru swap card", "spot call, or a ticker card / cashtag", C.green],
+    ["both", "Swap card with a Perpl tab", "perp wording, and Kuru has a market", C.green],
+    ["perp", "Perpl perp card", "perp wording, no Kuru market", C.green],
+    ["nansen", "Nansen verdict on the contract", "names a token contract · nothing to buy", C.red],
+    ["none", "No card", "not a call", C.gray],
+  ];
+  rows.forEach(([id, title, sub, fill], i) => node(id, 1110, 90 + i * 130, 500, 100, { fill, title, sub }));
+  link("post", "t", "tick", "l", "", { at: 0.5 });
+  link("post", "r", "cls", "l", "");
+  link("cls", "r", "route", "l", "");
+  link("tick", "r", "spot", "l", "yes", { bt: 0.6, ly: 136 });
+  for (const [id] of rows) link("route", "r", id, "l", "", { mx: 1065 });
+  node("badge", 40, 560, 250, 100, { fill: C.yellow, title: "Creator badge", sub: "if the author is bound" });
+  node("warn", 380, 560, 260, 100, { fill: C.red, title: "Fake-token warning", sub: "if the post shares a contract" });
+  link("post", "b", "badge", "t", "");
+  link("post", "b", "warn", "t", "", { at: 0.8, my: 500 });
+  note(1110, 750, "A card drawn from a ticker or cashtag is upgraded in place");
+  note(1110, 776, "when the classification arrives: one card per post.");
+}
+
+function extensionSigning() {
+  size(1640, 540, "Signing a trade from X");
+  node("press", 40, 200, 280, 110, { fill: C.blue, title: "Buy, Sell, Long or Short", sub: "pressed on the card", size: 19 });
+  decision("hw", 390, 170, 280, 170, ["Browser wallet", "in this tab?"]);
+  node("spot", 780, 60, 540, 110, { fill: C.yellow, title: "Spot, signed on X", sub: ["builds the exact Kuru step, simulates it", "for the minimum output, wallet signs"], logo: "kuru.png" });
+  node("perp", 780, 200, 540, 110, { fill: C.yellow, title: "Perp, signed on X", sub: ["/api/extension/perp/prepare → sign each step", "→ /api/extension/perp/confirm reads the fill"], logo: "perpl.png" });
+  node("win", 780, 340, 540, 110, { fill: C.violet, title: "Xtrading window", sub: ["/trade/inline or /trade/perp,", "the Privy wallet signs"], logo: "privy.png" });
+  node("chain", 1400, 200, 210, 110, { fill: C.green, title: "Monad", sub: "settles", logo: "monad.png" });
+  link("press", "r", "hw", "l", "");
+  link("hw", "r", "spot", "l", "yes, spot", { mx: 725, lx: 725, ly: 92 });
+  link("hw", "r", "perp", "l", "yes, perp", { lx: 725, ly: 238 });
+  link("hw", "r", "win", "l", "no", { mx: 725, lx: 725, ly: 372 });
+  link("spot", "r", "chain", "l", "", { bt: 0.25, mx: 1360 });
+  link("perp", "r", "chain", "l", "");
+  link("win", "r", "chain", "l", "", { bt: 0.75, mx: 1360 });
+  note(40, 500, "Kuru card: mainnet selected, testnet available · Perp ticket: testnet by default, mainnet when picked and enabled");
+}
+
+function routing() {
+  size(1640, 950, "From post to route");
+  node("in", 40, 90, 320, 110, { fill: C.blue, title: "Classify request", sub: ["post ID, handle, text,", "cached by ID + text hash"] });
+  node("rules", 440, 90, 260, 110, { title: "Rules classifier", sub: "deterministic" });
+  decision("cue", 780, 60, 280, 170, ["Asset or", "trade wording?"]);
+  node("llm", 1140, 90, 300, 110, { fill: C.orange, title: "Groq", sub: ["strict JSON output,", "falls back to rules"], logo: "groq.png" });
+  node("sig", 600, 300, 440, 120, { fill: C.yellow, title: "Signal", sub: ["call? asset, bullish or bearish, spot or", "perp, leverage, horizon, addresses"] });
+  link("in", "r", "rules", "l", "");
+  link("rules", "r", "cue", "l", "");
+  link("cue", "r", "llm", "l", "yes");
+  link("cue", "b", "sig", "t", "no", { bt: 0.6, ly: 262, lx: 945 });
+  link("llm", "b", "sig", "r", "", { via: [[1290, 360]] });
+  decision("route", 40, 520, 300, 180, ["deriveTradeRoute"], { fill: C.orange });
+  const outs = [
+    ["u1", "Unavailable", "names a contract: no ticker substitute", C.red],
+    ["pp", "Perpl long or short", "says long, short, leverage or perp", C.green],
+    ["kk", "Kuru buy or sell", "otherwise, if the asset has a Kuru market", C.green],
+    ["u2", "Unavailable", "no market for the asset", C.gray],
+  ];
+  outs.forEach(([id, t, s, f], i) => node(id, 420, 470 + i * 100, 420, 82, { fill: f, title: t, sub: s, size: 19 }));
+  for (const [id] of outs) link("route", "r", id, "l", "", { mx: 385 });
+  link("sig", "l", "route", "t", "", { via: [[190, 360]] });
+  decision("save", 930, 520, 330, 190, ["X confirms: exists, this", "handle wrote it, and", "it says this text?"]);
+  node("db", 1340, 500, 260, 90, { fill: C.gray, title: "post_signals", sub: "first verified version", logo: "aws.png", size: 19 });
+  node("skip", 1340, 640, 260, 90, { fill: C.gray, title: "Not stored", sub: "still returned", size: 19 });
+  link("sig", "b", "save", "t", "", { at: 0.85, bt: 0.5 });
+  link("save", "r", "db", "l", "yes", { mx: 1300 });
+  link("save", "r", "skip", "l", "no", { mx: 1300 });
+  note(40, 915, "The model extracts; code routes. Bearish wording alone is a spot sell, never a leveraged short.");
+}
+
+function kuruSpot() {
+  sequence("Spot trade on Kuru", [
+    { id: "u", name: "User", logo: "xtrading-icon.png", fill: C.blue },
+    { id: "r", name: "Trade review", sub: "website or window" },
+    { id: "s", name: "Xtrading API", logo: "vercel.png", sub: "/api/trades/prepare" },
+    { id: "m", name: "Monad RPC", logo: "monad.png", fill: C.green },
+    { id: "w", name: "Wallet", logo: "privy.png", fill: C.violet },
+  ], [
+    { from: "u", to: "r", label: ["market, side, amount,", "slippage"] },
+    { loop: [
+      { from: "r", to: "s", label: "intent and chain ID" },
+      { from: "s", to: "m", label: ["verify the market at block N,", "read balances and allowance"] },
+      { from: "s", to: "m", label: "eth_call the next step at block N" },
+      { from: "s", to: "m", label: ["estimate gas, check MON for gas,", "re-check block N's hash"] },
+      { from: "s", to: "r", label: ["next unsigned step: approve, deposit", "or swap with minimum output · 30 s"], dashed: true },
+      { from: "r", to: "w", label: "the exact transaction" },
+      { from: "w", to: "m", label: "user signs and sends" },
+    ], label: "repeat until the swap is sent" },
+    { from: "r", to: "s", label: ["POST /api/trades/record", "tx hash, source post"] },
+    { from: "s", to: "m", label: ["receipt: successful swap from", "this wallet to a known market"] },
+  ], { cardW: 270 });
+}
+
+function creatorFees() {
+  sequence("Creator fee through Kuru Flow", [
+    { id: "b", name: "Buyer", logo: "xtrading-icon.png", fill: C.blue },
+    { id: "s", name: "Xtrading API", logo: "vercel.png" },
+    { id: "d", name: "Postgres", logo: "aws.png", fill: C.gray },
+    { id: "f", name: "Kuru Flow", logo: "kuru.png", fill: C.green },
+    { id: "k", name: "Kuru book", logo: "kuru.png", fill: C.green },
+    { id: "c", name: "Creator wallet", fill: C.violet },
+  ], [
+    { from: "b", to: "s", label: "buy from @creator's post" },
+    { from: "s", to: "d", label: ["payout wallet must match the", "nonce-verified binding"] },
+    { from: "s", to: "s", label: ["fee rate from the creator's tier:", "0.1, 0.5, 1 or 2%"] },
+    { from: "s", to: "f", label: "check code and router at block N" },
+    { from: "s", to: "b", label: ["exact USDC approval,", "then executeSwap with the", "referrer and net minimum"], dashed: true },
+    { from: "b", to: "f", label: "sign and send" },
+    { from: "f", to: "k", label: "swap USDC for the token" },
+    { from: "f", to: "c", label: ["referrer fee,", "same transaction"] },
+    { from: "f", to: "b", label: "the rest, at least the net minimum", dashed: true },
+    { note: "FeeCollected event = the payment evidence Envio indexes", over: ["f", "c"] },
+  ], { cardW: 230 });
+}
+
+function perpl() {
+  sequence("Perp order on Perpl", [
+    { id: "u", name: "User", logo: "xtrading-icon.png", fill: C.blue },
+    { id: "s", name: "Xtrading API", logo: "vercel.png" },
+    { id: "p", name: "Perpl context", logo: "perpl.png", fill: C.gray, sub: "public API" },
+    { id: "e", name: "Perpl Exchange", logo: "perpl.png", fill: C.green },
+    { id: "w", name: "Wallet", logo: "privy.png", fill: C.violet },
+  ], [
+    { from: "u", to: "s", label: ["prepare: market, side, size,", "leverage, network"] },
+    { from: "s", to: "p", label: "markets, mark price, limits" },
+    { from: "s", to: "s", label: ["exchange and collateral match config,", "leverage, size and margin within caps"] },
+    { from: "s", to: "e", label: ["read account, AUSD", "balance and allowance"] },
+    { from: "s", to: "u", label: ["steps: exact AUSD approval,", "open or top up, then IOC", "execOrder at mark ± slippage"], dashed: true },
+    { loop: [
+      { from: "u", to: "w", label: "sign" },
+      { from: "w", to: "e", label: "send" },
+    ], label: "each step" },
+    { from: "u", to: "s", label: "confirm: tx hash and request ID" },
+    { from: "s", to: "e", label: ["receipt: sender, exchange, order ID,", "fills from the order's events"] },
+    { from: "s", to: "u", label: "filled, partly filled or not filled", dashed: true },
+  ], { cardW: 260 });
+}
+
+function callLifecycle() {
+  size(1640, 600, "Life of a registered call");
+  node("sub", 40, 210, 250, 110, { fill: C.blue, title: "Post URL", sub: ["submitted by the", "bound creator"], logo: "x.png" });
+  decision("chk", 350, 180, 280, 170, ["Checks", "pass?"]);
+  node("rej", 310, 420, 360, 130, { fill: C.red, title: "Rejected", sub: ["not their post · over 15 minutes old", "text doesn't state that asset and", "direction · 10 already today"] });
+  node("open", 730, 205, 300, 120, { fill: C.yellow, title: "Open", sub: ["entry price at the", "minute it was posted"] });
+  node("win", 1150, 70, 450, 100, { fill: C.green, title: "Success", sub: "moved the called way by at least the minimum" });
+  node("fail", 1150, 215, 450, 100, { fill: C.red, title: "Failure", sub: "didn't" });
+  node("tie", 1150, 360, 450, 100, { fill: C.gray, title: "Tie", sub: "exactly flat" });
+  link("sub", "r", "chk", "l", "");
+  link("chk", "r", "open", "l", "yes");
+  link("chk", "b", "rej", "t", "no", { lx: 515, ly: 385 });
+  link("open", "t", "open", "t", "not expired yet", { at: 0.3, bt: 0.7, via: [[820, 150], [940, 150]], lx: 880, ly: 130 });
+  link("open", "r", "win", "l", "", { mx: 1090 });
+  link("open", "r", "fail", "l", "", { mx: 1090 });
+  link("open", "r", "tie", "l", "", { mx: 1090 });
+  note(730, 520, "Scored when a record is read, with the first price candle at or after expiry.");
+  note(730, 548, "Post availability is re-checked every 6 hours; two misses in a row = removed.");
+}
+
+function tiers() {
+  size(1640, 620, "From record to tier");
+  node("calls", 40, 330, 260, 110, { fill: C.blue, title: "Scored calls", sub: ["registered calls", "only"] });
+  node("stats", 360, 330, 280, 110, { title: "Stats", sub: ["hit rate · median return", "· 7-day median"] });
+  const t = [
+    ["v", "Verified · 0.1%", ["bound, with a", "payout wallet"], C.gray],
+    ["pro", "Pro · 0.5%", ["5 scored,", "50% hits"], C.yellow],
+    ["max", "Max · 1%", ["15 scored, 60% hits,", "positive median"], C.orange],
+    ["ultra", "Ultra · 2%", ["30 scored, 65% hits,", "positive 7-day median"], C.green],
+  ];
+  t.forEach(([id, title, sub, fill], i) => node(id, 720 + i * 225, 430 - i * 110, 210, 120, { fill, title, sub, size: 19 }));
+  link("calls", "r", "stats", "l", "");
+  link("stats", "r", "v", "l", "", { bt: 0.5 });
+  link("v", "r", "pro", "b", "", { at: 0.4 });
+  link("pro", "r", "max", "b", "", { at: 0.4 });
+  link("max", "r", "ultra", "b", "", { at: 0.4 });
+  node("flags", 360, 100, 280, 130, { fill: C.red, title: "Red flags", sub: ["removed posts · fake tokens", "· trading against own calls", "· mostly wrong"] });
+  link("flags", "r", "pro", "t", "demote", { dashed: true, bt: 0.35, via: [[1018, 165]], lx: 860, ly: 150 });
+  note(720, 590, "The tier sets the creator's cut of each buy made from their posts.");
+}
+
+function envio() {
+  size(1640, 760, "Onchain data with Envio");
+  frame(30, 80, 390, 440, "Monad", { logo: "monad.png", fill: "#f3f0ff" });
+  node("tn", 55, 140, 340, 130, { fill: C.green, title: "Testnet 10143", sub: ["Kuru V2 AccountCore", "and order books"], logo: "kuru.png" });
+  node("mn", 55, 340, 340, 130, { fill: C.green, title: "Mainnet 143", sub: ["Kuru Flow entrypoint:", "FeeCollected, KuruFlowSwap"], logo: "kuru.png" });
+  frame(490, 80, 500, 560, "Envio", { logo: "envio.png", fill: "#fff4e6" });
+  node("hi", 515, 135, 450, 190, { fill: C.orange, title: "HyperIndex", sub: ["IDs chain:block:logIndex", "reorg rollback · 10-block lag", "GraphQL: KuruAccount, KuruSwap,", "KuruTransfer, CreatorFeePayment"] });
+  node("hs", 515, 420, 450, 140, { fill: C.orange, title: "HyperSync", sub: ["direct log and transaction", "queries from the web app"] });
+  link("tn", "r", "hi", "l", "", { bt: 0.35 });
+  link("mn", "r", "hi", "l", "", { at: 0.35, bt: 0.75 });
+  link("mn", "r", "hs", "l", "", { at: 0.7, bt: 0.4 });
+  const outs = [
+    ["act", "Activity · MCP get_portfolio", "testnet swaps and transfers"],
+    ["ctr", "Counter-trade red flag", "creator's own indexed swaps"],
+    ["prog", "Terminal: indexer progress", "per chain, vs the chain head"],
+    ["earn", "Creator earnings", "receipts re-checked on Monad RPC"],
+    ["onc", "/dashboard/onchain", "receipts re-checked on Monad RPC"],
+    ["port", "Portfolio history", "a wallet's mainnet transactions"],
+  ];
+  outs.forEach(([id, title, sub], i) => node(id, 1100, 85 + i * 105, 510, 88, { fill: C.blue, title, sub, size: 19 }));
+  for (const id of ["act", "ctr", "prog", "earn"]) link("hi", "r", id, "l", "", { mx: 1030 });
+  for (const id of ["earn", "onc", "port"]) link("hs", "r", id, "l", "", { mx: 1062 });
+  note(30, 720, "Both report current, lagging or unavailable against the chain head. A block lag is never shown as finality.");
+}
+
+function mcp() {
+  sequence("An agent prepares, the user signs", [
+    { id: "u", name: "User", logo: "xtrading-icon.png", fill: C.blue },
+    { id: "a", name: "Agent", logo: "mcp.png", fill: C.green },
+    { id: "m", name: "MCP server", logo: "vercel.png", sub: "/api/mcp" },
+    { id: "w", name: "Wallet", logo: "privy.png", fill: C.violet },
+    { id: "c", name: "Monad", logo: "monad.png", fill: C.green },
+  ], [
+    { from: "a", to: "m", label: ["get_creator, list_calls,", "recent_calls, classify_post,", "get_markets, quote_trade"] },
+    { from: "m", to: "a", label: "evidence, with sources and freshness", dashed: true },
+    { from: "u", to: "a", label: ["Privy access token", "as a Bearer header"] },
+    { from: "a", to: "m", label: "prepare_trade or prepare_perp" },
+    { from: "m", to: "m", label: ["same checks as the website,", "nothing is signed"] },
+    { from: "m", to: "a", label: "unsigned steps and an approvalUrl", dashed: true },
+    { from: "a", to: "u", label: "approvalUrl", dashed: true },
+    { from: "u", to: "w", label: ["opens it on /dashboard/trade,", "signs each step"] },
+    { from: "w", to: "c", label: "send" },
+    { from: "a", to: "m", label: ["get_portfolio, get_position", "or get_perp_account"] },
+    { from: "m", to: "a", label: "results read from the chain", dashed: true },
+  ], { cardW: 250 });
+}
+
+function website() {
+  size(1640, 860, "The website");
+  const col = (x, title, logo, fill, items) => {
+    frame(x, 80, 520, 600, title, { logo, fill });
+    items.forEach(([t, s], i) => box(x + 25, 132 + i * 90, 470, 76, { fill: C.yellow, title: t, sub: s, size: 19 }));
+  };
+  col(30, "Public", "vercel.png", "#f8f9fa", [
+    ["Home and guides", "/ · /how-it-works · /for-creators · /methodology"],
+    ["Creator records", "/creators/[handle] → /api/creators/[handle]/*"],
+    ["Onchain evidence", "/dashboard/onchain → Envio HyperSync"],
+    ["Extension", "/extension → download the zip"],
+  ]);
+  col(560, "Trader dashboard", "xtrading-icon.png", "#e7f5ff", [
+    ["Terminal", "/dashboard/terminal → /api/terminal/*"],
+    ["Trade", "/dashboard/trade → /api/trades/*, /api/markets"],
+    ["Portfolio", "/dashboard/portfolio → /api/wallet/*"],
+    ["Activity", "/dashboard/activity → /api/me/*"],
+    ["Watchlist", "/dashboard/watchlist → extension storage"],
+    ["Faucet", "/dashboard/faucet → test AUSD"],
+  ]);
+  col(1090, "Creator studio", "x.png", "#fff9db", [
+    ["Profile", "/creator/profile → /api/identity/*"],
+    ["Calls", "/creator/calls → /api/calls"],
+    ["Reputation", "/creator/reputation → /api/creators/[handle]/reputation"],
+    ["Earnings", "/creator/earnings → /api/creator/*"],
+  ]);
+  box(30, 720, 780, 90, { fill: C.violet, title: "Windows opened from X", sub: "/trade/inline (spot) · /trade/perp (perps) · Privy signs", logo: "privy.png", size: 19 });
+  box(840, 720, 770, 90, { fill: C.green, title: "Agent access", sub: "/integrations → MCP setup for /api/mcp", logo: "mcp.png", size: 19 });
+}
+
+function database() {
+  size(1640, 720, "Database (Postgres on AWS RDS)");
+  const table = (id, x, y, w, h, title, cols, fill = C.gray) =>
+    node(id, x, y, w, h, { fill, title, sub: cols, size: 21 });
+  table("ch", 40, 110, 440, 210, "wallet_challenges", ["privy_user_id (one per user)", "nonce message, wallet", "expires_at, consumed_at"]);
+  table("cr", 600, 110, 440, 210, "creators", ["x_user_id · unique", "privy_user_id · unique", "wallet · unique", "handle, linked_at"], C.yellow);
+  table("ca", 1160, 110, 440, 210, "calls", ["creator_id → creators", "post_id · unique", "evidence (terms, prices, checks)", "status"], C.blue);
+  table("po", 1160, 380, 440, 170, "creator_payouts", ["x_user_id → creators", "wallet, enabled, version"], C.green);
+  table("ps", 40, 420, 440, 210, "post_signals", ["post_id, handle (a hint)", "text_hash, signal", "+ availability, prices,", "Nansen verdicts"]);
+  table("ti", 600, 420, 440, 210, "trade_intents", ["privy_user_id, chain_id", "market, side, amount", "transaction_hash", "source_post_id (claimed)"]);
+  link("cr", "r", "ca", "l", "registers", { at: 0.4, bt: 0.4, ly: 180, lx: 1100 });
+  link("cr", "r", "po", "l", "opts in", { at: 0.75, bt: 0.5, lx: 1100, ly: 450 });
+  link("ch", "r", "cr", "l", "binds", { dashed: true });
+  note(40, 680, "Amounts are numeric(78,0) integer token units. fills and stake_snapshots exist in the schema but are unused.");
+}
+
+function deployment() {
+  size(1640, 720, "Deployment");
+  node("gh", 40, 230, 280, 120, { fill: C.gray, title: "GitHub", sub: "harshalbhangale/Xtrading" });
+  node("vc", 440, 110, 380, 130, { fill: C.yellow, title: "Vercel", sub: ["apps/web · xtradingnow.xyz", "API, pages, MCP"], logo: "vercel.png" });
+  node("ev", 440, 400, 380, 120, { fill: C.orange, title: "Envio hosted", sub: "HyperIndex GraphQL", logo: "envio.png" });
+  node("ext", 40, 470, 280, 120, { fill: C.blue, title: "Extension build", sub: ["pnpm … package →", "xtrading-extension.zip"], logo: "chrome.png" });
+  const right = [
+    ["rds", "AWS RDS Postgres", "verified TLS", "aws.png", C.gray],
+    ["hs", "Envio HyperSync", "direct queries", "envio.png", C.orange],
+    ["rpc", "Monad RPC", "testnet and mainnet", "monad.png", C.green],
+    ["prov", "Providers", "Privy · Groq · Nansen · X oEmbed · Binance · Kuru API", null, C.violet],
+  ];
+  right.forEach(([id, t, s, l, f], i) => node(id, 960, 70 + i * 125, 640, 95, { fill: f, title: t, sub: s, logo: l ?? undefined, size: 19 }));
+  link("gh", "r", "vc", "l", "push to main", { lx: 380, ly: 150 });
+  link("gh", "r", "ev", "l", "push to envio", { lx: 380, ly: 440 });
+  link("ext", "t", "gh", "b", "zip committed", { lx: 240, ly: 410 });
+  for (const [id] of right) link("vc", "r", id, "l", "", { mx: 890 });
+  link("vc", "b", "ev", "t", "GraphQL");
+  note(40, 680, "Secrets live in Vercel's server environment; nothing provider-keyed is NEXT_PUBLIC_*.");
+}
+
+const diagrams = {
+  architecture, flow, people, packages, identity, "extension-parts": extensionParts,
+  "extension-cards": extensionCards, "extension-signing": extensionSigning, routing,
+  "kuru-spot": kuruSpot, "creator-fees": creatorFees, perpl, "call-lifecycle": callLifecycle,
+  tiers, envio, mcp, website, database, deployment,
+};
+window.diagrams = Object.keys(diagrams);
+window.render = (name) => { svg.innerHTML = ""; seed = 7; N = {}; diagrams[name](); };
 </script>
 </body>
 </html>
