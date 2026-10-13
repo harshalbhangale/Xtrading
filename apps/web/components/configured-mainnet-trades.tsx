@@ -17,17 +17,10 @@ const time = (iso: string) =>
     minute: "2-digit",
   });
 
-/** Spent and minimum-received amounts for a verified trade, each in its own token's units. */
+/** Amount spent for a verified trade, in the input token's units. */
 function tradeAmounts(trade: MainnetTrades["trades"][number]) {
   const key = trade.market as keyof typeof kuruMainnet.markets | null;
-  if (
-    !trade.verified ||
-    !key ||
-    !trade.side ||
-    !trade.inputAmount ||
-    !trade.minAmountOut
-  )
-    return null;
+  if (!trade.verified || !key || !trade.side || !trade.inputAmount) return null;
   const base = kuruMainnet.markets[key].base;
   const buy = trade.side === "buy";
   const shown = (value: string, decimals: number, symbol: string) =>
@@ -37,9 +30,6 @@ function tradeAmounts(trade: MainnetTrades["trades"][number]) {
     spent: buy
       ? shown(trade.inputAmount, kuruMainnetUsdc.decimals, usdcSymbol)
       : shown(trade.inputAmount, base.decimals, base.symbol),
-    minimum: buy
-      ? shown(trade.minAmountOut, base.decimals, base.symbol)
-      : shown(trade.minAmountOut, kuruMainnetUsdc.decimals, usdcSymbol),
   };
 }
 
@@ -109,9 +99,8 @@ export default function ConfiguredMainnetTrades() {
     <>
       <p className="small-note">
         Each trade is checked against its transaction and receipt on Monad
-        mainnet. Amounts are what you spent and the minimum you accepted; the
-        amounts received are not indexed yet. Source posts are what you entered;
-        they are not verified.
+        mainnet. Amounts are what you spent; amounts received are not indexed
+        yet. Source posts are what you entered; they are not verified.
       </p>
       <div className="table-scroll">
         <table className="record-table">
@@ -120,7 +109,6 @@ export default function ConfiguredMainnetTrades() {
               <th scope="col">Time</th>
               <th scope="col">Trade</th>
               <th scope="col">Spent</th>
-              <th scope="col">Minimum received</th>
               <th scope="col">Source post</th>
               <th scope="col">Transaction</th>
             </tr>
@@ -133,7 +121,6 @@ export default function ConfiguredMainnetTrades() {
                   <td>{time(trade.recordedAt)}</td>
                   <td>{shown?.label ?? "Receipt not verified"}</td>
                   <td>{shown?.spent ?? "—"}</td>
-                  <td>{shown?.minimum ?? "—"}</td>
                   <td>
                     <a
                       href={`https://x.com/i/status/${trade.sourcePostId}`}

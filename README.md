@@ -101,16 +101,16 @@ KURU_FEE_FORK_RPC=https://rpc.monad.xyz forge test --root contracts --match-cont
 
 Envio's new mainnet projection records actual `FeeCollected` and `KuruFlowSwap` events from block 112914000. The earnings API checks recipient scope, canonical block hashes and indexer freshness. Hosted redeployment and its GraphQL endpoint update are required before live earnings history is available. Registration and quotes never count as earnings. Testnet V2 builder-fee support is still pending.
 
-## Bonded calls (Chainlink CRE)
+## Chainlink CRE call scorecard
 
-`contracts/src/CallSettlement.sol` holds opt-in call bonds, separate from refundable stake. A creator registers a call (asset, direction, target move, 1h–30d horizon, bond); its window starts at the registration block. Every hour, the workflow in `services/cre/settlement` reads due calls at a finalized block. It fetches the opens of the Binance 1-minute candles at the window start and expiry; each node fetches independently and the median is agreed. It then writes one signed report through the Chainlink forwarder. Success returns bond + reward, failure moves the bond into the reward pool, and a tie returns the bond. A missing price never slashes; the bond is refundable after three days.
+`contracts/src/CallSettlement.sol` is deployed bond-free on testnet (`minBond = maxBond = 0`, `contracts/deployments/call-scorecard-monad-testnet.json`): a creator records an open call with one gas-only transaction (Calls → "Record on Chainlink"); no tokens move. Every hour, the workflow in `services/cre/settlement` reads due calls at a finalized block, fetches the opens of the Binance 1-minute candles at the window start and expiry (each node independently, median agreed), and writes one signed report through the Chainlink forwarder. The contract records Success, Failure or Tie onchain; a missing price never resolves a call. With a positive bond range the same contract can also lock optional bonds (Foundry-tested), but the app no longer offers bonds.
 
 ```sh
 cd services/cre/settlement && bun install && bun test
 services/cre/scripts/fork-e2e.sh ETH 0 1   # asset, direction (0 Up, 1 Down), target bps
 ```
 
-The script forks Monad testnet about three hours back (anvil dev account, port 8548). It deploys against the simulation forwarder, registers and funds a call, and moves time past expiry. Then it runs `cre workflow simulate --broadcast` and prints the onchain outcome. The testnet contract (`contracts/deployments/call-settlement-monad-testnet.json`) currently trusts the simulation forwarder so `cre workflow simulate settlement --target staging-settings --broadcast` settles real calls; switch it with `setForwarder` once the workflow is deployed. Set `CALL_SETTLEMENT_ADDRESS` for the app. Deploy the contract with the production forwarder `0xF8344CFd5c43616a4366C34E3EEE75af79a74482`, set `settlementAddress` in `config.staging.json`, and deploy the workflow.
+The script forks Monad testnet about three hours back (anvil dev account, port 8548). It deploys against the simulation forwarder, registers and funds a call, and moves time past expiry. Then it runs `cre workflow simulate --broadcast` and prints the onchain outcome. The testnet scorecard currently trusts the simulation forwarder so `cre workflow simulate settlement --target staging-settings --broadcast` settles real calls; switch it with `setForwarder` once the workflow is deployed. Set `CALL_SETTLEMENT_ADDRESS` for the app. Deploy the contract with the production forwarder `0xF8344CFd5c43616a4366C34E3EEE75af79a74482`, set `settlementAddress` in `config.staging.json`, and deploy the workflow.
 
 ## Deployment
 

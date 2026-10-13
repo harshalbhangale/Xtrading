@@ -320,4 +320,36 @@ contract CallSettlementTest {
         require(status(ID) == expected, "rule");
         assertConserved();
     }
+
+    // --- bond-free scorecard deployment (minBond = maxBond = 0) ---
+
+    function testBondFreeCallsRecordOutcomesWithoutMovingFunds() public {
+        bytes32[] memory assets = new bytes32[](1);
+        assets[0] = ETH;
+        CallSettlement free = new CallSettlement(token, FORWARDER, 0, 0, assets);
+        uint256 before = token.balanceOf(CREATOR);
+        bytes32[3] memory ids = [keccak256("free-up"), keccak256("free-down"), keccak256("free-flat")];
+        // CREATOR never approved `free`: a zero bond must not pull tokens.
+        for (uint256 i; i < 3; ++i) {
+            vm.prank(CREATOR);
+            free.registerCall(ids[i], ETH, CallSettlement.Direction.Up, 100, 1 days, 0, 0, keccak256("terms"));
+        }
+        vm.expectRevert(CallSettlement.InvalidTerms.selector);
+        vm.prank(CREATOR);
+        free.registerCall(keccak256("bonded"), ETH, CallSettlement.Direction.Up, 100, 1 days, 1, 0, keccak256("terms"));
+
+        vm.warp(T0 + 1 days + 120);
+        CallSettlement.Settlement[] memory s = new CallSettlement.Settlement[](3);
+        s[0] = CallSettlement.Settlement(ids[0], 2000e8, T0 + 30, 2100e8, T0 + 1 days + 30);
+        s[1] = CallSettlement.Settlement(ids[1], 2000e8, T0 + 30, 1900e8, T0 + 1 days + 30);
+        s[2] = CallSettlement.Settlement(ids[2], 2000e8, T0 + 30, 2000e8, T0 + 1 days + 30);
+        vm.prank(FORWARDER);
+        free.onReport("", abi.encode(s));
+
+        require(free.getCall(ids[0]).status == CallSettlement.Status.Success, "success");
+        require(free.getCall(ids[1]).status == CallSettlement.Status.Failure, "failure");
+        require(free.getCall(ids[2]).status == CallSettlement.Status.Tie, "tie");
+        require(free.claimable(CREATOR) == 0 && free.openCallCount() == 0, "no payouts");
+        require(token.balanceOf(address(free)) == 0 && token.balanceOf(CREATOR) == before, "no funds moved");
+    }
 }

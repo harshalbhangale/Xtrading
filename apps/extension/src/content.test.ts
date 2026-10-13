@@ -346,7 +346,12 @@ it("removes a profile badge when refreshed identity evidence is unavailable", as
   await vi.advanceTimersByTimeAsync(60001);
   await addProfileBadge("alice");
   expect(document.querySelector(".cmb-profile-badge-host")).toBeNull();
-  expect(sendMessage).toHaveBeenCalledTimes(2);
+  // Bound: evidence + reputation; refreshed and unbound: evidence only.
+  expect(sendMessage.mock.calls.map(([m]) => m.type)).toEqual([
+    "creator-evidence",
+    "creator-reputation",
+    "creator-evidence",
+  ]);
 });
 
 it("refreshes feed evidence and discards an expired badge", async () => {

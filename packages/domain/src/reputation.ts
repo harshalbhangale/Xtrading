@@ -166,7 +166,10 @@ export function kolFlags(input: {
       callIds: [],
       transactions: [],
     });
-  const slashed = input.calls.filter((c) => c.bond?.status === "failure");
+  // Only bonds with money at stake; bond-free records are ordinary wrong calls.
+  const slashed = input.calls.filter(
+    (c) => c.bond?.status === "failure" && BigInt(c.bond.bond) > 0n,
+  );
   if (slashed.length)
     flags.push({
       kind: "slashed_bond",
@@ -290,3 +293,29 @@ export function assessKol(input: {
 export function tierName(id: TierId | null) {
   return reputationTiers.find((t) => t.id === id)?.name ?? null;
 }
+
+/** Public reputation response (`GET /api/creators/:handle/reputation`), as clients read it. */
+export const kolReputationSchema = z.object({
+  handle: z.string(),
+  bound: z.boolean(),
+  assessment: z.object({
+    scored: z.number().int().nonnegative(),
+    hits: z.number().int().nonnegative(),
+    open: z.number().int().nonnegative(),
+    tier: z.enum(["pro", "max", "ultra"]).nullable(),
+    feeBps: creatorFeeBpsSchema,
+    progressBps: z.number().int().min(0).max(10000),
+    next: z.object({ name: z.string() }).nullable(),
+    flags: z
+      .array(
+        z.object({
+          kind: z.string(),
+          severity: z.enum(["serious", "warning"]),
+          title: z.string(),
+          detail: z.string(),
+        }),
+      )
+      .max(10),
+  }),
+});
+export type KolReputation = z.infer<typeof kolReputationSchema>;

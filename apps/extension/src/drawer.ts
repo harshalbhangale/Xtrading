@@ -1,4 +1,5 @@
 import {
+  type KolReputation,
   type NansenCheck,
   nansenCheckSchema,
   type PostSignal,
@@ -13,6 +14,7 @@ import { markPath } from "./badge";
 import { appOrigin } from "./config";
 import { el, safeLink, send, shadowHost, shortAddress, svg } from "./dom";
 import { perpTicket } from "./perp-ticket";
+import { reputation, tierLabel } from "./reputation";
 import { spotTicket } from "./spot-ticket";
 
 const insightsSchema = z.object({
@@ -158,10 +160,23 @@ function nansenSection(check: NansenCheck) {
   );
 }
 
-function reputationSection(reputation: Reputation, insights: Insights) {
+function reputationSection(
+  reputation: Reputation,
+  insights: Insights,
+  tier: KolReputation | null,
+) {
   const evidence = insights.evidence;
   return section(
     "Creator",
+    tier ? row("Tier", tierLabel(tier)) : null,
+    tier
+      ? row(
+          "Red flags",
+          tier.assessment.flags.length
+            ? tier.assessment.flags.map((f) => f.title).join(" · ")
+            : "None found",
+        )
+      : null,
     row(
       "Identity",
       evidence?.identity.status === "bound"
@@ -367,11 +382,10 @@ export async function openDrawer(
   network.append(choices, note);
   body.append(network, trade, call, loading);
 
-  const insights = await loadInsights(
-    signal.handle,
-    signal.asset,
-    signal.direction,
-  );
+  const [insights, tier] = await Promise.all([
+    loadInsights(signal.handle, signal.asset, signal.direction),
+    reputation(signal.handle),
+  ]);
   if (current !== shell) return;
   loading.replaceWith(
     insights
@@ -379,7 +393,7 @@ export async function openDrawer(
           "details",
           { class: "evidence-details" },
           el("summary", {}, "Creator record and Nansen evidence"),
-          reputationSection(insights.reputation, insights),
+          reputationSection(insights.reputation, insights, tier),
           nansenSection(insights.nansen),
         )
       : section(

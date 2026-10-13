@@ -18,3 +18,6 @@ services/indexer/persisted_state.envio.json
 __pycache__/
 package-lock.json
 .vercel
+
+# Local Foundry library link; never tracked
+/contracts/node_modules

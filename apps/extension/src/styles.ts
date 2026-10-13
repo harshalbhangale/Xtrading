@@ -7,7 +7,9 @@ a { color: inherit; }
 .chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px;
   font: 600 11px/18px system-ui; border: 1px solid; white-space: nowrap; cursor: pointer; }
 .chip.verified { color: #1d6b2a; background: #e3f6dc; border-color: #9fd38e; }
-.chip.staked { color: #4b2fa6; background: #ece6ff; border-color: #b9a6f4; }
+.chip.tier { color: #1d4f91; background: #e4eefb; border-color: #a9c6ec; font-weight: 700; letter-spacing: 0.04em; }
+.chip.tier-ultra { color: #1b1f0a; background: #c6f25a; border-color: #a9d43d; }
+.chip.flag { color: #a3241b; background: #fde8e6; border-color: #f2b2ab; font-weight: 700; }
 .chip.muted { color: #5b6170; background: #f1f2f5; border-color: #d6d9e0; }
 .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 2px;
   padding: 8px 10px; border-radius: 12px; border: 1px solid #c8bdf2; background: #f7f4ff; color: #24193f;
@@ -307,7 +309,9 @@ a { color: inherit; }
 .btn:hover { background: #d6f985; }
 .btn.secondary, .btn[disabled] { background: transparent; color: var(--soft); border: 1px solid var(--line-strong); }
 .btn:focus-visible, .chip:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
-.chip.staked { color: var(--lime); background: #c6f25a14; border-color: #c6f25a55; }
+.chip.tier { color: var(--lime); background: #c6f25a14; border-color: #c6f25a55; font-weight: 700; letter-spacing: 0.04em; }
+.chip.tier-ultra { color: #111; background: var(--lime); border-color: var(--lime); }
+.chip.flag { color: #ff8a80; background: #ff5a4f1a; border-color: #ff5a4f66; font-weight: 700; }
 .chip.verified { color: var(--positive); background: #8ad97c14; border-color: #8ad97c55; }
 .dir-bullish { color: var(--positive); } .dir-bearish { color: var(--negative); }
 .cta { background: var(--lime); color: var(--on-lime); border-radius: 10px; }

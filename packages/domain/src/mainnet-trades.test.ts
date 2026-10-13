@@ -4,7 +4,7 @@ import { mainnetTradesSchema, recordTradeSchema } from "./index";
 const hash = `0x${"ab".repeat(32)}`;
 
 describe("recordTradeSchema", () => {
-  it("requires a supported chain alongside the transaction and post", () => {
+  it("accepts a supported chain and defaults to testnet when it is omitted", () => {
     expect(
       recordTradeSchema.safeParse({
         transactionHash: hash,
@@ -20,11 +20,11 @@ describe("recordTradeSchema", () => {
       }).success,
     ).toBe(true);
     expect(
-      recordTradeSchema.safeParse({
+      recordTradeSchema.parse({
         transactionHash: hash,
         sourcePostId: "123",
-      }).success,
-    ).toBe(false);
+      }).chainId,
+    ).toBe(10143);
     expect(
       recordTradeSchema.safeParse({
         transactionHash: hash,

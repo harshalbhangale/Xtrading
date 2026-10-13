@@ -366,7 +366,8 @@ export const recordTradeSchema = z
   .object({
     transactionHash: txHashSchema,
     sourcePostId: z.string().regex(/^[0-9]{1,30}$/),
-    chainId: chainIdSchema,
+    // Explicit network; defaults to testnet for older clients.
+    chainId: chainIdSchema.default(10143),
   })
   .strict();
 
@@ -383,7 +384,6 @@ export const mainnetTradeSchema = z.object({
     .nullable(),
   side: z.enum(["buy", "sell"]).nullable(),
   inputAmount: decimalAmount.nullable(),
-  minAmountOut: decimalAmount.nullable(),
   blockNumber: decimalAmount.nullable(),
 });
 export const mainnetTradesSchema = z.object({
@@ -439,65 +439,6 @@ export const browserFollowingSchema = z.object({
   coverage: z.literal("viewed-only"),
 });
 export type BrowserFollowing = z.infer<typeof browserFollowingSchema>;
-
-/** Opt-in onchain bond for a registered call, settled by the Chainlink CRE workflow. */
-const bytes32Schema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
-export const callBondStateSchema = z.object({
-  callId: z.uuid(),
-  onchainId: bytes32Schema,
-  chainId: z.literal(10143),
-  contract: addressSchema,
-  token: addressSchema,
-  wallet: addressSchema,
-  bondable: z.boolean(),
-  reason: z.string().nullable(),
-  horizon: amountSchema.nullable(),
-  minBond: amountSchema,
-  maxBond: amountSchema,
-  rewardPool: amountSchema,
-  tokenBalance: amountSchema,
-  allowance: amountSchema,
-  nativeBalance: amountSchema,
-  claimable: amountSchema,
-  refundableAt: amountSchema.nullable(),
-  onchain: z
-    .object({
-      status: z.enum(bondOutcomes),
-      bond: amountSchema,
-      reward: amountSchema,
-      start: amountSchema,
-      expiry: amountSchema,
-      entryPrice: amountSchema,
-      exitPrice: amountSchema,
-    })
-    .nullable(),
-  blockNumber: amountSchema,
-  blockTimestamp: amountSchema,
-  observedAt: z.iso.datetime(),
-});
-export type CallBondState = z.infer<typeof callBondStateSchema>;
-export const callBondActionSchema = z.object({
-  action: z.enum(["bond", "claim", "refund"]),
-  // Whole mUSDC; the contract enforces its own bounds.
-  amount: z
-    .string()
-    .regex(/^[1-9][0-9]{0,3}$/)
-    .optional(),
-});
-export const preparedCallBondSchema = z.object({
-  action: z.enum(["approve", "register", "claim", "refund"]),
-  chainId: z.literal(10143),
-  wallet: addressSchema,
-  to: addressSchema,
-  data: z.string().regex(/^0x[0-9a-fA-F]+$/),
-  value: z.literal("0"),
-  gas: amountSchema,
-  expiresAt: z.iso.datetime(),
-  bond: amountSchema.nullable(),
-  reward: amountSchema.nullable(),
-  termsHash: bytes32Schema.nullable(),
-  state: callBondStateSchema,
-});
 
 export type { InlineQuote } from "./inline-trade";
 export {

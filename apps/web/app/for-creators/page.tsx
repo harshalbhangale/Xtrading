@@ -112,9 +112,8 @@ export default function ForCreatorsPage() {
         <details>
           <summary>Do I need to deposit funds to become a creator?</summary>
           <p>
-            No. Link your X account and wallet, then register calls. Existing
-            deposits can still be recovered through the{" "}
-            <Link href="/creator/stake">previous-deposit recovery page</Link>.
+            No. Link your X account and wallet, then register calls. There is no
+            stake and no subscription.
           </p>
         </details>
       </section>
