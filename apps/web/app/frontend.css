@@ -600,41 +600,6 @@ textarea:focus-visible {
 .call-failure {
   color: var(--negative);
 }
-.bond-line {
-  margin: 8px 0 0;
-  font-size: 13px;
-}
-.bond-success a {
-  color: var(--positive);
-}
-.bond-failure a {
-  color: var(--negative);
-}
-.bond-toggle {
-  display: block;
-  margin-top: 8px;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  cursor: pointer;
-}
-.call-bond {
-  display: grid;
-  gap: 8px;
-  min-width: 220px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-}
-.call-bond label {
-  display: grid;
-  gap: 4px;
-}
-.bond-review {
-  padding: 10px;
-  border: 1px solid var(--line);
-}
 @media (max-width: 760px) {
   .call-form {
     grid-template-columns: 1fr 1fr;

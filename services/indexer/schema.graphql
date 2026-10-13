@@ -58,36 +58,6 @@ type KuruTransfer {
   transactionHash: String!
 }
 
-# One opt-in call bond, keyed by chain and onchain call ID. Status follows the
-# contract: open -> success | failure | tie (CRE report) or refunded (timeout).
-type CallBond {
-  id: ID!
-  chainId: Int!
-  contract: String!
-  callId: String!
-  creator: String!
-  asset: String!
-  direction: String!
-  targetBps: Int!
-  start: BigInt!
-  expiry: BigInt!
-  bond: BigInt!
-  reward: BigInt!
-  termsHash: String!
-  status: String!
-  entryPrice: BigInt
-  exitPrice: BigInt
-  payout: BigInt
-  slashed: BigInt
-  rejections: Int!
-  lastRejectionReason: Int
-  registeredAtBlock: BigInt!
-  registeredTx: String!
-  settledAtBlock: BigInt
-  settledAt: BigInt
-  settledTx: String
-}
-
 # Actual creator payment, never a quote. Reorg rollback removes orphaned events.
 type CreatorFeePayment {
   id: ID!

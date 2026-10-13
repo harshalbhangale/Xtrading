@@ -10,14 +10,13 @@ const explorers = {
 } as const;
 
 /**
- * Receipt-checked on-chain attestations for the live terminal: Chainlink CRE
- * call settlements (testnet) and Kuru Flow creator payments (mainnet), both
- * discovered through Envio HyperSync.
+ * Receipt-checked on-chain attestations for the live terminal: Kuru Flow
+ * creator payments (mainnet), discovered through Envio HyperSync.
  */
 export async function GET(request: Request) {
   if (!allow(`attest:${clientKey(request)}`, 10))
     return reply({ error: "rate_limited" }, 429);
-  const views = await Promise.all([envioEvidence(10143), envioEvidence(143)]);
+  const views = [await envioEvidence(143)];
   const items = views
     .flatMap((view) =>
       view.records.map((record) => ({
@@ -30,10 +29,7 @@ export async function GET(request: Request) {
         blockNumber: record.blockNumber,
         timestamp: Number(record.timestamp) * 1000,
         url: `${explorers[record.chainId]}${record.transactionHash}`,
-        detail:
-          record.kind === "settlement"
-            ? { outcome: record.outcome, callId: record.callId }
-            : { amount: record.amount, token: record.token },
+        detail: { amount: record.amount, token: record.token },
       })),
     )
     .sort((a, b) => b.timestamp - a.timestamp)

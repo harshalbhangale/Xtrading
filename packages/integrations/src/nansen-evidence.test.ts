@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  addressFlags,
   assessWalletTiming,
   MAJOR_TARGETS,
   type PositionEvent,
@@ -255,6 +256,81 @@ describe("token evidence", () => {
           sellersAfterCall: [],
         },
         onToken: null,
+      }),
+    ).toEqual([]);
+  });
+});
+
+describe("addressFlags", () => {
+  const fake = "0x00e51e3d0f05e8843be6967f0d483c35335e861e";
+  const chains = ["monad", "base", "ethereum", "bnb", "arbitrum"];
+  const unknown = {
+    asset: "PEPE",
+    address: fake,
+    resolved: null,
+    unknownOnMainnets: true,
+    checkedChains: chains,
+    testnet: null,
+  };
+
+  it("calls out a ticker shilled with someone else's address", () => {
+    expect(addressFlags(unknown)).toEqual([
+      {
+        kind: "impostor-token",
+        severity: "caution",
+        summary:
+          "The post says PEPE, but this isn't PEPE's contract. The real PEPE is 0x6982…1933 on Ethereum.",
+      },
+    ]);
+  });
+
+  it("names a testnet deployment, which has no value", () => {
+    expect(
+      addressFlags({ ...unknown, testnet: { symbol: "PEPE" } }).map(
+        (f) => f.kind,
+      ),
+    ).toEqual(["impostor-token", "testnet-only-contract"]);
+  });
+
+  it("flags a different token behind a familiar ticker", () => {
+    expect(
+      addressFlags({
+        ...unknown,
+        resolved: { chain: "base", symbol: "FROG" },
+        unknownOnMainnets: false,
+      })[0]?.summary,
+    ).toBe(
+      "The post says PEPE, but Nansen identifies this address as FROG. The real PEPE is 0x6982…1933 on Ethereum.",
+    );
+  });
+
+  it("treats a same-symbol copy as information, and the original as clean", () => {
+    expect(
+      addressFlags({
+        ...unknown,
+        resolved: { chain: "bnb", symbol: "PEPE" },
+        unknownOnMainnets: false,
+      }),
+    ).toMatchObject([{ kind: "not-canonical", severity: "info" }]);
+    expect(
+      addressFlags({
+        ...unknown,
+        address: "0x6982508145454Ce325dDbE47a25d4ec3d2311933",
+        resolved: { chain: "ethereum", symbol: "PEPE" },
+        unknownOnMainnets: false,
+      }),
+    ).toEqual([]);
+  });
+
+  it("never calls an unlisted ticker fake, and claims nothing without answers", () => {
+    expect(
+      addressFlags({ ...unknown, asset: "FROGGY" }).map((f) => f.kind),
+    ).toEqual(["unknown-contract"]);
+    expect(
+      addressFlags({
+        ...unknown,
+        unknownOnMainnets: false,
+        testnet: { symbol: "PEPE" },
       }),
     ).toEqual([]);
   });

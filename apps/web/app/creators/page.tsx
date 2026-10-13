@@ -72,8 +72,7 @@ export default async function CreatorsPage({
             <h3>No bound creator has a red flag right now.</h3>
             <p>
               Flags appear when a registered post stops being public, a creator
-              trades against their own call, most calls are wrong or a bond is
-              slashed.
+              trades against their own call or most calls are wrong.
             </p>
           </div>
         ) : records.length === 0 ? (

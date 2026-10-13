@@ -37,12 +37,12 @@ type Item = {
 type Attestations = {
   items: {
     id: string;
-    kind: "settlement" | "payment";
+    kind: "payment";
     network: string;
     transactionHash: string;
     timestamp: number;
     url: string;
-    detail: { outcome?: string; amount?: string };
+    detail: { amount?: string };
   }[];
   sources: { chainId: number; status: string }[];
 };
@@ -822,9 +822,7 @@ export default function ConfiguredTerminal() {
                       target="_blank"
                       rel="noreferrer"
                     >
-                      {a.kind === "settlement"
-                        ? `CRE settled · ${a.detail.outcome}`
-                        : "Creator fee paid"}
+                      Creator fee paid
                     </a>
                     <small>
                       {a.network} · {a.transactionHash.slice(0, 10)}… ·{" "}

@@ -4,22 +4,18 @@ import { envioEvidence } from "../../../lib/envio-evidence";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 export default async function OnchainPage() {
-  const views = await Promise.all([envioEvidence(143), envioEvidence(10143)]);
+  const views = [await envioEvidence(143)];
   return (
     <>
       <PageHeading
         eyebrow="Envio"
         title="Onchain evidence"
-        description="Real creator payments and call scorecard results discovered through Envio HyperSync and checked against chain receipts. No wallet connection needed."
+        description="Real creator payments discovered through Envio HyperSync and checked against chain receipts. No wallet connection needed."
       />
       {views.map((view) => (
         <Panel
           key={view.chainId}
-          title={
-            view.chainId === 143
-              ? "Creator payments · Monad mainnet"
-              : "Call scorecard · Monad testnet"
-          }
+          title="Creator payments · Monad mainnet"
           description={`${view.source} · ${view.status} · Indexed through block ${view.progressBlock || "unavailable"}`}
         >
           <p>
@@ -42,28 +38,19 @@ export default async function OnchainPage() {
               >
                 <p>
                   <strong>
-                    {record.kind === "payment"
-                      ? `${record.token === zeroAddress ? `${formatUnits(BigInt(record.amount), 18)} MON` : `${record.amount} token base units`} paid to creator`
-                      : `Call outcome: ${record.outcome}`}
+                    {`${record.token === zeroAddress ? `${formatUnits(BigInt(record.amount), 18)} MON` : `${record.amount} token base units`} paid to creator`}
                   </strong>
                 </p>
                 <p style={{ overflowWrap: "anywhere" }}>
                   Creator wallet: {record.creatorWallet}
                 </p>
-                {record.kind === "settlement" && (
-                  <p style={{ overflowWrap: "anywhere" }}>
-                    Call: {record.callId} · Entry {record.entryPrice} → Exit{" "}
-                    {record.exitPrice} (oracle units). A correct price call is
-                    not proof of a profitable user trade.
-                  </p>
-                )}
                 <p>
                   Block {record.blockNumber} ·{" "}
                   {new Date(Number(record.timestamp) * 1000).toISOString()}
                 </p>
                 <a
                   className="text-link"
-                  href={`${view.chainId === 143 ? "https://monadvision.com" : "https://testnet.monadvision.com"}/tx/${record.transactionHash}`}
+                  href={`https://monadvision.com/tx/${record.transactionHash}`}
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -75,9 +62,9 @@ export default async function OnchainPage() {
         </Panel>
       ))}
       <p>
-        Only the configured creator-fee contract and bond-free call scorecard
-        are included. These records do not establish account identity, five
-        profitable calls, or fee eligibility.
+        Only the configured creator-fee contract is included. These records do
+        not establish account identity, five profitable calls, or fee
+        eligibility.
       </p>
     </>
   );

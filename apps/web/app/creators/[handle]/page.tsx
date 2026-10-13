@@ -68,7 +68,7 @@ export default async function CreatorPage({
       {record && (
         <Panel
           title="Accountability"
-          description="Red flags come from evidence only: registered posts that stopped being public, trades against the creator's own calls, wrong-call rate and slashed bonds."
+          description="Red flags come from evidence only: registered posts that stopped being public, trades against the creator's own calls and wrong-call rate."
         >
           <KolFlags
             assessment={record.assessment}
@@ -130,7 +130,7 @@ export default async function CreatorPage({
       >
         {ledger ? (
           <>
-            <CallSummary calls={ledger.calls} bonds={ledger.bonds} />
+            <CallSummary calls={ledger.calls} />
             <CallLedger calls={ledger.calls} />
           </>
         ) : (
