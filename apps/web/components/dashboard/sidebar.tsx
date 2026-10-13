@@ -31,6 +31,7 @@ const navigation: Record<"user" | "creator", Item[]> = {
 };
 
 const tools: Item[] = [
+  { href: "/dashboard/onchain", label: "Onchain evidence", icon: "activity" },
   { href: "/extension", label: "X extension", icon: "extension" },
   { href: "/integrations", label: "Agent access", icon: "agent" },
   { href: "/setup", label: "System status", icon: "status" },

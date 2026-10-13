@@ -15,7 +15,8 @@
     "./signals": "./src/signals.ts",
     "./token-references": "./src/token-references.ts",
     "./perpl": "./src/perpl.ts",
-    "./creator-fees": "./src/creator-fees.ts"
+    "./creator-fees": "./src/creator-fees.ts",
+    "./envio-events": "./src/envio-events.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

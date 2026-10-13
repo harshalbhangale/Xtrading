@@ -7,7 +7,7 @@ Primary track: **Onchain Finance & Trading**.
 | Kuru | Spot trading from X on Monad | Approved order, confirmed fill and source-post attribution in the dashboard |
 | Perpl | Explicit perp calls and social trading | Risk-bounded, wallet-approved Perpl execution with real onchain activity; ≤2-minute demo |
 | Privy | X login, embedded wallet and signing | Verified X/wallet binding, creator payout registration and reviewed Kuru transaction through Privy |
-| Envio | Stake and trading projections | Onchain events update extension indicators and dashboard history |
+| Envio | HyperIndex Kuru activity plus HyperSync creator payments and bond-free call outcomes | `/dashboard/onchain`: real decoded events, receipt checks, block progress and transaction links; creator earnings consume the same payment source |
 | Nansen | Wallet/token context | Actual sourced insight with timestamp, network and coverage |
 | Chainlink CRE | Hourly settlement of expired, bonded calls | Simulated workflow, authenticated settlement report, reward/slash event and Envio projection |
 

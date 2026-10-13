@@ -5,6 +5,7 @@ import { createPublicClient, http } from "viem";
 import { monad } from "viem/chains";
 import { z } from "zod";
 import { envioQuery } from "./envio";
+import { envioEvidence } from "./envio-evidence";
 
 const address = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
 const payment = z.object({
@@ -27,7 +28,7 @@ const unavailable = () => ({
 });
 
 /** Bounded confirmed-payment history; never sum unlike tokens or infer fees from orders. */
-export async function creatorEarnings(wallet: string) {
+async function indexedCreatorEarnings(wallet: string) {
   try {
     const result = await envioQuery(
       `query CreatorEarnings($wallet: String!) {
@@ -102,4 +103,22 @@ export async function creatorEarnings(wallet: string) {
   } catch {
     return unavailable();
   }
+}
+
+export async function creatorEarnings(wallet: string) {
+  if (!address.safeParse(wallet).success) return unavailable();
+  const indexed = await indexedCreatorEarnings(wallet);
+  if (indexed.status !== "unavailable")
+    return { ...indexed, source: "Envio HyperIndex" };
+  const evidence = await envioEvidence(143, wallet);
+  return {
+    status: evidence.status,
+    payments: evidence.records
+      .filter((e) => e.kind === "payment")
+      .map((e) => payment.parse(e)),
+    observedAt: evidence.observedAt,
+    progressBlock: evidence.progressBlock,
+    finality: evidence.finality,
+    source: evidence.source,
+  };
 }

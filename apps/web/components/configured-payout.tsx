@@ -16,6 +16,8 @@ const schema = z.object({
   bps: creatorFeeBpsSchema,
 });
 const earningsSchema = z.object({
+  source: z.string().optional(),
+  progressBlock: z.string().nullable().optional(),
   status: z.enum(["unavailable", "current", "lagging"]),
   payments: z.array(
     z.object({
@@ -124,6 +126,13 @@ export default function ConfiguredPayout() {
     );
   return (
     <div className="stake-form">
+      {earnings && (
+        <p>
+          {earnings.source || "Envio"} · {earnings.status} · Block{" "}
+          {earnings.progressBlock || "unavailable"}.{" "}
+          <Link href="/dashboard/onchain">View onchain evidence ↗</Link>
+        </p>
+      )}
       {record && (
         <>
           <p>

@@ -63,12 +63,12 @@ External testnet contracts used: Kuru Spot V2 AccountCore [`0xdbaaDe7B42c95399bb
 | Web app and API | [xtradingnow.xyz](https://xtradingnow.xyz) (Vercel) | Live |
 | MCP server | `https://xtradingnow.xyz/api/mcp` | Live |
 | Chrome extension 0.9.0 | [xtradingnow.xyz/extension](https://xtradingnow.xyz/extension) | Live download |
-| Envio indexer | Hosted project `tradepost` (config name `xtrading`). Deployment `a2e3a1d` is synced 100% with CallSettlement and Kuru Flow handlers; production endpoint (`https://indexer.dev.hyperindex.xyz/6634cb9/v1/graphql`) still serves the older build until `a2e3a1d` is promoted | Live: stakes, Kuru fills. CallSettled and creator-fee projections run on `a2e3a1d`; the app shows live Envio block progress per chain in the Terminal integrity panel |
+| Envio | HyperIndex supplies historical Kuru testnet activity. HyperSync supplies current mainnet creator payments and bond-free testnet call settlements | `/dashboard/onchain` shows canonical receipt-checked events, progress and freshness; authenticated earnings use HyperSync if the hosted entity is unavailable |
 | Chainlink CRE workflow | `tradepost-settlement-staging`, Monad testnet selector `2183018362218727504` | Simulated with broadcast; DON deployment needs Chainlink access |
 
 ### Not done yet
 
-- Promote Envio deployment `a2e3a1d` to production (dashboard → Promote), after which creator earnings and Chainlink results appear in the app.
+- Repair the Envio GitHub deployment connection and redeploy the latest HyperIndex handlers. Old deployment `a2e3a1d` does not include the mainnet fee contract or current bond-free scorecard; promoting it alone will not add them. HyperSync already powers these app features independently.
 - CRE workflow deployment to the Chainlink DON, then `setForwarder` to the production KeystoneForwarder.
 - An in-app (not scripted) mainnet trade, a live Perpl order and a keyed Nansen finding on a wallet with mainnet history.
 
@@ -159,7 +159,7 @@ Fee execution requires both `KURU_MAINNET_ENABLED=true` and `CREATOR_FEES_ENABLE
 KURU_FEE_FORK_RPC=https://rpc.monad.xyz forge test --root contracts --match-contract KuruCreatorFeeForkTest --evm-version cancun -vv
 ```
 
-Envio's new mainnet projection records actual `FeeCollected` and `KuruFlowSwap` events from block 112914000. The earnings API checks recipient scope, canonical block hashes and indexer freshness. Hosted redeployment and its GraphQL endpoint update are required before live earnings history is available. Registration and quotes never count as earnings. Testnet V2 builder-fee support is still pending.
+Envio's new mainnet projection records actual `FeeCollected` and `KuruFlowSwap` events from block 112914000. The earnings API checks recipient scope, canonical block hashes and indexer freshness. Live earnings fall back to server-side HyperSync when the hosted fee entity is absent; the public `/dashboard/onchain` page shows actual fee payments and current bond-free scorecard settlements. Set server-only `ENVIO_API_TOKEN` in the web environment. Registration and quotes never count as earnings. Testnet V2 builder-fee support is still pending.
 
 ## Chainlink CRE call scorecard
 
