@@ -6,8 +6,10 @@ import {
   publicPayoutSchema,
   type TradeRoute,
 } from "@call-my-bluff/domain";
+import { getAddress } from "viem";
 import { callInsights } from "./call-insights";
 import { appOrigin } from "./config";
+import { directTrade } from "./direct-trade";
 import { assetUrl, el, safeLink, send } from "./dom";
 import { perpTicket } from "./perp-ticket";
 import { riskLine } from "./risk-line";
@@ -18,6 +20,7 @@ import {
   readXTicker,
   sparklineSvg,
 } from "./ticker-price";
+import { hasBrowserWallet } from "./wallet";
 
 export type SwapMarket = "MON" | "WETH" | "WBTC";
 
@@ -147,6 +150,7 @@ export function swapCard(input: {
   // The buyer's choice; the fee only applies when the creator is registered,
   // on mainnet buys.
   let creatorOptIn = true;
+  let creatorWallet: `0x${string}` | null = null;
 
   const card = el("section", {
     class: `inline-card swap-card${input.attached ? " inline-attached" : ""}`,
@@ -205,6 +209,7 @@ export function swapCard(input: {
     el("option", { value: "143" }, "Monad mainnet"),
     el("option", { value: "10143" }, "Monad testnet"),
   ) as HTMLSelectElement;
+  const walletChip = el("span", { class: "swap-wallet", hidden: "" });
   const amount = el("input", {
     class: "inline-amount swap-amount",
     inputmode: "decimal",
@@ -419,6 +424,7 @@ export function swapCard(input: {
       )
         return;
       creatorBps = payout.data.bps;
+      creatorWallet = getAddress(payout.data.creator.wallet);
       creatorLine.replaceChildren(
         creatorToggle,
         el("b", {}, `${creatorBps / 100}%`),
@@ -438,9 +444,50 @@ export function swapCard(input: {
     update();
   });
 
-  submit.addEventListener("click", () => {
+  let busy = false;
+  const explorer = "https://monadvision.com/tx/";
+  /** Mainnet with an injected wallet: trade right here; otherwise secure review. */
+  async function tradeInPlace() {
+    busy = true;
+    submit.setAttribute("disabled", "");
+    try {
+      const result = await directTrade({
+        market: input.market,
+        side,
+        amount: amount.value,
+        slippageBps: 50,
+        creator:
+          creatorWallet && creatorBps && creatorToggle.checked && side === "buy"
+            ? { wallet: creatorWallet, bps: creatorBps as 10 | 50 | 100 | 200 }
+            : null,
+        onStatus: (text) => {
+          status.textContent = text;
+        },
+      });
+      walletChip.textContent = `${result.from.slice(0, 6)}…${result.from.slice(-4)}`;
+      walletChip.hidden = false;
+      status.replaceChildren(
+        `${side === "buy" ? "Bought" : "Sold"} ${asset} on Kuru ✓ `,
+        safeLink(`${explorer}${result.hash}`, "View transaction ↗"),
+        result.creatorPaid
+          ? ` · @${input.handle} was paid in the same transaction.`
+          : "",
+      );
+      amount.value = "";
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Trade failed.";
+      status.textContent = /reject|denied|4001/i.test(message)
+        ? "Cancelled in your wallet. Nothing was sent."
+        : message;
+    } finally {
+      busy = false;
+      update();
+    }
+  }
+  submit.addEventListener("click", async () => {
     const decimals = side === "buy" ? 6 : tokenDecimals(input.market);
-    if (!decimalAtoms(amount.value, decimals)) return;
+    if (busy || !decimalAtoms(amount.value, decimals)) return;
+    if (chainId === 143 && (await hasBrowserWallet())) return tradeInPlace();
     const url = new URL("/trade/inline", appOrigin);
     for (const [key, value] of Object.entries({
       chainId: String(chainId),
@@ -465,7 +512,7 @@ export function swapCard(input: {
       "popup,width=480,height=760,noopener,noreferrer",
     );
     status.replaceChildren(
-      "Sign in the Xtrading window with your wallet. ",
+      "Confirm in the Xtrading wallet review. ",
       safeLink(url.href, "Open review ↗"),
     );
   });
@@ -541,6 +588,7 @@ export function swapCard(input: {
       el(
         "span",
         { class: "swap-row-end" },
+        walletChip,
         el(
           "span",
           { class: "swap-chain-pill" },
