@@ -11,6 +11,7 @@ import {
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useRef, useState } from "react";
 import { type PerplStep, usePerplSteps } from "./use-perpl-steps";
+import { useTradingWallet, walletHeader } from "./use-trading-wallet";
 
 type Review = {
   execution: string;
@@ -75,6 +76,7 @@ export default function ConfiguredPerpTrade({
   initialParams?: string;
 } = {}) {
   const { ready, authenticated, user, login, getAccessToken } = usePrivy();
+  const tradingWallet = useTradingWallet();
   const [marketId, setMarketId] = useState("");
   const [side, setSide] = useState<"long" | "short">("long");
   const [size, setSize] = useState("");
@@ -228,6 +230,7 @@ export default function ConfiguredPerpTrade({
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+        ...walletHeader(tradingWallet),
       },
       body: JSON.stringify(payload),
     });

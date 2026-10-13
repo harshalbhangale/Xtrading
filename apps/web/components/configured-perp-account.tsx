@@ -6,6 +6,7 @@ import { formatUnits } from "viem";
 import { z } from "zod";
 import PerpCloseReview from "./perp-close-review";
 import { usePerplSteps } from "./use-perpl-steps";
+import { useTradingWallet, walletHeader } from "./use-trading-wallet";
 
 const amount = z.string().regex(/^[0-9]+$/);
 const schema = z.object({
@@ -57,6 +58,7 @@ const withdrawSchema = z.object({
 /** The signed-in user's own Perpl testnet account, read from the Exchange contract. */
 export default function ConfiguredPerpAccount() {
   const { ready, authenticated, user, getAccessToken } = usePrivy();
+  const tradingWallet = useTradingWallet();
   const runSteps = usePerplSteps();
   const [state, setState] = useState<z.infer<typeof schema> | null>(null);
   const [notice, setNotice] = useState("");
@@ -71,13 +73,16 @@ export default function ConfiguredPerpAccount() {
     try {
       const token = await getAccessToken();
       const r = await fetch("/api/trades/perp/account", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...walletHeader(tradingWallet),
+        },
         cache: "no-store",
       });
       if (!r.ok)
         throw new Error(
           r.status === 403
-            ? "Bind your X account to your wallet to see your Perpl account."
+            ? "Connect the wallet you trade with to see your Perpl account."
             : "Perpl account data is unavailable.",
         );
       const value = schema.parse(await r.json());
@@ -91,7 +96,7 @@ export default function ConfiguredPerpAccount() {
         setNotice(e instanceof Error ? e.message : "Account unavailable.");
       }
     }
-  }, [ready, authenticated, getAccessToken]);
+  }, [ready, authenticated, getAccessToken, tradingWallet]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: Clear private exchange state when the signed-in account changes.
   useEffect(() => {
     setState(null);
@@ -113,6 +118,7 @@ export default function ConfiguredPerpAccount() {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          ...walletHeader(tradingWallet),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ amount: withdraw.trim() }),

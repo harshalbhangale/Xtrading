@@ -23,6 +23,7 @@ import {
 import { z } from "zod";
 import { identityContext } from "./identity-http";
 import { perplSnapshot, testnetClient } from "./markets";
+import { tradingWallet } from "./trading-wallet";
 
 export const perpRequestSchema = z
   .object({
@@ -73,19 +74,12 @@ const execution = (wallet: string) =>
 
 type Context = typeof identityContext;
 
-/** The caller's current X ↔ wallet binding; every Perpl action is scoped to that wallet. */
+/** The signed-in user's own wallet; every Perpl action is scoped to it. */
 async function boundWallet(request: Request, context: Context) {
   const { user, service, chainId } = await context(request);
   if (chainId !== PERPL_TESTNET.chainId)
     throw new IdentityError("trading_testnet_only", 409);
-  const binding = await service.current(user.privyUserId);
-  if (
-    !binding ||
-    user.xAccount?.xUserId !== binding.xUserId ||
-    !user.wallets.some((w) => w.toLowerCase() === binding.wallet)
-  )
-    throw new IdentityError("current_binding_required", 403);
-  return getAddress(binding.wallet);
+  return tradingWallet(request, user, service);
 }
 
 /** The wallet's own exchange account, or null when it has not opened one. */

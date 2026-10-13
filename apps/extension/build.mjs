@@ -36,7 +36,6 @@ await build({
     "src/popup.ts",
     "src/background.ts",
     "src/app-bridge.ts",
-    "src/wallet-bridge.ts",
   ],
   outdir: "dist",
   bundle: true,

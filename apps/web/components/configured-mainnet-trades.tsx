@@ -6,6 +6,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
+import { useTradingWallet, walletHeader } from "./use-trading-wallet";
 
 const explorer = "https://monadvision.com/tx/";
 const usdcSymbol = "USDC";
@@ -35,6 +36,7 @@ function tradeAmounts(trade: MainnetTrades["trades"][number]) {
 
 export default function ConfiguredMainnetTrades() {
   const { ready, authenticated, login, getAccessToken, user } = usePrivy();
+  const tradingWallet = useTradingWallet();
   const [result, setResult] = useState<MainnetTrades | null>(null);
   const [error, setError] = useState("");
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reload when the signed-in account changes.
@@ -47,7 +49,10 @@ export default function ConfiguredMainnetTrades() {
       const token = await getAccessToken();
       const response = await fetch("/api/me/mainnet-trades", {
         cache: "no-store",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...walletHeader(tradingWallet),
+        },
       });
       const body: unknown = await response.json();
       if (!response.ok) throw new Error("unavailable");
@@ -61,7 +66,7 @@ export default function ConfiguredMainnetTrades() {
     return () => {
       cancelled = true;
     };
-  }, [ready, authenticated, user?.id, getAccessToken]);
+  }, [ready, authenticated, user?.id, getAccessToken, tradingWallet]);
 
   if (!ready) return <p className="small-note">Loading…</p>;
   if (!authenticated)

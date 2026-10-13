@@ -4,6 +4,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { usePerplSteps } from "./use-perpl-steps";
+import { useTradingWallet, walletHeader } from "./use-trading-wallet";
 
 const integer = z.string().regex(/^[0-9]+$/);
 const step = z.object({
@@ -46,6 +47,7 @@ export default function PerpCloseReview({
   onDone: () => void;
 }) {
   const { getAccessToken, user } = usePrivy();
+  const tradingWallet = useTradingWallet();
   const runSteps = usePerplSteps();
   const [review, setReview] = useState<z.infer<typeof reviewSchema> | null>(
     null,
@@ -66,6 +68,7 @@ export default function PerpCloseReview({
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
+        ...walletHeader(tradingWallet),
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),

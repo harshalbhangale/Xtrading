@@ -5,6 +5,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
+import { useTradingWallet, walletHeader } from "./use-trading-wallet";
 
 const decimals = {
   USDC: kuruUsdc.decimals,
@@ -40,6 +41,7 @@ export default function ConfiguredActivity({
   view: "fills" | "all" | "recent";
 }) {
   const { ready, authenticated, login, getAccessToken, user } = usePrivy();
+  const tradingWallet = useTradingWallet();
   const [activity, setActivity] = useState<KuruActivity | null>(null);
   const [error, setError] = useState("");
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reload when the signed-in account changes.
@@ -52,7 +54,10 @@ export default function ConfiguredActivity({
       const token = await getAccessToken();
       const response = await fetch("/api/me/activity", {
         cache: "no-store",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...walletHeader(tradingWallet),
+        },
       });
       const body: unknown = await response.json();
       if (!response.ok) throw new Error("unavailable");
@@ -64,7 +69,7 @@ export default function ConfiguredActivity({
     return () => {
       cancelled = true;
     };
-  }, [ready, authenticated, user?.id, getAccessToken]);
+  }, [ready, authenticated, user?.id, getAccessToken, tradingWallet]);
 
   if (!ready) return <p className="small-note">Loading…</p>;
   if (!authenticated)
