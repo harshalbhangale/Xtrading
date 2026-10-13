@@ -1,23 +1,28 @@
 import "server-only";
 import { IdentityError } from "@call-my-bluff/database/identity";
 import {
-  buildPerplOpenOrder,
-  signPerplRequest,
-} from "@call-my-bluff/integrations/perpl";
-import {
-  perplWalletSchema,
-  projectPerplAccount,
-} from "@call-my-bluff/integrations/perpl-account";
-import {
-  buildPerplCloseOrder,
-  signCloseReview,
-  verifyCloseReview,
-} from "@call-my-bluff/integrations/perpl-close";
+  PERPL_TESTNET,
+  perplCloseOrder,
+  perplCollateralNeeded,
+  perplExchangeAbi,
+  perplOrderAction,
+  perplOrderOutcome,
+  perplOrderStep,
+  perplWalletOrder,
+  perplWalletSteps,
+  perplWithdrawStep,
+} from "@call-my-bluff/integrations/perpl-exchange";
 import { stakeUnits } from "@call-my-bluff/integrations/stake";
+import {
+  BaseError,
+  ContractFunctionRevertedError,
+  decodeFunctionData,
+  erc20Abi,
+  getAddress,
+} from "viem";
 import { z } from "zod";
 import { identityContext } from "./identity-http";
-import { perplSnapshot } from "./markets";
-import { allow } from "./rate-limit";
+import { perplSnapshot, testnetClient } from "./markets";
 
 export const perpRequestSchema = z
   .object({
@@ -32,68 +37,47 @@ export const perpRequestSchema = z
       .string()
       .regex(/^[0-9]{1,30}$/)
       .nullable(),
-    confirm: z.literal(true).optional(),
   })
   .strict();
 
-// Perpl's API returns hashes without the 0x prefix; explorers reject those.
-function txHash(value: string | null | undefined) {
-  if (!value) return null;
-  const hex = value.startsWith("0x") ? value.slice(2) : value;
-  return /^[0-9a-fA-F]{64}$/.test(hex) ? `0x${hex}` : null;
-}
+export const perpConfirmSchema = z
+  .object({
+    transactionHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+    requestId: z.string().regex(/^[1-9][0-9]{0,30}$/),
+    sourcePostId: z
+      .string()
+      .regex(/^[0-9]{1,30}$/)
+      .nullable(),
+  })
+  .strict();
 
 function config() {
   const maxLeverage = Number(process.env.PERPL_MAX_LEVERAGE || "5");
   return {
-    apiUrl: process.env.PERPL_API_URL || "https://testnet.perpl.xyz/api",
-    apiKey: process.env.PERPL_API_KEY ?? "",
-    secret: process.env.PERPL_API_KEY_SECRET ?? "",
-    accountId: process.env.PERPL_ACCOUNT_ID ?? "",
     maxLeverage:
       Number.isInteger(maxLeverage) && maxLeverage >= 1 && maxLeverage <= 50
         ? maxLeverage
         : 5,
     maxSize: process.env.PERPL_MAX_SIZE || "1",
-    // Live orders execute on one team-held Perpl account signed by the server key,
-    // so only these stable X user IDs may send them; everyone else stays in demo.
-    operators: (process.env.PERPL_OPERATOR_X_USER_IDS ?? "")
-      .split(",")
-      .map((id) => id.trim())
-      .filter((id) => /^[0-9]+$/.test(id)),
   };
 }
 
-/** Public order caps; the same limits are enforced again on prepare and submit. */
+/** Public order caps; the same limits are enforced again on prepare. */
 export function perpLimits() {
   const c = config();
   return { maxLeverage: c.maxLeverage, maxSize: c.maxSize };
 }
 
-export function perplMode(xUserId?: string) {
-  const c = config();
-  return c.apiKey &&
-    c.secret &&
-    /^[0-9]+$/.test(c.accountId) &&
-    xUserId !== undefined &&
-    c.operators.includes(xUserId)
-    ? ("live" as const)
-    : ("demo" as const);
-}
-const executionNote = (mode: "live" | "demo", accountId: string) =>
-  mode === "live"
-    ? `Executes on the team's Perpl testnet account #${accountId} via its API key, not from your wallet.`
-    : "Demo: the order is validated against live market caps but not sent. No position is opened.";
+const execution = (wallet: string) =>
+  `Signed and sent by your wallet ${wallet} to your own Perpl testnet account. Xtrading never signs or holds keys.`;
 
 type Context = typeof identityContext;
 
-async function reviewed(
-  request: Request,
-  input: z.infer<typeof perpRequestSchema>,
-  context: Context,
-) {
+/** The caller's current X ↔ wallet binding; every Perpl action is scoped to that wallet. */
+async function boundWallet(request: Request, context: Context) {
   const { user, service, chainId } = await context(request);
-  if (chainId !== 10143) throw new IdentityError("trading_testnet_only", 409);
+  if (chainId !== PERPL_TESTNET.chainId)
+    throw new IdentityError("trading_testnet_only", 409);
   const binding = await service.current(user.privyUserId);
   if (
     !binding ||
@@ -101,12 +85,82 @@ async function reviewed(
     !user.wallets.some((w) => w.toLowerCase() === binding.wallet)
   )
     throw new IdentityError("current_binding_required", 403);
+  return getAddress(binding.wallet);
+}
+
+/** The wallet's own exchange account, or null when it has not opened one. */
+async function exchangeAccount(wallet: `0x${string}`) {
+  const client = testnetClient();
+  try {
+    const account = await client.readContract({
+      address: PERPL_TESTNET.exchange,
+      abi: perplExchangeAbi,
+      functionName: "getAccountByAddr",
+      args: [wallet],
+    });
+    return {
+      id: account.accountId,
+      balanceCNS: account.balanceCNS,
+      lockedCNS: account.lockedBalanceCNS,
+      frozen: account.frozen !== 0,
+    };
+  } catch (error) {
+    const revert =
+      error instanceof BaseError &&
+      error.walk((e) => e instanceof ContractFunctionRevertedError);
+    if (
+      revert instanceof ContractFunctionRevertedError &&
+      revert.data?.errorName === "AccountDoesNotExist"
+    )
+      return null;
+    throw new IdentityError("perpl_unavailable", 503);
+  }
+}
+
+async function walletCollateral(wallet: `0x${string}`) {
+  const client = testnetClient();
+  const [balance, allowance] = await Promise.all([
+    client.readContract({
+      address: PERPL_TESTNET.collateral,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [wallet],
+    }),
+    client.readContract({
+      address: PERPL_TESTNET.collateral,
+      abi: erc20Abi,
+      functionName: "allowance",
+      args: [wallet, PERPL_TESTNET.exchange],
+    }),
+  ]);
+  return { balance, allowance };
+}
+
+/**
+ * Reviews an order and returns the unsigned transactions the user's own wallet
+ * sends: an exact AUSD approval and account funding when needed, then the order.
+ * The server never signs; the order trades the wallet's own Perpl account.
+ */
+export async function preparePerp(
+  request: Request,
+  input: z.infer<typeof perpRequestSchema>,
+  context: Context = identityContext,
+) {
+  const wallet = await boundWallet(request, context);
   const snapshot = await perplSnapshot().catch(() => {
     throw new IdentityError("perpl_unavailable", 503);
   });
   const market = snapshot.markets.find((m) => m.marketId === input.marketId);
   if (!market) throw new IdentityError("market_unavailable", 409);
   if (!market.open) throw new IdentityError("market_closed", 409);
+  // Explicit configuration: never send orders to an exchange Perpl's context names differently.
+  if (getAddress(market.exchange) !== getAddress(PERPL_TESTNET.exchange))
+    throw new IdentityError("perpl_exchange_mismatch", 409);
+  if (
+    getAddress(market.collateral.address) !==
+    getAddress(PERPL_TESTNET.collateral)
+  )
+    throw new IdentityError("perpl_collateral_mismatch", 409);
   const c = config();
   if (input.leverage > c.maxLeverage)
     throw new IdentityError("leverage_above_cap", 409);
@@ -114,506 +168,366 @@ async function reviewed(
     throw new IdentityError("leverage_above_market_max", 409);
   if (market.maxSlippageBps && input.slippageBps > market.maxSlippageBps)
     throw new IdentityError("slippage_above_market_max", 409);
-  let size: bigint, maxSize: bigint;
+  if (!market.quote.mark) throw new IdentityError("market_unpriced", 409);
+  let lots: bigint, maxLots: bigint;
   try {
-    size = stakeUnits(input.size, market.sizeDecimals);
-    maxSize = stakeUnits(c.maxSize, market.sizeDecimals);
+    lots = stakeUnits(input.size, market.sizeDecimals);
+    maxLots = stakeUnits(c.maxSize, market.sizeDecimals);
   } catch {
     throw new IdentityError("invalid_amount");
   }
-  if (size > maxSize) throw new IdentityError("size_above_cap", 409);
+  if (lots > maxLots) throw new IdentityError("size_above_cap", 409);
+  let order: ReturnType<typeof perplWalletOrder>;
+  try {
+    order = perplWalletOrder({
+      requestId: BigInt(Date.now()),
+      perpId: market.marketId,
+      side: input.side,
+      lots,
+      maxLots,
+      markPNS: BigInt(market.quote.mark),
+      slippageBps: input.slippageBps,
+      leverage: input.leverage,
+      maxLeverage: Math.min(c.maxLeverage, market.marketMaxLeverage ?? 50),
+    });
+  } catch {
+    throw new IdentityError("invalid_order");
+  }
+  const client = testnetClient();
+  const [account, funds, minOpen] = await Promise.all([
+    exchangeAccount(wallet),
+    walletCollateral(wallet),
+    client.readContract({
+      address: PERPL_TESTNET.exchange,
+      abi: perplExchangeAbi,
+      functionName: "getMinAccountOpenCNS",
+    }),
+  ]).catch((error) => {
+    if (error instanceof IdentityError) throw error;
+    throw new IdentityError("perpl_unavailable", 503);
+  });
+  if (account?.frozen) throw new IdentityError("perpl_account_frozen", 409);
+  const needed = perplCollateralNeeded({
+    pricePNS: order.pricePNS,
+    lots,
+    priceDecimals: market.priceDecimals,
+    sizeDecimals: market.sizeDecimals,
+    leverage: input.leverage,
+    takerFeePer100k: market.takerFeePpm ?? 0,
+  });
+  let steps: ReturnType<typeof perplWalletSteps>;
+  try {
+    steps = perplWalletSteps({
+      account,
+      walletCollateral: funds.balance,
+      allowance: funds.allowance,
+      minAccountOpen: minOpen,
+      needed,
+      order,
+    });
+  } catch {
+    throw new IdentityError("collateral_insufficient", 409);
+  }
   return {
-    binding,
-    market,
-    size,
-    maxSize,
-    c,
-    privyUserId: user.privyUserId,
-    mode: perplMode(binding.xUserId),
-  };
-}
-
-async function operatorAccount(c: ReturnType<typeof config>) {
-  const value = perplWalletSchema.parse(
-    await signedGet(c, "/v1/trading/wallet"),
-  );
-  const account = value.as.find((a) => String(a.id) === c.accountId);
-  if (!account) throw new IdentityError("perpl_account_not_owned", 409);
-  if (account.fr) throw new IdentityError("perpl_account_frozen", 409);
-  if (!account.fw) throw new IdentityError("perpl_forwarding_disabled", 409);
-  if (BigInt(account.b) <= 0n)
-    throw new IdentityError("perpl_collateral_empty", 409);
-  return account;
-}
-
-export async function preparePerp(
-  request: Request,
-  input: z.infer<typeof perpRequestSchema>,
-  context: Context = identityContext,
-) {
-  const { binding, market, size, c, mode } = await reviewed(
-    request,
-    input,
-    context,
-  );
-  const account = mode === "live" ? await operatorAccount(c) : null;
-  return {
-    accountId: account?.id ?? null,
-    availableCollateral: account?.b ?? null,
-    collateralDecimals: market.collateral.decimals,
     status: "prepared" as const,
     venue: "Perpl" as const,
     instrument: "perp" as const,
-    mode,
-    execution: executionNote(mode, c.accountId),
-    chainId: 10143 as const,
-    wallet: binding.wallet,
+    execution: execution(wallet),
+    chainId: PERPL_TESTNET.chainId,
+    wallet,
     market: market.symbol,
     marketId: market.marketId,
-    exchange: market.exchange,
+    exchange: PERPL_TESTNET.exchange,
     collateral: market.collateral.symbol,
+    collateralDecimals: PERPL_TESTNET.collateralDecimals,
     side: input.side,
     size: input.size,
-    sizeUnits: size.toString(),
+    sizeUnits: lots.toString(),
     leverage: input.leverage,
     maxLeverage: c.maxLeverage,
     slippageBps: input.slippageBps,
-    orderType: "Immediate-or-cancel market order",
+    limitPrice: order.pricePNS.toString(),
+    priceDecimals: market.priceDecimals,
+    orderType: "Immediate-or-cancel order, limit at mark ± slippage",
+    requestId: order.orderDescId.toString(),
+    account: account
+      ? {
+          id: account.id.toString(),
+          balance: account.balanceCNS.toString(),
+        }
+      : null,
+    walletCollateral: funds.balance.toString(),
+    collateralNeeded: needed.toString(),
+    steps,
     sourcePostId: input.sourcePostId,
     expiresAt: new Date(Date.now() + 60_000).toISOString(),
     observedAt: new Date().toISOString(),
   };
 }
 
-export async function submitPerp(
-  request: Request,
-  input: z.infer<typeof perpRequestSchema>,
-  context: Context = identityContext,
-) {
-  if (input.confirm !== true) throw new IdentityError("confirmation_required");
-  const { market, size, maxSize, c, privyUserId, mode } = await reviewed(
-    request,
-    input,
-    context,
-  );
-  // One submission per user, post and side per minute; protects against double clicks and replays.
-  if (
-    !allow(
-      `perp:${privyUserId}:${input.marketId}:${input.sourcePostId ?? "none"}:${input.side}`,
-      1,
-      60_000,
-    )
-  )
-    throw new IdentityError("duplicate_order", 409);
-  const account = mode === "live" ? await operatorAccount(c) : null;
-  const requestId = Math.max(Date.now(), (account?.lfr ?? 0) + 1);
-  if (!Number.isSafeInteger(requestId))
-    throw new IdentityError("invalid_request_id");
-  const order = buildPerplOpenOrder({
-    marketId: market.marketId,
-    accountId: mode === "live" ? c.accountId : "0",
-    side: input.side,
-    size: size.toString(),
-    leverageHundredths: input.leverage * 100,
-    maxLeverageHundredths: c.maxLeverage * 100,
-    maxSize: maxSize.toString(),
-    slippageBps: input.slippageBps,
-    requestId,
-  });
-  if (mode === "demo")
-    return {
-      status: "demo" as const,
-      mode: "demo" as const,
-      requestId,
-      market: market.symbol,
-      order,
-      message: executionNote(mode, c.accountId),
-    };
-  const target = "/v1/trading/orders";
-  const body = JSON.stringify({ d: [order] });
-  const { headers } = signPerplRequest({
-    chainId: 10143,
-    method: "POST",
-    target,
-    body,
-    apiKey: c.apiKey,
-    secretHex: c.secret,
-  });
-  const response = await fetch(`${c.apiUrl}${target}`, {
-    method: "POST",
-    headers: { ...headers, "Content-Type": "application/json" },
-    body,
-    redirect: "error",
-    cache: "no-store",
-    signal: AbortSignal.timeout(15_000),
-  }).catch(() => {
-    throw new IdentityError("perpl_unavailable", 503);
-  });
-  const result = z
-    .object({
-      status: z
-        .object({ code: z.number(), error: z.string().optional() })
-        .optional(),
-      statuses: z
-        .array(z.object({ code: z.number(), error: z.string().optional() }))
-        .optional(),
-    })
-    .safeParse(await response.json().catch(() => null));
-  const status = result.success
-    ? (result.data.statuses?.[0] ?? result.data.status)
-    : undefined;
-  const accepted = response.ok && status?.code === 0;
-  return {
-    status: accepted ? ("submitted" as const) : ("rejected" as const),
-    mode: "live" as const,
-    requestId,
-    market: market.symbol,
-    order,
-    message: accepted
-      ? "Accepted by Perpl for forwarding. Submitted is not filled; check positions for the outcome."
-      : `Perpl rejected the order${status?.error ? `: ${status.error.slice(0, 200)}` : ` (HTTP ${response.status})`}.`,
-  };
-}
-
-const orderStatuses = [
-  "unspecified",
-  "pending",
-  "open",
-  "partially-filled",
-  "filled",
-  "canceled",
-  "expired",
-  "failed",
-  "untriggered",
-  "triggered",
-  "executed",
-] as const;
-const stamp = z
-  .object({
-    b: z.number().optional(),
-    t: z.number().optional(),
-    txid: z.string().optional(),
-  })
-  .partial();
-const historySchema = z.object({
-  d: z.array(
-    z
-      .object({
-        at: stamp.optional(),
-        rq: z.number(),
-        mkt: z.number(),
-        oid: z.number(),
-        st: z.number(),
-        os: z.number(),
-        fp: z.number(),
-        fs: z.number(),
-        f: z.union([z.string(), z.number()]),
-        lv: z.number(),
-      })
-      .passthrough(),
-  ),
-});
-const positionsSchema = z.object({
-  d: z.array(
-    z
-      .object({
-        at: stamp.optional(),
-        mkt: z.number(),
-        rq: z.number(),
-        st: z.number(),
-        sd: z.number(),
-        c: z.union([z.string(), z.number()]),
-        ep: z.number(),
-        s: z.number(),
-        lv: z.number(),
-      })
-      .passthrough(),
-  ),
-});
-
-async function signedGet(c: ReturnType<typeof config>, target: string) {
-  const { headers } = signPerplRequest({
-    chainId: 10143,
-    method: "GET",
-    target,
-    body: "",
-    apiKey: c.apiKey,
-    secretHex: c.secret,
-  });
-  const response = await fetch(`${c.apiUrl}${target}`, {
-    headers,
-    redirect: "error",
-    cache: "no-store",
-    signal: AbortSignal.timeout(10_000),
-  }).catch(() => {
-    throw new IdentityError("perpl_unavailable", 503);
-  });
-  if (!response.ok) throw new IdentityError("perpl_unavailable", 503);
-  return response.json() as Promise<unknown>;
-}
-
 /**
- * Outcome of a live order, read back from Perpl: forwarding is not execution,
- * so the order's status, fill and resulting position come from Perpl's history.
+ * Reads back a wallet-sent order: the transaction must come from the bound
+ * wallet, call execOrder on Perpl's exchange with the reviewed request ID, and
+ * succeed. Fills come from the receipt's events, not from an API or a guess.
  */
-export async function perpStatus(
+export async function confirmPerp(
   request: Request,
-  requestId: number,
+  input: z.infer<typeof perpConfirmSchema>,
   context: Context = identityContext,
 ) {
-  const { user, service } = await context(request);
-  const binding = await service.current(user.privyUserId);
+  const wallet = await boundWallet(request, context);
+  const client = testnetClient();
+  const hash = input.transactionHash as `0x${string}`;
+  const [transaction, receipt] = await Promise.all([
+    client.getTransaction({ hash }),
+    client.getTransactionReceipt({ hash }),
+  ]).catch(() => {
+    throw new IdentityError("transaction_pending", 409);
+  });
+  if (getAddress(transaction.from) !== wallet)
+    throw new IdentityError("transaction_not_from_wallet", 403);
   if (
-    !binding ||
-    binding.xUserId !== user.xAccount?.xUserId ||
-    !user.wallets.some(
-      (w) => w.toLowerCase() === binding.wallet.toLowerCase(),
-    ) ||
-    perplMode(binding.xUserId) !== "live"
+    !transaction.to ||
+    getAddress(transaction.to) !== getAddress(PERPL_TESTNET.exchange)
   )
-    throw new IdentityError("perpl_operator_only", 403);
-  if (!Number.isSafeInteger(requestId) || requestId <= 0)
-    throw new IdentityError("invalid_request_id");
-  const c = config();
-  const [history, positions] = await Promise.all([
-    signedGet(c, "/v1/trading/order-history?count=50"),
-    signedGet(c, "/v1/trading/positions"),
-  ]);
-  const order = historySchema
-    .parse(history)
-    .d.filter((o) => o.rq === requestId)
-    .sort((a, b) => (b.at?.b ?? 0) - (a.at?.b ?? 0))[0];
-  const position = positionsSchema
-    .parse(positions)
-    .d.find((p) => p.rq === requestId);
+    throw new IdentityError("transaction_not_perpl", 409);
+  let desc: Extract<
+    ReturnType<typeof decodeFunctionData<typeof perplExchangeAbi>>,
+    { functionName: "execOrder" }
+  >["args"][0];
+  try {
+    const call = decodeFunctionData({
+      abi: perplExchangeAbi,
+      data: transaction.input,
+    });
+    if (call.functionName !== "execOrder") throw new Error();
+    desc = call.args[0];
+  } catch {
+    throw new IdentityError("transaction_not_order", 409);
+  }
+  if (desc.orderDescId !== BigInt(input.requestId))
+    throw new IdentityError("request_mismatch", 409);
+  if (receipt.status !== "success")
+    return {
+      status: "reverted" as const,
+      wallet,
+      transactionHash: hash,
+      block: Number(receipt.blockNumber),
+      message: "The transaction reverted. No order was placed.",
+      observedAt: new Date().toISOString(),
+    };
+  const account = await exchangeAccount(wallet);
+  if (!account) throw new IdentityError("perpl_account_missing", 409);
+  const outcome = perplOrderOutcome({
+    logs: receipt.logs,
+    accountId: account.id,
+    orderDescId: desc.orderDescId,
+  });
+  if (!outcome.found) throw new IdentityError("order_not_found", 409);
+  const filled = outcome.filledLots;
   return {
-    requestId,
-    order: order
-      ? {
-          marketId: order.mkt,
-          status: orderStatuses[order.st] ?? "unspecified",
-          originalSize: String(order.os),
-          filledSize: String(order.fs),
-          fillPrice: String(order.fp),
-          fee: String(order.f),
-          leverage: order.lv,
-          block: order.at?.b ?? null,
-          transactionHash: txHash(order.at?.txid),
-        }
-      : null,
-    position: position
-      ? {
-          marketId: position.mkt,
-          side: position.sd === 1 ? "long" : "short",
-          size: String(position.s),
-          entryPrice: String(position.ep),
-          collateral: String(position.c),
-          leverage: position.lv,
-          transactionHash: txHash(position.at?.txid),
-        }
-      : null,
+    status:
+      filled === 0n
+        ? ("not-filled" as const)
+        : filled < desc.lotLNS
+          ? ("partially-filled" as const)
+          : ("filled" as const),
+    wallet,
+    accountId: account.id.toString(),
+    marketId: Number(desc.perpId),
+    action: perplOrderAction[desc.orderType] ?? "open-long",
+    requestedSize: desc.lotLNS.toString(),
+    filledSize: filled.toString(),
+    averagePrice: outcome.averagePricePNS?.toString() ?? null,
+    fee: outcome.feeCNS.toString(),
+    transactionHash: hash,
+    block: Number(receipt.blockNumber),
+    sourcePostId: input.sourcePostId,
+    message:
+      filled === 0n
+        ? "Sent from your wallet, but nothing filled within the price bound. No position was opened."
+        : "Filled on your own Perpl account. Read from the transaction's events.",
     observedAt: new Date().toISOString(),
   };
 }
 
-/** Operator-only, account-scoped exchange snapshot; independent of an order request ID. */
+/** The bound wallet's own Perpl exchange account and wallet AUSD, read from chain. */
 export async function perpAccount(
   request: Request,
   context: Context = identityContext,
 ) {
-  const { user, service, chainId } = await context(request);
-  if (chainId !== 10143) throw new IdentityError("trading_testnet_only", 409);
-  const binding = await service.current(user.privyUserId);
-  if (
-    !binding ||
-    binding.xUserId !== user.xAccount?.xUserId ||
-    !user.wallets.some(
-      (w) => w.toLowerCase() === binding.wallet.toLowerCase(),
-    ) ||
-    perplMode(binding.xUserId) !== "live"
-  )
-    throw new IdentityError("perpl_operator_only", 403);
-  const c = config();
-  const [wallet, positions, history, snapshot] = await Promise.all([
-    signedGet(c, "/v1/trading/wallet"),
-    signedGet(c, "/v1/trading/positions"),
-    signedGet(c, "/v1/trading/order-history?count=20"),
+  const wallet = await boundWallet(request, context);
+  const [account, funds, snapshot] = await Promise.all([
+    exchangeAccount(wallet),
+    walletCollateral(wallet),
     perplSnapshot(),
-  ]);
-  const state = projectPerplAccount(c.accountId, wallet, positions, history);
+  ]).catch((error) => {
+    if (error instanceof IdentityError) throw error;
+    throw new IdentityError("perpl_unavailable", 503);
+  });
+  const positions = account
+    ? (
+        await Promise.all(
+          snapshot.markets.map(async (market) => ({
+            market,
+            position: await openPosition(market.marketId, account.id),
+          })),
+        )
+      ).flatMap(({ market, position }) =>
+        position
+          ? [
+              {
+                marketId: market.marketId,
+                symbol: market.symbol,
+                priceDecimals: market.priceDecimals,
+                sizeDecimals: market.sizeDecimals,
+                side: position.side,
+                size: position.lots.toString(),
+                entryPrice: position.entryPNS.toString(),
+                markPrice: position.markPNS.toString(),
+                collateral: position.depositCNS.toString(),
+              },
+            ]
+          : [],
+      )
+    : [];
   return {
-    ...state,
-    chainId: 10143,
+    wallet,
+    chainId: PERPL_TESTNET.chainId,
+    exchange: PERPL_TESTNET.exchange,
     collateralSymbol: "AUSD",
-    collateralDecimals: 6,
-    source: "Perpl testnet API",
+    collateralDecimals: PERPL_TESTNET.collateralDecimals,
+    walletCollateral: funds.balance.toString(),
+    account: account
+      ? {
+          id: account.id.toString(),
+          available: account.balanceCNS.toString(),
+          locked: account.lockedCNS.toString(),
+          frozen: account.frozen,
+        }
+      : null,
+    positions,
+    source: "Perpl Exchange contract on Monad testnet",
     observedAt: new Date().toISOString(),
-    markets: snapshot.markets.map((m) => ({
-      marketId: m.marketId,
-      symbol: m.symbol,
-      priceDecimals: m.priceDecimals,
-      sizeDecimals: m.sizeDecimals,
-    })),
+  };
+}
+
+/** The account's open position on one market, read from the Exchange contract. */
+async function openPosition(perpId: number, accountId: bigint) {
+  const [position, markPNS] = await testnetClient().readContract({
+    address: PERPL_TESTNET.exchange,
+    abi: perplExchangeAbi,
+    functionName: "getPosition",
+    args: [BigInt(perpId), accountId],
+  });
+  if (position.accountId !== accountId || position.lotLNS === 0n) return null;
+  return {
+    // Perpl position types: 0 long, 1 short.
+    side: position.positionType === 0 ? ("long" as const) : ("short" as const),
+    lots: position.lotLNS,
+    entryPNS: position.pricePNS,
+    depositCNS: position.depositCNS,
+    markPNS,
   };
 }
 
 export const closeRequestSchema = z
   .object({
-    positionId: z.string().regex(/^[0-9]{1,20}$/),
+    marketId: z.number().int().nonnegative(),
     slippageBps: z.number().int().min(1).max(500),
   })
   .strict();
-export const closeSubmitSchema = z
-  .object({
-    reviewToken: z.string().min(1).max(4096),
-    confirm: z.literal(true),
-  })
-  .strict();
 
+/**
+ * A full close of the wallet's own position, as one unsigned execOrder step.
+ * Size and side come from the chain, not the browser; the order is reduce-only.
+ */
 export async function preparePerpClose(
   request: Request,
   input: z.infer<typeof closeRequestSchema>,
+  context: Context = identityContext,
 ) {
-  const state = await perpAccount(request);
-  if (state.frozen || !state.forwarding)
-    throw new IdentityError("perpl_account_unavailable", 409);
-  const position = state.positions.find(
-    (p) => p.positionId === input.positionId,
-  );
-  if (!position) throw new IdentityError("position_not_open", 409);
-  const snapshot = await perplSnapshot();
-  const market = snapshot.markets.find((m) => m.marketId === position.marketId);
+  const wallet = await boundWallet(request, context);
+  const [account, snapshot] = await Promise.all([
+    exchangeAccount(wallet),
+    perplSnapshot(),
+  ]).catch((error) => {
+    if (error instanceof IdentityError) throw error;
+    throw new IdentityError("perpl_unavailable", 503);
+  });
+  if (!account) throw new IdentityError("perpl_account_missing", 409);
+  if (account.frozen) throw new IdentityError("perpl_account_frozen", 409);
+  const market = snapshot.markets.find((m) => m.marketId === input.marketId);
   if (!market?.open) throw new IdentityError("market_closed", 409);
   if (market.maxSlippageBps && input.slippageBps > market.maxSlippageBps)
     throw new IdentityError("slippage_above_market_max", 409);
-  const { user } = await identityContext(request);
-  const c = config();
-  const review = {
-    accountId: state.accountId,
-    positionId: position.positionId,
-    marketId: position.marketId,
-    side: position.side,
-    size: position.size,
-    leverageHundredths: position.leverageHundredths,
+  const position = await openPosition(market.marketId, account.id).catch(() => {
+    throw new IdentityError("perpl_unavailable", 503);
+  });
+  if (!position) throw new IdentityError("position_not_open", 409);
+  const order = perplCloseOrder({
+    requestId: BigInt(Date.now()),
+    perpId: market.marketId,
+    position: position.side,
+    lots: position.lots,
+    markPNS: position.markPNS,
     slippageBps: input.slippageBps,
-    requestId: Math.max(Date.now(), state.lastRequestId + 1),
-    expiresAt: Date.now() + 60000,
-    owner: user.privyUserId,
-  };
-  const mark = market.quote.mark;
-  const notional =
-    mark === null
-      ? null
-      : (BigInt(mark) * BigInt(position.size) * 1000000n) /
-        10n ** BigInt(market.priceDecimals + market.sizeDecimals);
-  const fee =
-    notional === null || market.takerFeePpm === null
-      ? null
-      : (notional * BigInt(market.takerFeePpm) + 999999n) / 1000000n;
+  });
   return {
-    reviewToken: signCloseReview(review, c.secret),
-    accountId: state.accountId,
+    wallet,
+    accountId: account.id.toString(),
     market: market.symbol,
-    positionId: position.positionId,
+    marketId: market.marketId,
     side: position.side,
-    size: position.size,
+    size: position.lots.toString(),
     sizeDecimals: market.sizeDecimals,
-    collateral: position.collateral,
-    estimatedFee: fee?.toString() ?? null,
+    priceDecimals: market.priceDecimals,
+    collateral: position.depositCNS.toString(),
+    limitPrice: order.pricePNS.toString(),
     slippageBps: input.slippageBps,
-    expiresAt: new Date(review.expiresAt).toISOString(),
-    requestId: review.requestId,
-    note: "Full close-only IOC order. May fill partially. Returned exchange collateral depends on realized PnL, fees and funding; this does not withdraw to a wallet.",
+    requestId: order.orderDescId.toString(),
+    steps: [
+      perplOrderStep(
+        order,
+        `Close your ${market.symbol} ${position.side} from your wallet`,
+      ),
+    ],
+    note: "Reduce-only, immediate-or-cancel; it may fill partially. Freed margin stays in your Perpl account until you withdraw it.",
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
   };
 }
 
-export async function submitPerpClose(
+export const withdrawRequestSchema = z
+  .object({ amount: z.string().regex(/^[0-9]{1,12}(\.[0-9]{1,6})?$/) })
+  .strict();
+
+/** Withdraws free AUSD from the wallet's own Perpl account back to that wallet. */
+export async function preparePerpWithdraw(
   request: Request,
-  input: z.infer<typeof closeSubmitSchema>,
+  input: z.infer<typeof withdrawRequestSchema>,
+  context: Context = identityContext,
 ) {
-  const { user } = await identityContext(request);
-  const c = config();
-  let review: ReturnType<typeof verifyCloseReview>;
+  const wallet = await boundWallet(request, context);
+  const account = await exchangeAccount(wallet);
+  if (!account) throw new IdentityError("perpl_account_missing", 409);
+  if (account.frozen) throw new IdentityError("perpl_account_frozen", 409);
+  let amount: bigint;
   try {
-    review = verifyCloseReview(input.reviewToken, c.secret, user.privyUserId);
+    amount = stakeUnits(input.amount, PERPL_TESTNET.collateralDecimals);
   } catch {
-    throw new IdentityError("invalid_close_review", 409);
+    throw new IdentityError("invalid_amount");
   }
-  const state = await perpAccount(request);
-  if (state.frozen || !state.forwarding || state.accountId !== review.accountId)
-    throw new IdentityError("perpl_account_unavailable", 409);
-  const position = state.positions.find(
-    (p) => p.positionId === review.positionId,
-  );
-  if (
-    !position ||
-    position.size !== review.size ||
-    position.side !== review.side ||
-    position.marketId !== review.marketId ||
-    position.leverageHundredths !== review.leverageHundredths
-  )
-    throw new IdentityError("position_changed_review_again", 409);
-  if (state.lastRequestId >= review.requestId)
-    throw new IdentityError("request_already_forwarded_check_status", 409);
-  const snapshot = await perplSnapshot();
-  const market = snapshot.markets.find((m) => m.marketId === review.marketId);
-  if (
-    !market?.open ||
-    (market.maxSlippageBps && review.slippageBps > market.maxSlippageBps)
-  )
-    throw new IdentityError("market_unavailable", 409);
-  if (!allow(`perp-close:${review.accountId}:${review.positionId}`, 1, 60000))
-    throw new IdentityError("duplicate_order", 409);
-  const order = buildPerplCloseOrder(review);
-  const target = "/v1/trading/orders";
-  const body = JSON.stringify({ d: [order] });
-  const { headers } = signPerplRequest({
-    chainId: 10143,
-    method: "POST",
-    target,
-    body,
-    apiKey: c.apiKey,
-    secretHex: c.secret,
-  });
+  let step: ReturnType<typeof perplWithdrawStep>;
   try {
-    const response = await fetch(`${c.apiUrl}${target}`, {
-      method: "POST",
-      headers: { ...headers, "Content-Type": "application/json" },
-      body,
-      redirect: "error",
-      cache: "no-store",
-      signal: AbortSignal.timeout(15000),
-    });
-    const result = z
-      .object({
-        status: z.object({ code: z.number() }).optional(),
-        statuses: z.array(z.object({ code: z.number() })).optional(),
-      })
-      .safeParse(await response.json().catch(() => null));
-    const status = result.success
-      ? (result.data.statuses?.[0] ?? result.data.status)
-      : null;
-    if (!status)
-      return {
-        status: "unknown",
-        requestId: review.requestId,
-        message:
-          "Response uncertain. Check this request's status before retrying.",
-      };
-    return {
-      status: response.ok && status.code === 0 ? "submitted" : "rejected",
-      requestId: review.requestId,
-      message:
-        response.ok && status.code === 0
-          ? "Accepted for forwarding. Check actual fill and remaining position; this is not a withdrawal."
-          : "Close order rejected. Refresh the account before reviewing again.",
-    };
+    step = perplWithdrawStep(amount, account.balanceCNS);
   } catch {
-    return {
-      status: "unknown",
-      requestId: review.requestId,
-      message:
-        "Submission uncertain. Check this request's status before retrying.",
-    };
+    throw new IdentityError("amount_above_available", 409);
   }
+  return {
+    wallet,
+    accountId: account.id.toString(),
+    amount: amount.toString(),
+    available: account.balanceCNS.toString(),
+    steps: [step],
+  };
 }

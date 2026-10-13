@@ -68,12 +68,10 @@ export function integrationStatus(
     },
     {
       name: "Perpl",
-      configured: Boolean(
-        env.PERPL_API_KEY && env.PERPL_API_KEY_SECRET && env.PERPL_ACCOUNT_ID,
-      ),
+      configured: Boolean(env.MONAD_RPC_URL),
       implementation: "foundation",
       detail:
-        "Perp calls route to open Perpl testnet markets. Reviewed IOC orders with leverage/size caps are submitted with a signed API key; without credentials orders are validated in demo mode only.",
+        "Perp calls route to open Perpl testnet markets. Reviewed IOC orders with leverage/size caps are signed by the user's own wallet and trade the wallet's own Perpl account; the server holds no Perpl key.",
     },
     {
       name: "Chainlink CRE",

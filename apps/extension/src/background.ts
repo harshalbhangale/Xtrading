@@ -214,21 +214,16 @@ function handleMessage(
     return chrome.storage.local
       .remove(sessionKey)
       .then(() => ({ cleared: true }));
+  // The server only reviews and reads back; the user's browser wallet signs every order.
   if (
-    (message.type === "perp-prepare" || message.type === "perp-submit") &&
+    (message.type === "perp-prepare" || message.type === "perp-confirm") &&
     message.order &&
     typeof message.order === "object"
   )
     return sessionCall(
-      `/api/extension/perp/${message.type === "perp-prepare" ? "prepare" : "submit"}`,
+      `/api/extension/perp/${message.type === "perp-prepare" ? "prepare" : "confirm"}`,
       message.order,
     );
-  if (
-    message.type === "perp-status" &&
-    typeof message.requestId === "number" &&
-    Number.isSafeInteger(message.requestId)
-  )
-    return sessionCall(`/api/extension/perp/status?rq=${message.requestId}`);
   if (message.type === "markets")
     // Public market data only; a short cache keeps the ticket's mark price fresh.
     return cached("markets", 10000, () => getJson("/api/markets"));

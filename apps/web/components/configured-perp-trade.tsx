@@ -10,10 +10,16 @@ import {
 } from "@call-my-bluff/domain";
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useRef, useState } from "react";
+import { type PerplStep, usePerplSteps } from "./use-perpl-steps";
 
 type Review = {
-  mode: "live" | "demo";
   execution: string;
+  requestId: string;
+  limitPrice: string;
+  collateralNeeded: string;
+  walletCollateral: string;
+  account: { id: string; balance: string } | null;
+  steps: PerplStep[];
   wallet: string;
   market: string;
   marketId: number;
@@ -29,25 +35,6 @@ type Review = {
   sourcePostId: string;
   expiresAt: string;
   observedAt: string;
-};
-type Status = {
-  requestId: number;
-  order: {
-    status: string;
-    originalSize: string;
-    filledSize: string;
-    fillPrice: string;
-    fee: string;
-    block: number | null;
-    transactionHash: string | null;
-  } | null;
-  position: {
-    side: string;
-    size: string;
-    entryPrice: string;
-    collateral: string;
-    leverage: number;
-  } | null;
 };
 type Market = {
   marketId: number;
@@ -71,10 +58,14 @@ type Market = {
 };
 type Limits = { maxLeverage: number; maxSize: string };
 type Result = {
-  status: "demo" | "submitted" | "rejected";
-  mode: "live" | "demo";
-  requestId: number;
-  market: string;
+  status: "filled" | "partially-filled" | "not-filled" | "reverted";
+  accountId?: string;
+  filledSize?: string;
+  requestedSize?: string;
+  averagePrice?: string | null;
+  fee?: string;
+  transactionHash: string;
+  block: number;
   message: string;
 };
 
@@ -99,11 +90,15 @@ export default function ConfiguredPerpTrade({
   const [limits, setLimits] = useState<Limits | null>(null);
   const [unit, setUnit] = useState<"base" | "usd">("base");
   const [showLeverage, setShowLeverage] = useState(false);
-  const [status, setStatus] = useState<Status | null>(null);
+  const [progress, setProgress] = useState("");
+  const runSteps = usePerplSteps();
   const owner = useRef(user?.id);
   owner.current = user?.id;
+  // Opened from X with review=1: review once the session and markets are ready.
+  const autoReview = useRef(false);
   useEffect(() => {
     const params = new URLSearchParams(initialParams ?? window.location.search);
+    autoReview.current = params.get("review") === "1";
     const market = params.get("marketId"),
       requested = params.get("side"),
       source = params.get("postId"),
@@ -211,7 +206,7 @@ export default function ConfiguredPerpTrade({
   const canReview =
     !busy && !!selected && !!sizeUnits && sizeUnits > 0n && !sizeError;
   const expired = review ? Date.parse(review.expiresAt) <= now : false;
-  function body(confirm: boolean) {
+  function body() {
     if (!/^[0-9]{1,6}$/.test(marketId))
       throw new Error("Choose a Perpl market ID.");
     if (postId && !/^[0-9]{1,30}$/.test(postId))
@@ -223,7 +218,6 @@ export default function ConfiguredPerpTrade({
       leverage: Number(leverage),
       slippageBps: Number(slippage),
       sourcePostId: postId || null,
-      ...(confirm ? { confirm: true } : {}),
     };
   }
   async function call(path: string, payload: unknown) {
@@ -253,10 +247,7 @@ export default function ConfiguredPerpTrade({
     setResult(null);
     setNotice("");
     try {
-      const value = (await call(
-        "/api/trades/perp/prepare",
-        body(false),
-      )) as Review;
+      const value = (await call("/api/trades/perp/prepare", body())) as Review;
       if (account === owner.current) setReview(value);
     } catch (error) {
       if (account === owner.current)
@@ -267,6 +258,13 @@ export default function ConfiguredPerpTrade({
       setBusy(false);
     }
   }
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Runs once when the prefilled order becomes reviewable.
+  useEffect(() => {
+    if (!autoReview.current || !ready || !authenticated || !canReview) return;
+    autoReview.current = false;
+    void prepare();
+  }, [ready, authenticated, canReview]);
+  // Each step is signed by the user's own wallet; the server only reviews and reads back.
   async function submit() {
     if (!review || expired) {
       setReview(null);
@@ -274,49 +272,40 @@ export default function ConfiguredPerpTrade({
       return;
     }
     const account = owner.current;
+    const reviewed = review;
     setBusy(true);
+    setNotice("");
     try {
-      const value = (await call(
-        "/api/trades/perp/submit",
-        body(true),
-      )) as Result;
+      const hashes = await runSteps(reviewed.wallet, reviewed.steps, (text) => {
+        if (account === owner.current) setProgress(text);
+      });
+      const orderHash = hashes.order;
+      if (!orderHash) throw new Error("No order was sent.");
+      setProgress("Reading the result from chain…");
+      let value: Result | null = null;
+      for (let attempt = 0; attempt < 5 && !value; attempt++) {
+        try {
+          value = (await call("/api/trades/perp/confirm", {
+            transactionHash: orderHash,
+            requestId: reviewed.requestId,
+            sourcePostId: postId || null,
+          })) as Result;
+        } catch (error) {
+          if (attempt === 4) throw error;
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+      }
       if (account !== owner.current) return;
       setResult(value);
       setReview(null);
-      setStatus(null);
-      if (value.status === "submitted") void track(value.requestId);
     } catch (error) {
       if (account === owner.current)
         setNotice(
-          error instanceof Error ? error.message : "Submission failed.",
+          error instanceof Error ? error.message : "Wallet request failed.",
         );
     } finally {
       setBusy(false);
-    }
-  }
-  // Forwarding is not execution: read the order, fill and position back.
-  async function track(requestId: number) {
-    const account = owner.current;
-    for (let attempt = 0; attempt < 15; attempt++) {
-      await new Promise((r) => setTimeout(r, 2000));
-      if (account !== owner.current) return;
-      try {
-        const token = await getAccessToken();
-        const response = await fetch(
-          `/api/trades/perp/status?rq=${requestId}`,
-          { cache: "no-store", headers: { Authorization: `Bearer ${token}` } },
-        );
-        if (!response.ok) continue;
-        const value = (await response.json()) as Status;
-        setStatus(value);
-        if (
-          value.order &&
-          !["pending", "open", "partially-filled"].includes(value.order.status)
-        )
-          return;
-      } catch {
-        // Retry on the next tick; the order outcome does not depend on polling.
-      }
+      setProgress("");
     }
   }
   if (!ready) return <p>Loading wallet session…</p>;
@@ -562,9 +551,18 @@ export default function ConfiguredPerpTrade({
               {review.side === "long" ? "Long" : "Short"} {review.size}{" "}
               {review.market} · {review.leverage}x
             </p>
-            <p className="pt-mode">
-              {review.mode === "live" ? "Live" : "Demo"} · {review.execution}
-            </p>
+            <p className="pt-mode">Your wallet · {review.execution}</p>
+            <ol className="pt-steps">
+              {review.steps.map((step) => (
+                <li key={step.kind}>{step.label}</li>
+              ))}
+            </ol>
+            {selected && (
+              <p className="pt-mode">
+                Limit {usd(BigInt(review.limitPrice))} (mark ±{" "}
+                {(review.slippageBps / 100).toFixed(2)}%), immediate-or-cancel.
+              </p>
+            )}
             <div className="pt-review-actions">
               <button
                 className={`pt-submit ${review.side}`}
@@ -574,7 +572,9 @@ export default function ConfiguredPerpTrade({
               >
                 {expired
                   ? "Review expired"
-                  : `Confirm ${review.side === "long" ? "Long" : "Short"}`}
+                  : busy
+                    ? "Waiting for wallet…"
+                    : `Sign ${review.side === "long" ? "Long" : "Short"} in wallet`}
               </button>
               <button
                 className="pt-back"
@@ -586,6 +586,11 @@ export default function ConfiguredPerpTrade({
               </button>
             </div>
           </section>
+        )}
+        {progress && (
+          <p role="status" className="pt-mode">
+            {progress}
+          </p>
         )}
         {notice && (
           <p role="status" className="pt-error">
@@ -626,98 +631,76 @@ export default function ConfiguredPerpTrade({
 
         {result && (
           <section
-            className={`pt-result ${result.status}`}
+            className={`pt-result ${result.status === "filled" || result.status === "partially-filled" ? "submitted" : "rejected"}`}
             aria-label="Perp order result"
           >
             <strong>
-              {result.status === "submitted"
-                ? "Order submitted"
-                : result.status === "rejected"
-                  ? "Order rejected"
-                  : "Demo order validated"}
+              {result.status === "filled"
+                ? "Order filled"
+                : result.status === "partially-filled"
+                  ? "Order partially filled"
+                  : result.status === "not-filled"
+                    ? "Order not filled"
+                    : "Transaction reverted"}
             </strong>
             <p>{result.message}</p>
-            {result.status === "submitted" && (
-              <dl className="pt-summary">
+            <dl className="pt-summary">
+              {result.accountId && (
                 <div>
-                  <dt>Status</dt>
-                  <dd>{status?.order?.status ?? "Waiting for Perpl…"}</dd>
+                  <dt>Perpl account</dt>
+                  <dd>#{result.accountId} (yours)</dd>
                 </div>
-                {status?.order && selected && (
-                  <>
-                    <div>
-                      <dt>Filled</dt>
-                      <dd>
-                        {fromUnits(
-                          BigInt(status.order.filledSize),
-                          selected.sizeDecimals,
-                        )}{" "}
-                        /{" "}
-                        {fromUnits(
-                          BigInt(status.order.originalSize),
-                          selected.sizeDecimals,
-                        )}{" "}
-                        {selected.symbol}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Avg fill price</dt>
-                      <dd>
-                        {status.order.fillPrice === "0"
-                          ? "—"
-                          : formatUsd(
-                              BigInt(status.order.fillPrice),
-                              selected.priceDecimals,
-                            )}
-                      </dd>
-                    </div>
-                  </>
-                )}
-                {status?.position && selected && (
-                  <div>
-                    <dt>Position</dt>
-                    <dd>
-                      {status.position.side}{" "}
-                      {fromUnits(
-                        BigInt(status.position.size),
-                        selected.sizeDecimals,
-                      )}{" "}
-                      {selected.symbol} @{" "}
-                      {formatUsd(
-                        BigInt(status.position.entryPrice),
-                        selected.priceDecimals,
-                      )}{" "}
-                      · {status.position.leverage / 100}x
-                    </dd>
-                  </div>
-                )}
-                {status?.order?.transactionHash && (
-                  <div>
-                    <dt>Onchain</dt>
-                    <dd>
-                      <a
-                        className="text-link"
-                        href={`https://testnet.monadvision.com/tx/${status.order.transactionHash}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Block {status.order.block} ↗
-                      </a>
-                    </dd>
-                  </div>
-                )}
-              </dl>
-            )}
-            {result.mode === "live" && (
-              <a
-                className="text-link"
-                href="https://testnet.perpl.xyz"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Positions on Perpl ↗
-              </a>
-            )}
+              )}
+              {selected && result.filledSize && result.requestedSize && (
+                <div>
+                  <dt>Filled</dt>
+                  <dd>
+                    {fromUnits(
+                      BigInt(result.filledSize),
+                      selected.sizeDecimals,
+                    )}{" "}
+                    /{" "}
+                    {fromUnits(
+                      BigInt(result.requestedSize),
+                      selected.sizeDecimals,
+                    )}{" "}
+                    {selected.symbol}
+                  </dd>
+                </div>
+              )}
+              {selected && result.averagePrice && (
+                <div>
+                  <dt>Avg fill price</dt>
+                  <dd>
+                    {formatUsd(
+                      BigInt(result.averagePrice),
+                      selected.priceDecimals,
+                    )}
+                  </dd>
+                </div>
+              )}
+              <div>
+                <dt>Onchain</dt>
+                <dd>
+                  <a
+                    className="text-link"
+                    href={`https://testnet.monadvision.com/tx/${result.transactionHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Block {result.block} ↗
+                  </a>
+                </dd>
+              </div>
+            </dl>
+            <a
+              className="text-link"
+              href="https://testnet.perpl.xyz"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Positions on Perpl ↗
+            </a>
           </section>
         )}
       </section>

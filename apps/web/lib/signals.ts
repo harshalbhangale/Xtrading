@@ -10,6 +10,7 @@ import {
   deriveTradeRoute,
   heuristicSignal,
   mentionsAsset,
+  mentionsPerp,
   type PerplMarketSummary,
 } from "@call-my-bluff/integrations/signals";
 import {
@@ -120,9 +121,17 @@ export async function classifyPost(input: PostSignalRequest) {
         : null;
     signal = modelled ?? baseline;
   }
+  // Instrument comes from the wording, also for rows stored before this rule.
+  const instrument = !signal.isCall
+    ? null
+    : mentionsPerp(input.text)
+      ? ("perp" as const)
+      : ("spot" as const);
   signal = {
     ...signal,
     capturedText: input.text,
+    instrument,
+    leverage: instrument === "perp" ? signal.leverage : null,
     images: input.images.length ? input.images : signal.images,
     tokenReferences: tokenReferences(input.text),
     tokenMention:

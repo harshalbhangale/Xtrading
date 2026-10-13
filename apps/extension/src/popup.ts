@@ -20,7 +20,7 @@ export function buildLabel(chainId: number | undefined) {
 
 /**
  * Health reports a chain and provider modes. It does not prove a Kuru fill.
- * Perpl "operator-only" is the team account, not a demo and not open trading.
+ * Perpl "wallet" means each user signs orders for their own account; no server key.
  */
 export function connectionRows(health: {
   chainId?: number;
@@ -30,11 +30,9 @@ export function connectionRows(health: {
   const tone = (mode?: string): StatusTone =>
     mode === "live" ? "ok" : mode === "demo" ? "demo" : "off";
   const perpl: StatusRow =
-    modes.perpl === "live"
-      ? { label: "Perpl orders", value: "Live", tone: "ok" }
-      : modes.perpl === "operator-only"
-        ? { label: "Perpl orders", value: "Operator only", tone: "demo" }
-        : { label: "Perpl orders", value: "Demo, not sent", tone: "demo" };
+    modes.perpl === "wallet"
+      ? { label: "Perpl orders", value: "Your wallet · testnet", tone: "ok" }
+      : { label: "Perpl orders", value: "Unavailable", tone: "off" };
   const kuru =
     health.chainId === 143
       ? "Mainnet"

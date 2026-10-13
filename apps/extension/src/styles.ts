@@ -236,6 +236,8 @@ a { color: inherit; }
 .ticket-size .unit { border: 0; background: transparent; color: var(--foreground); font: 600 12px system-ui; cursor: pointer; padding: 6px; white-space: nowrap; }
 .ticket-hint { margin: -4px 0 0; min-height: 14px; text-align: right; color: var(--muted); font-size: 11px; }
 .ticket-hint.error { color: #f2566b; }
+.ticket-hint:empty { display: none; }
+.ticket .note:empty { display: none; }
 .ticket-sum { display: flex; flex-direction: column; gap: 4px; margin: 0; font-size: 12px; }
 .ticket-sum div { display: flex; justify-content: space-between; }
 .ticket-sum dt { color: var(--muted); text-decoration: underline dotted; text-underline-offset: 3px; }
@@ -252,6 +254,7 @@ a { color: inherit; }
 .ticket-mode.rejected strong { color: #f2566b; }
 .ticket-mode.submitted strong { color: #2fbf71; }
 .ticket-confirm { display: flex; gap: 6px; }
+.ticket-steps { margin: 0; padding-left: 18px; color: var(--foreground); font-size: 12px; line-height: 1.6; }
 .ticket-confirm .ticket-go { flex: 1; }
 .ticket-back { padding: 0 14px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--foreground); font: 600 13px system-ui; cursor: pointer; }
 .ticket-venue { margin-left: auto; color: var(--muted); font: 600 11px ui-monospace, monospace; }
@@ -449,6 +452,18 @@ a { color: inherit; }
 .swap-row-end { display: inline-flex; align-items: center; gap: 8px; }
 .swap-wallet { border: 1px solid var(--line); border-radius: 99px; padding: 7px 12px; font: 600 13px ui-monospace,SFMono-Regular,Menlo,monospace; }
 
+/* Drawer opened inside a post: same brand surface as the side drawer. Without this the
+   panel inherits :host's initial (black, 16px) text. */
+.drawer-inline { display: block; margin: 8px 0 4px; overflow: hidden; color: var(--foreground);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px; font-size: 13px; line-height: 1.5; }
+.drawer-inline header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;
+  border-bottom: 1px solid var(--line); }
+.drawer-inline header button { width: 32px; height: 32px; border: 0; border-radius: 8px; background: none;
+  color: var(--soft); font-size: 20px; cursor: pointer; }
+.drawer-inline header button:hover { background: var(--hover); color: var(--foreground); }
+.drawer-inline .powered { padding: 0 16px 14px; }
+.drawer .row span:last-child, .drawer-inline .row span:last-child, .ticket-mark, .ticket-sum dd, .ticket-head strong { color: var(--foreground); }
+
 /* Nansen check panel */
 .nansen { display: flex; flex-direction: column; gap: 12px; }
 .nansen h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
@@ -553,4 +568,33 @@ a { color: inherit; }
 .nv-status { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
 .nv-status.ok { background: var(--positive); } .nv-status.empty { background: var(--soft); opacity: .5; }
 .nv-status.failed { background: var(--negative); } .nv-status.skipped { background: var(--warning); }
+
+/* Spot and perp cards share X's card style; brand tokens map onto X's theme here. */
+.inline-card { --paper: var(--surface); --soft: var(--muted); --hover: var(--raised); --line-strong: var(--line); }
+:host([data-theme="light"]) .inline-card { --positive: #00875a; --negative: #d0182a; --warning: #9a6700; }
+.call-insights { border-top: 1px solid var(--line); }
+.call-insights > summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 16px; cursor: pointer;
+  list-style: none; font-size: 13px; color: var(--muted); }
+.call-insights > summary::-webkit-details-marker { display: none; }
+.call-insights > summary::after { content: "▾"; margin-left: auto; }
+.call-insights[open] > summary::after { content: "▴"; }
+.ci-title { color: var(--foreground); font-weight: 700; }
+.ci-chip { padding: 2px 9px; border-radius: 99px; border: 1px solid var(--line); font-size: 12px; font-weight: 600; }
+.ci-chip.up { color: var(--positive); border-color: currentColor; }
+.ci-chip.down { color: var(--negative); border-color: currentColor; }
+.call-insights-body { padding: 0 16px 8px; }
+.call-insights-body .section, .call-insights-body .nansen { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.call-insights-body .section:last-child { border-bottom: 0; }
+.inline-card .section h3 { color: var(--muted); }
+.inline-card .row span:last-child { color: var(--foreground); }
+.inline-card .note { color: var(--muted); }
+.perp-badge { flex: 0 0 auto; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted);
+  font-size: 12px; font-weight: 700; white-space: nowrap; }
+.perp-venue { color: var(--foreground); font-weight: 800; letter-spacing: -0.01em; }
+.perp-card .inline-panel { display: grid; gap: 10px; }
+.perp-card .ticket-head { display: none; }
+.perp-card .ticket-go { border-radius: 99px; }
+.perp-card .ticket-size, .perp-card .ticket-sum { border-radius: 14px; background: var(--raised); }
+.perp-card .ticket-side { border-radius: 99px; }
+.perp-card .ticket-side .side { border-radius: 99px; }
 `;

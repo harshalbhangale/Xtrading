@@ -139,7 +139,44 @@ const row = (label: string, value: string) =>
 const section = (title: string, ...children: Array<Node | false | null>) =>
   el("div", { class: "section" }, el("h3", {}, title), ...children);
 
-function reputationSection(
+/** "What the post says": the extracted call, never a recommendation. */
+export function callSection(signal: PostSignal) {
+  const direction = signal.direction
+    ? el("span", { class: `dir-${signal.direction}` }, signal.direction)
+    : el("span", {}, "no direction stated");
+  const call = section(
+    "What the post says",
+    el(
+      "div",
+      {},
+      el("strong", {}, signal.asset ?? "—"),
+      " · ",
+      direction,
+      " · ",
+      signal.instrument ?? "—",
+      signal.leverage ? ` · ${signal.leverage}x` : "",
+    ),
+    el("p", { class: "note" }, signal.summary),
+    row("Horizon", signal.horizon ?? "Not stated"),
+    row("Confidence", signal.confidence),
+    postAttachments(signal),
+    safeLink(
+      `https://x.com/${signal.handle}/status/${signal.postId}`,
+      "View post ↗",
+    ),
+    row(
+      "Extracted by",
+      signal.source === "llm"
+        ? `Groq (${signal.model ?? "model"})`
+        : "Rules (no LLM key)",
+    ),
+  );
+  if (signal.source === "heuristic")
+    call.querySelector("h3")?.append(el("span", { class: "tag" }, "RULES"));
+  return call;
+}
+
+export function reputationSection(
   reputation: Reputation,
   insights: Insights,
   tier: KolReputation | null,
@@ -208,7 +245,7 @@ export async function openDrawer(
   const drawer = el(
     "aside",
     {
-      class: inlineRoot ? "inline-panel" : "drawer",
+      class: inlineRoot ? "drawer-inline" : "drawer",
       role: "dialog",
       "aria-label": "Xtrading call details",
     },
@@ -245,38 +282,7 @@ export async function openDrawer(
     if ((event as KeyboardEvent).key === "Escape") closeDrawer();
   });
 
-  const direction = signal.direction
-    ? el("span", { class: `dir-${signal.direction}` }, signal.direction)
-    : el("span", {}, "no direction stated");
-  const call = section(
-    "What the post says",
-    el(
-      "div",
-      {},
-      el("strong", {}, signal.asset ?? "—"),
-      " · ",
-      direction,
-      " · ",
-      signal.instrument ?? "—",
-      signal.leverage ? ` · ${signal.leverage}x` : "",
-    ),
-    el("p", { class: "note" }, signal.summary),
-    row("Horizon", signal.horizon ?? "Not stated"),
-    row("Confidence", signal.confidence),
-    postAttachments(signal),
-    safeLink(
-      `https://x.com/${signal.handle}/status/${signal.postId}`,
-      "View post ↗",
-    ),
-    row(
-      "Extracted by",
-      signal.source === "llm"
-        ? `Groq (${signal.model ?? "model"})`
-        : "Rules (no LLM key)",
-    ),
-  );
-  if (signal.source === "heuristic")
-    call.querySelector("h3")?.append(el("span", { class: "tag" }, "RULES"));
+  const call = callSection(signal);
   const href = tradeUrl(postId, signal, route);
   const trade =
     route.status === "available" && route.instrument === "perp"

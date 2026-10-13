@@ -11,7 +11,7 @@ it("names the chain from health and does not call Kuru a live fill", () => {
   expect(buildLabel(143)).toBe("Monad mainnet");
   const rows = connectionRows({
     chainId: 10143,
-    modes: { llm: "demo", nansen: "demo", perpl: "operator-only" },
+    modes: { llm: "demo", nansen: "demo", perpl: "wallet" },
   });
   expect(rows.find((row) => row.label === "Kuru spot")).toEqual({
     label: "Kuru spot",
@@ -20,18 +20,18 @@ it("names the chain from health and does not call Kuru a live fill", () => {
   });
   expect(rows.find((row) => row.label === "Perpl orders")).toEqual({
     label: "Perpl orders",
-    value: "Operator only",
-    tone: "demo",
+    value: "Your wallet · testnet",
+    tone: "ok",
   });
   expect(unreachableCopy()).toBe("Not reachable");
 });
 
-it("keeps an unknown chain and a missing Perpl key honest", () => {
-  const rows = connectionRows({ chainId: 1, modes: { perpl: "demo" } });
+it("keeps an unknown chain and an unreported Perpl mode honest", () => {
+  const rows = connectionRows({ chainId: 1, modes: {} });
   expect(rows.find((row) => row.label === "Kuru spot")?.value).toBe(
     "Unknown network",
   );
   expect(rows.find((row) => row.label === "Perpl orders")?.value).toBe(
-    "Demo, not sent",
+    "Unavailable",
   );
 });

@@ -8,6 +8,14 @@ import {
 vi.hoisted(() => {
   vi.stubGlobal("CMB_APP_ORIGIN", "https://xtradingtoday.vercel.app");
 });
+const wallet = vi.hoisted(() => ({
+  sign: vi.fn(async () => `0x${"ab".repeat(32)}`),
+}));
+vi.mock("./perp-wallet", () => ({ signPerplSteps: wallet.sign }));
+vi.mock("./wallet", async (original) => ({
+  ...(await original<typeof import("./wallet")>()),
+  hasBrowserWallet: async () => true,
+}));
 
 import { closeDrawer, openDrawer } from "./drawer";
 
@@ -98,7 +106,9 @@ it("prices a perp call in the drawer and hands the order to the app", async () =
   input.value = "4";
   input.dispatchEvent(new Event("input"));
   const go = root?.querySelector<HTMLAnchorElement>(".ticket-go");
-  expect(go?.textContent).toBe("Long 4 MON · 3x in app ↗");
+  expect(go?.textContent).toBe("Long 4 MON · 3x · Xtrading wallet ↗");
+  expect(go?.href).toContain("/trade/perp?");
+  expect(go?.href).toContain("review=1");
   expect(go?.href).toContain("size=4");
   expect(go?.href).toContain("leverage=3");
   expect(root?.textContent).toContain("$0.1000"); // 4 × $0.025 order value
@@ -108,7 +118,7 @@ it("prices a perp call in the drawer and hands the order to the app", async () =
   expect(root?.textContent).toContain("Above the 10 MON cap");
 });
 
-it("reviews and submits a perp order from X once the extension is connected", async () => {
+it("reviews a perp order on X and has the user's own wallet sign it", async () => {
   const sent: Array<{ type: string; order?: Record<string, unknown> }> = [];
   vi.stubGlobal("chrome", {
     runtime: {
@@ -138,10 +148,30 @@ it("reviews and submits a perp order from X once the extension is connected", as
           if (message.type === "session-status")
             return { connected: true, handle: "alice" };
           if (message.type === "perp-prepare")
-            return { result: { mode: "demo", execution: "Demo: not sent." } };
-          if (message.type === "perp-submit")
             return {
-              result: { status: "demo", requestId: 1, message: "Validated." },
+              result: {
+                wallet: "0x716ae38ccd2c044d33b9aa040a2a6901f6ffd964",
+                execution: "Signed and sent by your wallet.",
+                requestId: "77",
+                limitPrice: "2525",
+                steps: [
+                  {
+                    kind: "order",
+                    label: "Place the order from your wallet",
+                    to: "0x1964C32f0bE608E7D29302AFF5E61268E72080cc",
+                    data: "0x",
+                  },
+                ],
+              },
+            };
+          if (message.type === "perp-confirm")
+            return {
+              result: {
+                status: "filled",
+                filledSize: "2",
+                averagePrice: "2510",
+                message: "Filled on your own Perpl account.",
+              },
             };
           return null;
         },
@@ -175,23 +205,39 @@ it("reviews and submits a perp order from X once the extension is connected", as
   );
   trade?.click();
   await flush();
-  expect(root?.textContent).toContain("DEMO");
-  const confirm = Array.from(
-    root?.querySelectorAll<HTMLButtonElement>(".ticket-confirm button") ?? [],
-  ).find((b) => b.textContent === "Confirm Long");
-  confirm?.click();
-  await flush();
-  expect(root?.textContent).toContain("Demo validated");
-  const submitted = sent.find((m) => m.type === "perp-submit");
-  expect(submitted?.order).toEqual({
+  expect(root?.textContent).toContain("YOUR WALLET");
+  expect(sent.find((m) => m.type === "perp-prepare")?.order).toEqual({
     marketId: 64,
     side: "long",
     size: "2",
     leverage: 3,
     slippageBps: 100,
     sourcePostId: "123",
-    confirm: true,
   });
+  const buttons = Array.from(
+    root?.querySelectorAll<HTMLButtonElement>(".ticket-confirm button") ?? [],
+  );
+  // Primary: the Xtrading (Privy) wallet signs in the app's window over X.
+  const open = vi.spyOn(window, "open").mockReturnValue(null);
+  buttons.find((b) => b.textContent === "Sign with Xtrading wallet ↗")?.click();
+  expect(String(open.mock.calls[0]?.[0])).toContain("/trade/perp?marketId=64");
+  // Secondary: a browser wallet on X that is the bound wallet.
+  buttons.find((b) => b.textContent === "Browser wallet")?.click();
+  await flush();
+  await flush();
+  // The bound wallet signs; the server only reads the transaction back.
+  expect(wallet.sign).toHaveBeenCalledWith(
+    expect.objectContaining({
+      wallet: "0x716ae38ccd2c044d33b9aa040a2a6901f6ffd964",
+    }),
+  );
+  expect(sent.find((m) => m.type === "perp-confirm")?.order).toEqual({
+    transactionHash: `0x${"ab".repeat(32)}`,
+    requestId: "77",
+    sourcePostId: "123",
+  });
+  expect(root?.textContent).toContain("filled");
+  expect(sent.some((m) => m.type === "perp-submit")).toBe(false);
 });
 
 it("prices a Kuru spot call and opens the wallet window over X", async () => {

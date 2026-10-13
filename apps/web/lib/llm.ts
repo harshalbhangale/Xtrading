@@ -107,10 +107,12 @@ export async function classifyWithLlm(
         ? out.asset.toUpperCase()
         : null;
     const isCall = out.isCall && asset !== null;
-    // Never let the model escalate a spot view into leverage without explicit wording.
+    // Instrument follows the post's wording, not the model: "go long" / "short" /
+    // leverage / perps mean a perp position; anything else stays spot. The model
+    // labelled "go long on monad" spot, which routed a long call to a spot buy.
     const instrument = !isCall
       ? null
-      : out.instrument === "perp" && mentionsPerp(input.text)
+      : mentionsPerp(input.text)
         ? "perp"
         : "spot";
     return {

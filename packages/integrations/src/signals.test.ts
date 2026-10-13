@@ -1,7 +1,5 @@
-import { createPrivateKey, createPublicKey, verify } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { buildPerplOpenOrder, signPerplRequest } from "./perpl";
-import { deriveTradeRoute, heuristicSignal } from "./signals";
+import { deriveTradeRoute, heuristicSignal, mentionsPerp } from "./signals";
 
 const base = { postId: "123", handle: "Alice" };
 const perpl = [
@@ -32,6 +30,16 @@ describe("heuristicSignal", () => {
       direction: "bearish",
       leverage: 10,
     });
+  });
+  it("reads go long / short as a perp position, but not a long-term horizon", () => {
+    for (const text of [
+      "go long on monad this week",
+      "go short on ETH at 2400",
+    ])
+      expect(heuristicSignal({ ...base, text }).instrument).toBe("perp");
+    expect(mentionsPerp("holding $MON long term")).toBe(false);
+    expect(mentionsPerp("short-term $ETH bounce")).toBe(false);
+    expect(mentionsPerp("bullish $MON in the long run")).toBe(false);
   });
   it("keeps a bearish call without perp language on spot", () => {
     const s = heuristicSignal({ ...base, text: "Selling my $MON, top is in" });
@@ -102,69 +110,6 @@ describe("deriveTradeRoute", () => {
       deriveTradeRoute(heuristicSignal({ ...base, text: "buy $SOL" }), perpl)
         .status,
     ).toBe("unavailable");
-  });
-});
-
-describe("Perpl", () => {
-  const secretHex = "11".repeat(32);
-  it("signs the documented canonical string with Ed25519", () => {
-    const { canonical, headers } = signPerplRequest({
-      chainId: 10143,
-      method: "POST",
-      target: "/v1/trading/orders",
-      body: "{}",
-      apiKey: "key",
-      secretHex,
-      timestampMs: 1,
-      nonce: "n",
-    });
-    expect(canonical.split("\n").slice(0, 5)).toEqual([
-      "10143",
-      "POST",
-      "/v1/trading/orders",
-      "1",
-      "n",
-    ]);
-    const priv = createPrivateKey({
-      key: Buffer.concat([
-        Buffer.from("302e020100300506032b657004220420", "hex"),
-        Buffer.from(secretHex, "hex"),
-      ]),
-      format: "der",
-      type: "pkcs8",
-    });
-    expect(
-      verify(
-        null,
-        Buffer.from(canonical),
-        createPublicKey(priv),
-        Buffer.from(headers["X-API-Signature"], "base64url"),
-      ),
-    ).toBe(true);
-  });
-  it("enforces leverage and size caps", () => {
-    const order = {
-      marketId: 1,
-      accountId: "7",
-      side: "long" as const,
-      size: "100",
-      leverageHundredths: 500,
-      maxLeverageHundredths: 500,
-      maxSize: "1000",
-      slippageBps: 100,
-      requestId: 1,
-    };
-    expect(buildPerplOpenOrder(order)).toMatchObject({
-      t: 1,
-      p: 0,
-      fl: 4,
-      lv: 500,
-      s: 100,
-    });
-    expect(() =>
-      buildPerplOpenOrder({ ...order, leverageHundredths: 600 }),
-    ).toThrow();
-    expect(() => buildPerplOpenOrder({ ...order, size: "1001" })).toThrow();
   });
 });
 

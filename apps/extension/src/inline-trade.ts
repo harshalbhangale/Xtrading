@@ -33,6 +33,7 @@ export function inlineTrade(
     handle: signal.handle,
     market,
     article,
+    signal: signal.signal,
   }).card;
 }
 
