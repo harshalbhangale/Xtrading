@@ -8,11 +8,11 @@ import { addPostBadge } from "./creator-badge";
 import { el, safeLink, send, shadowHost } from "./dom";
 import { openDrawer } from "./drawer";
 import { observeFollowing } from "./follow-observer";
-import { inlineMarket, inlineTrade } from "./inline-trade";
+import { inlineTrade, kuruMarket } from "./inline-trade";
 import { perpCard } from "./perp-card";
 import { postImages } from "./post-media";
 import { scanProfile } from "./profile";
-import { cashtagMarket, swapCard } from "./swap-card";
+import { cashtagMarket, swapCard, tradeControl } from "./swap-card";
 import { attachToXTicker } from "./x-ticker";
 
 function postIdentity(article: HTMLElement) {
@@ -51,33 +51,43 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
     textNode.innerText.trim() !== text
   )
     return;
-  if (article.querySelector(".cmb-signal-host")) return;
   const { signal, route } = parsed.data;
-  const { host, root } = shadowHost("cmb-signal-host");
-  host.dataset.postId = postId;
-  if (
-    inlineMarket(signal) &&
-    route.status === "available" &&
-    route.instrument === "spot"
-  ) {
-    // The cashtag card (or X's own ticker card) already trades this post.
-    if (article.querySelector(".cmb-xticker-host, .cmb-swap-host")) {
-      rendered.add(article);
-      return;
-    }
-    const card = inlineTrade({ ...signal, signal }, route, article);
-    host.dataset.inline = "true";
-    root.append(card);
-    card.dataset.mounted = "true";
-    host.addEventListener("click", (event) => event.stopPropagation());
+  const perpRoute =
+    route.status === "available" && route.instrument === "perp" ? route : null;
+  // One card per post. A card drawn from a cashtag or X's ticker is upgraded
+  // in place: the call check gains the classification, and a perp call
+  // switches it to Perpl by default (spot stays one tap away).
+  const existing = tradeControl(article);
+  if (existing) {
+    existing.setSignal(signal);
+    if (perpRoute) existing.enablePerp(signal, perpRoute);
     rendered.add(article);
-    textNode.after(host);
     return;
   }
-  if (route.status === "available" && route.instrument === "perp") {
-    // Same X-style card as spot; X's ticker Buy is spot, so it never replaces this.
-    const card = perpCard({ postId, signal, route });
-    host.dataset.inline = "perp";
+  if (article.querySelector(".cmb-signal-host")) return;
+  const { host, root } = shadowHost("cmb-signal-host");
+  host.dataset.postId = postId;
+  const spotMarket = signal.tokenReferences.length
+    ? null
+    : kuruMarket(signal.asset);
+  const card =
+    route.status === "available" && spotMarket
+      ? route.instrument === "spot"
+        ? inlineTrade({ ...signal, signal }, route, article)
+        : swapCard({
+            postId,
+            handle,
+            market: spotMarket,
+            article,
+            signal,
+            perp: perpRoute ? { signal, route: perpRoute } : undefined,
+          }).card
+      : perpRoute
+        ? // Perp-only asset (no Kuru spot market).
+          perpCard({ postId, signal, route: perpRoute })
+        : null;
+  if (card) {
+    host.dataset.inline = "true";
     root.append(card);
     card.dataset.mounted = "true";
     host.addEventListener("click", (event) => event.stopPropagation());
@@ -227,11 +237,10 @@ function tradeFromXTicker(
   article: HTMLElement,
   id: { handle: string; postId: string },
 ) {
+  // One card per post: never add a second one next to ours.
+  if (article.querySelector(".cmb-signal-host[data-inline], .cmb-swap-host"))
+    return;
   if (attachToXTicker(article, id)) {
-    for (const stale of article.querySelectorAll<HTMLElement>(
-      '.cmb-signal-host[data-inline="true"], .cmb-swap-host',
-    ))
-      stale.remove();
     rendered.add(article);
     return;
   }
@@ -241,17 +250,14 @@ function tradeFromXTicker(
   const textNode = article.querySelector<HTMLElement>(
     '[data-testid="tweetText"]',
   );
-  if (!market || !textNode || article.querySelector(".cmb-swap-host")) return;
+  if (!market || !textNode || article.querySelector(".cmb-xticker-host"))
+    return;
   const { host, root } = shadowHost("cmb-swap-host");
   host.dataset.postId = id.postId;
   const { card } = swapCard({ ...id, market, article });
   root.append(card);
   card.dataset.mounted = "true";
   host.addEventListener("click", (event) => event.stopPropagation());
-  for (const stale of article.querySelectorAll<HTMLElement>(
-    '.cmb-signal-host[data-inline="true"]',
-  ))
-    stale.remove();
   textNode.after(host);
   rendered.add(article);
 }
