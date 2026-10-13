@@ -7,7 +7,8 @@ import { SignalField } from "./signal-field";
 const copy = {
   default: {
     lines: ["SEE THE POST.", "TRADE IT.", "STAY ON X."],
-    body: "Discover your favourite KOL’s next call.\nBuy, sell, go spot or perps — right from X.\nYour wallet. Your approval. Built on Monad.",
+    body: (networks: string) =>
+      `Discover your favourite KOL’s next call.\nBuy, sell, go spot or perps — right from X.\nYour wallet. Your approval. Spot on ${networks}.`,
   },
   Kuru: {
     lines: ["FROM THE POST.", "TO YOUR", "POSITION."],
@@ -49,7 +50,11 @@ function TypedLine({ text, animate }: { text: string; animate: boolean }) {
   }, [text, animate]);
   return <span>{shown}</span>;
 }
-export function KineticHero() {
+export function KineticHero({
+  networks = "Monad testnet",
+}: {
+  networks?: string;
+}) {
   const [mode, setMode] = useState<Mode>("default");
   const interacted = useRef(false);
   const { paused, toggle } = useLandingMotion();
@@ -87,7 +92,9 @@ export function KineticHero() {
           ))}
         </h1>
         <p className="x-hero-intro x-hero-description" key={mode}>
-          {active.body}
+          {typeof active.body === "function"
+            ? active.body(networks)
+            : active.body}
         </p>
         <div className="xp-actions x-hero-actions">
           <Link href="/start" className="xp-button">
@@ -95,6 +102,14 @@ export function KineticHero() {
           </Link>
           <a href="#try-it" className="xp-text-link">
             Try a real X post <span>↓</span>
+          </a>
+          <a
+            href="https://x.com/Xtradingnow"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="xp-text-link"
+          >
+            Follow @Xtradingnow on X <span>↗</span>
           </a>
         </div>
         <div className="x-stack">

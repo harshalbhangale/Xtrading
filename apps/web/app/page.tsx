@@ -11,9 +11,18 @@ export const metadata: Metadata = {
   title: "Xtrading — spot and perps, right from X",
 };
 export default function LandingPage() {
+  // Spot trading is on testnet and, when enabled for this deployment, mainnet.
+  const testnet = process.env.NEXT_PUBLIC_MONAD_CHAIN_ID !== "143";
+  const mainnet = process.env.KURU_MAINNET_ENABLED === "true";
+  const networks =
+    mainnet && testnet
+      ? "Monad testnet and mainnet"
+      : mainnet
+        ? "Monad mainnet"
+        : "Monad testnet";
   return (
     <LandingMotion>
-      <KineticHero />
+      <KineticHero networks={networks} />
       <div className="x-signal-tape" aria-hidden="true">
         <div>
           {["first", "second"].map((key) => (
