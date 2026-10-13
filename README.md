@@ -63,12 +63,12 @@ External testnet contracts used: Kuru Spot V2 AccountCore [`0xdbaaDe7B42c95399bb
 | Web app and API | [xtradingnow.xyz](https://xtradingnow.xyz) (Vercel) | Live |
 | MCP server | `https://xtradingnow.xyz/api/mcp` | Live |
 | Chrome extension 0.9.0 | [xtradingnow.xyz/extension](https://xtradingnow.xyz/extension) | Live download |
-| Envio indexer | Hosted project `tradepost`, deployment `6634cb9` (`https://indexer.dev.hyperindex.xyz/6634cb9/v1/graphql`) | Live: stakes, Kuru fills. The update with creator-fee payments and CRE results (`origin/envio` at `801215b`) is not deployed yet: Envio's GitHub app needs re-authorisation |
+| Envio indexer | Hosted project `tradepost` (config name `xtrading`). Deployment `a2e3a1d` is synced 100% with CallSettlement and Kuru Flow handlers; production endpoint (`https://indexer.dev.hyperindex.xyz/6634cb9/v1/graphql`) still serves the older build until `a2e3a1d` is promoted | Live: stakes, Kuru fills. CallSettled and creator-fee projections run on `a2e3a1d`; the app shows live Envio block progress per chain in the Terminal integrity panel |
 | Chainlink CRE workflow | `tradepost-settlement-staging`, Monad testnet selector `2183018362218727504` | Simulated with broadcast; DON deployment needs Chainlink access |
 
 ### Not done yet
 
-- Envio redeploy (above), after which creator earnings and Chainlink results appear in the app.
+- Promote Envio deployment `a2e3a1d` to production (dashboard → Promote), after which creator earnings and Chainlink results appear in the app.
 - CRE workflow deployment to the Chainlink DON, then `setForwarder` to the production KeystoneForwarder.
 - An in-app (not scripted) mainnet trade, a live Perpl order and a keyed Nansen finding on a wallet with mainnet history.
 

@@ -12,6 +12,7 @@ import { and, desc, gt, ilike, inArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { publicCallLedger } from "./calls";
 import { getDatabase } from "./database";
+import { envioQuery } from "./envio";
 import { creatorReputation } from "./insights";
 import { perplSnapshot } from "./markets";
 
@@ -190,10 +191,39 @@ export async function trendingTickers() {
     .slice(0, 8);
 }
 
+/** Envio HyperIndex progress per chain, straight from the hosted indexer. */
+async function indexerStatus() {
+  const result = await envioQuery(
+    `query {
+      testnet: _meta(where: {chainId: {_eq: 10143}}) {progressBlock progressBlockTime isReady}
+      mainnet: _meta(where: {chainId: {_eq: 143}}) {progressBlock progressBlockTime isReady}
+    }`,
+    {},
+  ).catch(() => null);
+  const pick = (rows: unknown) => {
+    const row = Array.isArray(rows) ? rows[0] : null;
+    if (!row || typeof row.progressBlock !== "number") return null;
+    return {
+      block: row.progressBlock as number,
+      time:
+        typeof row.progressBlockTime === "string"
+          ? row.progressBlockTime
+          : null,
+      ready: row.isReady === true,
+    };
+  };
+  if (!result?.data) return null;
+  return {
+    testnet: pick(result.data.testnet),
+    mainnet: pick(result.data.mainnet),
+  };
+}
+
 /** Totals for the integrity panel. */
 export async function terminalIntegrity() {
   const database = getDatabase();
   if (!database) return null;
+  const indexer = await indexerStatus();
   const [signals] = await database.db
     .select({
       indexed: sql<number>`count(*)::int`,
@@ -206,7 +236,7 @@ export async function terminalIntegrity() {
       scored: sql<number>`count(*) filter (where ${calls.status} = 'resolved')::int`,
     })
     .from(calls);
-  return { ...signals, ...registered };
+  return { ...signals, ...registered, indexer };
 }
 
 const railCache = new Map<string, { at: number; value: unknown }>();

@@ -2,7 +2,7 @@
 import { identityStatusSchema, type PostSignal } from "@call-my-bluff/domain";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { bridge as readFollowing } from "./browser-following";
 import {
   extensionWatchlist,
@@ -32,6 +32,10 @@ type Sidebar = {
     callsDetected: number;
     registered: number;
     scored: number;
+    indexer?: {
+      testnet: { block: number; time: string | null; ready: boolean } | null;
+      mainnet: { block: number; time: string | null; ready: boolean } | null;
+    } | null;
   } | null;
   rail:
     | {
@@ -330,6 +334,19 @@ export default function ConfiguredTerminal() {
             <dd>{sidebar.integrity.registered}</dd>
             <dt>Scored</dt>
             <dd>{sidebar.integrity.scored}</dd>
+            {(["testnet", "mainnet"] as const).map((chain) => {
+              const status = sidebar.integrity?.indexer?.[chain];
+              return (
+                <Fragment key={chain}>
+                  <dt>Envio · {chain}</dt>
+                  <dd>
+                    {status
+                      ? `block ${status.block.toLocaleString("en-US")}${status.ready ? "" : " · syncing"}`
+                      : "unavailable"}
+                  </dd>
+                </Fragment>
+              );
+            })}
           </dl>
         )}
         {followed !== null && followed.length === 0 && (
