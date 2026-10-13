@@ -6,7 +6,7 @@ The extension is the primary product surface. On x.com it adds:
 2. **A profile-header card** on X profile pages with separate recorded binding, refundable stake, detected-call count and pending score; it links to the creator dashboard. Untracked accounts show missing evidence honestly.
 3. **Expandable creator evidence**, separate from the swap form: linked account, call count/performance, sourced Nansen observations and creator dashboard. Details for unsupported/perp routes open inside the post rather than a fixed sidebar.
 4. **Expand calls & wallet activity** on the profile card: ongoing registered calls and indexed Kuru swaps. Creator-specific Perpl positions are not shown yet; orders already trade the creator's own wallet account.
-5. **Optional viewed-follow sync** into Watchlist using local extension storage. It observes profiles and visible rows in your own following list, with no paid X following API. See [setup and limits](browser-following.md).
+5. **Optional viewed-follow sync** into Watchlist using local extension storage. It observes profiles and visible rows in your own following list, with no paid X following API. Opt in on the Watchlist page; it records only follows you view, never cookies or tokens.
 
 Ordinary posts receive no trade cards. Bound authors can show a quiet identity badge; a badge does not establish performance or unique humanity. Profile evidence refreshes every minute while the tab is visible; expanded evidence loads when opened.
 
