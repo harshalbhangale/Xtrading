@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Xtrading",
   "description": "Inline Kuru trading from X, creator analytics and verified payout registration on Monad.",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "permissions": ["storage"],
   "background": {
     "service_worker": "background.js"
