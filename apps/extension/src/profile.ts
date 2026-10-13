@@ -1,4 +1,9 @@
-import { normalizeHandle, publicCallLedgerSchema } from "@call-my-bluff/domain";
+import {
+  normalizeHandle,
+  publicCallLedgerSchema,
+  type Reputation,
+  watchlistSchema,
+} from "@call-my-bluff/domain";
 import { callStats, statTiles } from "./card-metrics";
 import { appOrigin } from "./config";
 import { addProfileBadge } from "./creator-badge";
@@ -142,6 +147,7 @@ export async function scanProfile() {
         "cta",
       ),
       expand,
+      followButton(handle),
     ),
     overview,
   );
@@ -161,6 +167,8 @@ export async function scanProfile() {
     });
     return;
   }
+  const recent = recentCalls(handle, insights.reputation);
+  if (recent) details.append(recent);
   const evidence = insights.evidence;
   panel.set(
     "wallet",
@@ -189,10 +197,123 @@ export async function scanProfile() {
         ? "ledger unavailable"
         : insights.reputation.status === "ready" &&
             insights.reputation.trackedCalls
-          ? `${insights.reputation.trackedCalls} detected, none scored`
+          ? "none registered"
           : "none yet",
     });
+  detectedTiles(insights.reputation).forEach((tile, index) => {
+    panel.set(`detected${index}`, {
+      ...tile,
+      kind: "stat",
+      group: "Detected on X · unverified",
+    });
+  });
   panel.set("saiddid", checked);
+}
+
+/**
+ * Save or remove the creator in the extension's watchlist, which the dashboard reads.
+ * Only the handle is stored; no X, wallet or stake data is written.
+ */
+function followButton(handle: string) {
+  const button = el(
+    "button",
+    {
+      type: "button",
+      class: "card-follow",
+      "aria-pressed": "false",
+    },
+    "Follow KOL",
+  ) as HTMLButtonElement;
+  let saved = false;
+  const paint = (state: "saved" | "unsaved" | "unavailable") => {
+    saved = state === "saved";
+    button.disabled = state === "unavailable";
+    button.setAttribute("aria-pressed", String(saved));
+    button.textContent = saved
+      ? "Following KOL"
+      : state === "unavailable"
+        ? "Watchlist unavailable"
+        : "Follow KOL";
+    button.title =
+      state === "saved"
+        ? "Saved to your Xtrading watchlist. Click to remove."
+        : state === "unsaved"
+          ? "Save this creator to your Xtrading watchlist."
+          : "Reload the Xtrading extension to use the watchlist.";
+  };
+  const isSaved = (value: unknown) => {
+    const parsed = watchlistSchema.safeParse(value);
+    return parsed.success
+      ? parsed.data.entries.some((entry) => entry.handle === handle)
+      : null;
+  };
+  void send<unknown>({ type: "watchlist", action: "read" }).then((value) => {
+    const listed = isSaved(value);
+    if (listed === null) paint("unavailable");
+    else paint(listed ? "saved" : "unsaved");
+  });
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    void send<unknown>({
+      type: "watchlist",
+      action: saved ? "remove" : "add",
+      handle,
+    }).then((value) => {
+      const listed = isSaved(value);
+      if (listed === null) {
+        button.disabled = false;
+        button.title =
+          "Could not update the watchlist. It may be full (50 handles) or the extension needs a reload.";
+        return;
+      }
+      paint(listed ? "saved" : "unsaved");
+    });
+  });
+  return button;
+}
+
+/** Counts from creator evidence seen by extension users. They are unverified and unscored. */
+function detectedTiles(reputation: Reputation) {
+  if (reputation.status !== "ready" || !reputation.trackedCalls) return [];
+  return [
+    { label: "Detected", value: String(reputation.trackedCalls) },
+    { label: "Bullish", value: String(reputation.bullish) },
+    { label: "Bearish", value: String(reputation.bearish) },
+    { label: "Perp", value: String(reputation.perpCalls) },
+    { label: "Scored", value: String(reputation.evaluated) },
+  ];
+}
+
+/** The latest detected calls, shown as observations. Unclassified fields say so. */
+function recentCalls(handle: string, reputation: Reputation) {
+  if (reputation.status !== "ready" || !reputation.recent.length) return null;
+  return el(
+    "div",
+    { class: "recent-calls" },
+    el(
+      "p",
+      { class: "note" },
+      "Detected from posts seen by Xtrading users. Unverified and unscored; no wallet or stake claim.",
+    ),
+    el(
+      "ul",
+      {},
+      ...reputation.recent.slice(0, 3).map((call) => {
+        const posted = postTime(call.postId);
+        return el(
+          "li",
+          {},
+          [
+            call.asset ?? "asset not classified",
+            call.instrument ?? "instrument not classified",
+            call.direction ?? "direction not classified",
+          ].join(" · "),
+          posted ? ` · ${ago(posted)} ` : " ",
+          safeLink(`https://x.com/${handle}/status/${call.postId}`, "view ↗"),
+        );
+      }),
+    ),
+  );
 }
 
 /** Said versus did for the creator's latest classified call, from the Nansen wallet check. */

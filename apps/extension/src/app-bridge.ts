@@ -1,4 +1,4 @@
-import { normalizeHandle } from "@call-my-bluff/domain";
+import { normalizeHandle, watchlistCommandSchema } from "@call-my-bluff/domain";
 import { appOrigin } from "./config";
 import { send } from "./dom";
 
@@ -80,4 +80,35 @@ window.addEventListener("message", (event: MessageEvent) => {
         appOrigin,
       );
     });
+});
+
+// App-only watchlist bridge for saved creator handles. No Privy tokens, X cookies or provider keys cross it.
+window.addEventListener("message", (event: MessageEvent) => {
+  if (
+    event.source !== window ||
+    event.origin !== appOrigin ||
+    location.origin !== appOrigin ||
+    location.pathname !== "/dashboard/watchlist"
+  )
+    return;
+  const message = event.data;
+  if (
+    !message ||
+    typeof message !== "object" ||
+    message.type !== "tradepost-watchlist-request" ||
+    typeof message.nonce !== "string" ||
+    !/^[a-zA-Z0-9-]{16,100}$/.test(message.nonce)
+  )
+    return;
+  const command = watchlistCommandSchema.safeParse({
+    action: message.action,
+    handle: message.handle,
+  });
+  if (!command.success) return;
+  void send<unknown>({ type: "watchlist", ...command.data }).then((value) =>
+    window.postMessage(
+      { type: "tradepost-watchlist-response", nonce: message.nonce, value },
+      appOrigin,
+    ),
+  );
 });

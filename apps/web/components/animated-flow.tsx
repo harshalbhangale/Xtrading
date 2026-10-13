@@ -5,6 +5,7 @@ import gsap from "gsap";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { useLandingMotion } from "./landing-motion";
+import { TradePostIllustration } from "./trade-post-illustration";
 
 const steps = [
   {
@@ -154,10 +155,7 @@ export function AnimatedFlow() {
                 type="button"
                 aria-pressed={active === index}
                 aria-controls={panelId}
-                onClick={() => {
-                  setActive(index);
-                  setPlaying(false);
-                }}
+                onClick={() => setActive(index)}
               >
                 <span className="x-flow-node" aria-hidden="true">
                   {item.icon}
@@ -183,40 +181,39 @@ export function AnimatedFlow() {
               <i />
               <i />
             </div>
-            <div className="x-flow-object">
-              <span className="x-flow-object-icon">{step.icon}</span>
-              {active === 0 ? (
-                <div className="x-flow-post-lines">
-                  <i />
-                  <i />
-                  <i />
-                  <b>TRADE THIS POST ↗</b>
-                </div>
-              ) : active === 1 ? (
-                <div className="x-flow-evidence">
-                  {["SPOT", "PERPS", "BUY", "SELL"].map((label) => (
-                    <span key={label}>
-                      <i />
-                      {label}
-                    </span>
-                  ))}
-                </div>
-              ) : active === 2 ? (
-                <div className="x-flow-review">
-                  <span>REVIEW DETAILS</span>
-                  <i />
-                  <i />
-                  <b>YOU APPROVE ↗</b>
-                </div>
-              ) : (
-                <div className="x-flow-receipt">
-                  <span>YOUR TRADE STATUS</span>
-                  <i />
-                  <i />
-                  <b>TRACK THE OUTCOME ↗</b>
-                </div>
-              )}
-            </div>
+            {active === 0 ? (
+              <div className="x-flow-object x-flow-object-trade">
+                <TradePostIllustration />
+              </div>
+            ) : (
+              <div className="x-flow-object">
+                <span className="x-flow-object-icon">{step.icon}</span>
+                {active === 1 ? (
+                  <div className="x-flow-evidence">
+                    {["SPOT", "PERPS", "BUY", "SELL"].map((label) => (
+                      <span key={label}>
+                        <i />
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                ) : active === 2 ? (
+                  <div className="x-flow-review">
+                    <span>REVIEW DETAILS</span>
+                    <i />
+                    <i />
+                    <b>YOU APPROVE ↗</b>
+                  </div>
+                ) : (
+                  <div className="x-flow-receipt">
+                    <span>YOUR TRADE STATUS</span>
+                    <i />
+                    <i />
+                    <b>TRACK THE OUTCOME ↗</b>
+                  </div>
+                )}
+              </div>
+            )}
             <span className="x-flow-visual-caption">
               0{active + 1} / {step.label.toUpperCase()}
             </span>

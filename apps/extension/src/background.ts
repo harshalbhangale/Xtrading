@@ -9,9 +9,11 @@ import {
   publicCallLedgerSchema,
   publicCreatorEvidenceSchema,
   publicPayoutSchema,
+  watchlistCommandSchema,
 } from "@call-my-bluff/domain";
 import { appOrigin } from "./config";
 import { readFollowing, updateFollowing } from "./follow-storage";
+import { readWatchlist, updateWatchlist } from "./watchlist-storage";
 
 type Entry = { expires: number; value: unknown };
 const cache = new Map<string, Entry>();
@@ -245,6 +247,7 @@ function handleMessage(
 }
 
 let followWrites: Promise<unknown> = Promise.resolve();
+let watchlistWrites: Promise<unknown> = Promise.resolve();
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (!sender.tab?.url || typeof message !== "object" || message === null)
     return false;
@@ -301,6 +304,26 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
           : updateFollowing(viewer, { enabled: message.enabled }),
       );
     void followWrites
+      .then(respond)
+      .catch(() => respond({ error: "storage_unavailable" }));
+    return true;
+  }
+  if (message.type === "watchlist") {
+    // Saved handles: written from X profile cards and read or changed from the dashboard watchlist only.
+    const fromApp =
+      senderUrl.origin === appOrigin &&
+      senderUrl.pathname === "/dashboard/watchlist";
+    const fromX = /^https:\/\/(x\.com|twitter\.com)\//.test(sender.tab.url);
+    const command = watchlistCommandSchema.safeParse(message);
+    if ((!fromApp && !fromX) || !command.success) return false;
+    watchlistWrites = watchlistWrites
+      .catch(() => null)
+      .then(() =>
+        command.data.action === "read"
+          ? readWatchlist().then((entries) => ({ entries }))
+          : updateWatchlist(command.data),
+      );
+    void watchlistWrites
       .then(respond)
       .catch(() => respond({ error: "storage_unavailable" }));
     return true;

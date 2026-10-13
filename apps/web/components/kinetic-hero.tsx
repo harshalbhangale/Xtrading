@@ -6,7 +6,7 @@ import { SignalField } from "./signal-field";
 
 const copy = {
   default: {
-    lines: ["SEE THE POST.", "TRADE IT.", "STAY ON X."],
+    lines: ["SEE THE TWEET.", "TRADE IT.", "STAY ON X."],
     body: (networks: string) =>
       `Discover your favourite KOL’s next call.\nBuy, sell, go spot or perps — right from X.\nYour wallet. Your approval. Spot on ${networks}.`,
   },

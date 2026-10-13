@@ -139,10 +139,10 @@ a { color: inherit; }
 /* Profile card: quiet module above the tabs, two matched actions. */
 .card { margin: 8px 16px 12px; }
 .card .title { font: 700 14px system-ui; margin-bottom: 8px; }
-.card-actions { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-start; gap: 8px; margin-top: 12px; }
-.card-actions .cta, .card-toggle { display: inline-flex; flex: 1 1 0; align-items: center; justify-content: center;
-  box-sizing: border-box; max-width: 11.5rem; min-width: 0; min-height: 32px; margin: 0; padding: 0 12px;
-  border-radius: 999px; font: 700 12px/1 system-ui, sans-serif; white-space: nowrap; text-align: center; }
+.card-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 6px; margin-top: 10px; }
+.card-actions .cta, .card-toggle, .card-follow { display: inline-flex; flex: 0 1 auto; align-items: center; justify-content: center;
+  box-sizing: border-box; max-width: 8.5rem; min-width: 0; min-height: 24px; margin: 0; padding: 0 10px;
+  border-radius: 999px; font: 700 11px/1 system-ui, sans-serif; white-space: nowrap; text-align: center; }
 .card-actions .cta { background: #d6f58a; color: #17210c; }
 .card-actions .cta:hover { background: #e7fea8; }
 .card-toggle { appearance: none; cursor: pointer; background: transparent; color: var(--foreground); border: 1px solid var(--line); }
@@ -150,6 +150,14 @@ a { color: inherit; }
 .card-toggle::after { content: " ▾"; }
 .card-toggle[aria-expanded="true"]::after { content: " ▴"; }
 .card-toggle:focus-visible { outline: 2px solid #7b61ff; outline-offset: 2px; }
+.card-follow { appearance: none; cursor: pointer; background: transparent; color: var(--foreground); border: 1px solid var(--line); }
+.card-follow:hover { background: var(--raised); }
+.card-follow[aria-pressed="true"] { background: #d6f58a; color: #17210c; border-color: #d6f58a; }
+.card-follow:disabled { opacity: .55; cursor: default; }
+.card-follow:focus-visible { outline: 2px solid #7b61ff; outline-offset: 2px; }
+.recent-calls { margin-top: 10px; font-size: 12px; }
+.recent-calls ul { margin: 6px 0 0; padding-left: 16px; }
+.recent-calls li { margin: 3px 0; }
 .card-overview { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .card-overview h3 { margin: 14px 0 4px; color: var(--muted); font: 700 11px/1.3 system-ui;
   letter-spacing: .06em; text-transform: uppercase; }
