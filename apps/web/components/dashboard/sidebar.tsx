@@ -12,8 +12,8 @@ type Item = { href: string; label: string; icon: IconName };
 
 const navigation: Record<"user" | "creator", Item[]> = {
   user: [
-    { href: "/dashboard", label: "Overview", icon: "overview" },
-    { href: "/dashboard/terminal", label: "Terminal", icon: "activity" },
+    { href: "/dashboard", label: "Terminal", icon: "activity" },
+    { href: "/dashboard/profile", label: "Profile", icon: "overview" },
     { href: "/dashboard/trade", label: "Trade", icon: "trade" },
     { href: "/dashboard/portfolio", label: "Portfolio", icon: "portfolio" },
     { href: "/dashboard/activity", label: "Activity", icon: "activity" },
