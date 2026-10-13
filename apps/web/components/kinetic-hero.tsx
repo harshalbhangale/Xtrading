@@ -12,7 +12,8 @@ const copy = {
   },
   Kuru: {
     lines: ["FROM THE POST.", "TO YOUR", "POSITION."],
-    body: "Kuru spot, on mainnet and testnet.\nBuy or sell from the post with a simulated minimum,\nthen approve with your own wallet.",
+    body: (networks: string) =>
+      `Kuru spot, on ${networks}.\nBuy or sell from the post with a simulated minimum,\nthen approve with your own wallet.`,
   },
   Perpl: {
     lines: ["LONG IT.", "SHORT IT.", "SIZE IT."],
