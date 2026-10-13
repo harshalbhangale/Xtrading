@@ -3,6 +3,8 @@ import {
   identityStatusSchema,
   normalizeHandle,
   type PostSignal,
+  type SpotPrice,
+  spotPricesSchema,
 } from "@call-my-bluff/domain";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
@@ -96,6 +98,38 @@ const age = (ms: number) =>
       : `${Math.round(ms / 86_400_000)}d`;
 const pct = (bps: number) =>
   `${bps > 0 ? "+" : bps < 0 ? "−" : ""}${Math.abs(bps / 100).toFixed(1)}%`;
+/** Display price: small values keep significant digits, larger ones two decimals. */
+const usd = (value: string) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return value;
+  return n < 1
+    ? `$${n.toPrecision(4)}`
+    : `$${n.toLocaleString("en-US", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
+};
+function Sparkline({ points, up }: { points: string[]; up: boolean }) {
+  const values = points.map(Number).filter(Number.isFinite);
+  if (values.length < 2) return null;
+  const min = Math.min(...values);
+  const span = Math.max(...values) - min || 1;
+  const path = values
+    .map(
+      (v, i) =>
+        `${((i / (values.length - 1)) * 60).toFixed(1)},${(17 - ((v - min) / span) * 16).toFixed(1)}`,
+    )
+    .join(" ");
+  return (
+    <svg
+      className={`term-spark ${up ? "up" : "down"}`}
+      viewBox="0 0 60 18"
+      width="60"
+      height="18"
+      aria-hidden="true"
+    >
+      <polyline points={path} />
+    </svg>
+  );
+}
+
 function readFades(): string[] {
   try {
     const value: unknown = JSON.parse(localStorage.getItem(fadesKey) ?? "[]");
@@ -159,6 +193,7 @@ export default function ConfiguredTerminal() {
     { handle: string; calls: number }[] | null
   >(null);
   const [newHandle, setNewHandle] = useState("");
+  const [prices, setPrices] = useState<Record<string, SpotPrice>>({});
   const [fades, setFades] = useState<string[]>([]);
   const [source, setSource] = useState<"following" | "everyone">("following");
   const [filter, setFilter] = useState<Filter>("calls");
@@ -323,6 +358,28 @@ export default function ConfiguredTerminal() {
         .catch(() => undefined);
     void fetchCreators();
     const timer = setInterval(fetchCreators, 300_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  // Kuru mainnet prices with an on-chain 24h chart; tickers without a market show none.
+  useEffect(() => {
+    let cancelled = false;
+    const fetchPrices = () =>
+      fetch("/api/markets/prices", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((value) => {
+          const parsed = spotPricesSchema.safeParse(value);
+          if (!cancelled && parsed.success)
+            setPrices(
+              Object.fromEntries(parsed.data.prices.map((p) => [p.asset, p])),
+            );
+        })
+        .catch(() => undefined);
+    void fetchPrices();
+    const timer = setInterval(fetchPrices, 60_000);
     return () => {
       cancelled = true;
       clearInterval(timer);
@@ -697,15 +754,45 @@ export default function ConfiguredTerminal() {
               <p className="small-note">No calls detected this week.</p>
             ) : (
               <ol className="term-trending">
-                {sidebar.trending.map((t) => (
-                  <li key={t.asset}>
-                    <strong>${t.asset}</strong>
-                    <span className={`term-bias term-${t.bias}`}>{t.bias}</span>
-                    <small>
-                      {t.calls} {t.calls === 1 ? "call" : "calls"}
-                    </small>
-                  </li>
-                ))}
+                {sidebar.trending.map((t) => {
+                  const price = prices[t.asset];
+                  const change =
+                    price?.change24hPct == null
+                      ? null
+                      : Number(price.change24hPct);
+                  return (
+                    <li key={t.asset}>
+                      <strong>${t.asset}</strong>
+                      <span className={`term-bias term-${t.bias}`}>
+                        {t.bias}
+                      </span>
+                      {price ? (
+                        <>
+                          <span className="term-price">
+                            {usd(price.price)}
+                            {change !== null && (
+                              <em className={change >= 0 ? "up" : "down"}>
+                                {change >= 0 ? "+" : "−"}
+                                {Math.abs(change).toFixed(2)}%
+                              </em>
+                            )}
+                          </span>
+                          <Sparkline
+                            points={price.sparkline}
+                            up={(change ?? 0) >= 0}
+                          />
+                        </>
+                      ) : (
+                        <span className="term-price term-no-price">
+                          No Kuru market
+                        </span>
+                      )}
+                      <small>
+                        {t.calls} {t.calls === 1 ? "call" : "calls"}
+                      </small>
+                    </li>
+                  );
+                })}
               </ol>
             )}
           </section>

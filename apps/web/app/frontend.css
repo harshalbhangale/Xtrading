@@ -1312,3 +1312,77 @@ p.term-resolution {
   font-style: normal;
   font-weight: 700;
 }
+.wallet-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.wallet-tabs {
+  display: flex;
+  gap: 10px;
+  margin: 25px 0;
+}
+.wallet-receive {
+  display: flex;
+  gap: 25px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.wallet-receive img {
+  background: #fff;
+  padding: 8px;
+  flex: none;
+}
+.wallet-receive > div {
+  flex: 1;
+  min-width: 240px;
+}
+.wallet-send .input-action input {
+  min-width: 0;
+}
+.wallet-panel .wallet-tabs .button,
+.wallet-panel .input-action .button {
+  margin: 0;
+  width: auto;
+}
+
+/* Terminal: trending ticker prices */
+.term-price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--ink);
+  font: 600 13px var(--mono);
+}
+.term-price em {
+  font-style: normal;
+  font-weight: 500;
+  font-size: 12px;
+}
+.term-price em.up {
+  color: #8fd36b;
+}
+.term-price em.down {
+  color: #f0715c;
+}
+.term-no-price {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-weight: 400;
+}
+.term-spark {
+  align-self: center;
+}
+.term-spark polyline {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.term-spark.up polyline {
+  stroke: #8fd36b;
+}
+.term-spark.down polyline {
+  stroke: #f0715c;
+}
