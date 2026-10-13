@@ -51,8 +51,6 @@ const errors: Record<string, string> = {
   mainnet_trading_disabled: "Mainnet is switched off on this server.",
   rpc_unconfigured: "The chain connection is not configured on this server.",
 };
-// The wallet works on Monad mainnet only.
-const chainId: ChainId = 143;
 const short = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`;
 const tokenInfo: Record<
   string,
@@ -63,6 +61,7 @@ const tokenInfo: Record<
   WETH: { name: "Wrapped Ether", places: 6, price: "ETH" },
   WBTC: { name: "Wrapped Bitcoin", places: 8, price: "BTC" },
   cbBTC: { name: "Coinbase Wrapped BTC", places: 8, price: "BTC" },
+  AUSD: { name: "Agora USD (test)", places: 2, price: null },
 };
 const group = (whole: string) => whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 /** Token units for display: cut (never rounded up) to the token's places. */
@@ -99,6 +98,8 @@ export default function ConfiguredWalletPanel() {
   const { createWallet } = useCreateWallet();
   const { sendTransaction } = useWalletSend();
   const [selected, setSelected] = useState<string>("");
+  // Testnet unless mainnet is picked explicitly.
+  const [chainId, setChainId] = useState<ChainId>(10143);
   const [balances, setBalances] = useState<Balances | null>(null);
   const [loadError, setLoadError] = useState("");
   const [qr, setQr] = useState("");
@@ -163,7 +164,11 @@ export default function ConfiguredWalletPanel() {
       const result = walletBalancesSchema.parse(
         await api(`/api/wallet/balances?chainId=${chainId}&address=${address}`),
       );
-      if (result.wallet.toLowerCase() !== address.toLowerCase()) return;
+      if (
+        result.wallet.toLowerCase() !== address.toLowerCase() ||
+        result.chainId !== chainId
+      )
+        return;
       setBalances(result);
     } catch (error) {
       setBalances(null);
@@ -171,7 +176,7 @@ export default function ConfiguredWalletPanel() {
         error instanceof Error ? error.message : "Balances unavailable.",
       );
     }
-  }, [api, address]);
+  }, [api, address, chainId]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reload when the account, wallet or network changes.
   useEffect(() => {
@@ -179,7 +184,7 @@ export default function ConfiguredWalletPanel() {
     setBalances(null);
     setReview(null);
     void loadBalances();
-  }, [ready, authenticated, address, user?.id]);
+  }, [ready, authenticated, address, user?.id, chainId]);
 
   useEffect(() => {
     if (!address) return setQr("");
@@ -234,6 +239,8 @@ export default function ConfiguredWalletPanel() {
     balance: string;
     token: { symbol: string; decimals: number };
   }) => {
+    // Testnet tokens have no market value.
+    if (chainId !== 143) return null;
     const key = tokenInfo[row.token.symbol]?.price;
     const price = key === null ? "1" : key ? prices[key] : undefined;
     return price ? usdCents(row.balance, row.token.decimals, price) : null;
@@ -444,9 +451,18 @@ export default function ConfiguredWalletPanel() {
             ↗
           </a>
         </div>
-        <span className="wlt-chip">
-          <i aria-hidden="true" /> {network.name}
-        </span>
+        <select
+          className="wlt-chip"
+          aria-label="Network"
+          value={chainId}
+          disabled={busy}
+          onChange={(event) =>
+            setChainId(Number(event.target.value) === 143 ? 143 : 10143)
+          }
+        >
+          <option value={10143}>{networks[10143].name}</option>
+          <option value={143}>{networks[143].name}</option>
+        </select>
       </header>
 
       {uniqueWallets.length > 1 && (
@@ -731,7 +747,7 @@ export default function ConfiguredWalletPanel() {
           )}
         </p>
       )}
-      <WalletHistory wallet={address} />
+      {chainId === 143 && <WalletHistory wallet={address} />}
     </div>
   );
 }

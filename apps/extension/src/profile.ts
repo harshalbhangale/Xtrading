@@ -24,6 +24,7 @@ import {
   deletedTweetCount,
   deletedTweetsLabel,
   reputation,
+  suspectedTweetCount,
   tierLabel,
 } from "./reputation";
 
@@ -200,6 +201,9 @@ export async function scanProfile() {
       ? { label: "Tier", value: tierLabel(rep), kind: "row" }
       : { label: "Tier", value: null, reason: "unavailable" },
   );
+  const flagged =
+    (deletedTweetCount(rep) ?? 0) + (suspectedTweetCount(rep) ?? 0) > 0;
+  // Missing tweets are a red flag: a red box in the card, never beside the name.
   panel.set("deleted-tweets", {
     label: "Deleted / unavailable tweets",
     value: el(
@@ -210,8 +214,9 @@ export async function scanProfile() {
       },
       deletedTweetsLabel(rep),
     ),
-    kind: "row",
-    ...((deletedTweetCount(rep) ?? 0) > 0 ? { tone: "bad" as const } : {}),
+    ...(flagged
+      ? { kind: "chip" as const, tone: "bad" as const, group: "Red flags" }
+      : { kind: "row" as const }),
   });
   const ledger = publicCallLedgerSchema.safeParse(ledgerRaw);
   const tiles = statTiles(callStats(ledger.success ? ledger.data.calls : []));

@@ -2,7 +2,7 @@ import "server-only";
 import { assessKol, normalizeHandle } from "@call-my-bluff/domain";
 import { getAddress } from "viem";
 import { publicCallLedger } from "./calls";
-import { deletionReport } from "./deletions";
+import { deletionReport, mergeCallAvailability } from "./deletions";
 import { walletActivity } from "./fill-indexing";
 import { publicCreatorEvidence } from "./public-creator";
 
@@ -27,20 +27,32 @@ export async function kolRecord(
       () => null,
     ),
   ]);
+  // Registered calls count too: a deleted registered call is the worst case.
+  const totals = availability
+    ? mergeCallAvailability(
+        availability.totals,
+        new Set(availability.indexedPostIds),
+        (ledger?.calls ?? []).map((call) => ({
+          postId: call.postId,
+          availability: call.evidence.availability,
+        })),
+      )
+    : null;
   const swaps =
     activity && activity.status !== "unavailable" ? activity.swaps : [];
   return {
     handle,
     bound: Boolean(wallet),
-    postAvailability: availability
-      ? {
-          indexed: availability.totals.indexed,
-          checked: availability.totals.checked,
-          missing: availability.totals.removed,
-          suspected: availability.totals.suspected,
-          observedAt: availability.observedAt,
-        }
-      : null,
+    postAvailability:
+      availability && totals
+        ? {
+            indexed: totals.indexed,
+            checked: totals.checked,
+            missing: totals.removed,
+            suspected: totals.suspected,
+            observedAt: availability.observedAt,
+          }
+        : null,
     ledger,
     swapsStatus: wallet ? (activity?.status ?? "unavailable") : "unbound",
     assessment: assessKol({ calls: ledger?.calls ?? [], swaps }),

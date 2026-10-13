@@ -71,7 +71,7 @@ describe("reputation chips", () => {
     expect(chip?.textContent).toBe("3 deleted / unavailable tweets");
     expect(chip?.title).toContain("out of 10 checked posts");
     expect(deletedTweetCount(record)).toBe(3);
-    expect(deletedTweetsLabel(record)).toBe("3");
+    expect(deletedTweetsLabel(record)).toBe("3 · 1 missing once");
   });
   it("keeps absent and unchecked coverage unavailable, distinct from a checked zero", () => {
     expect(flagChip(base())).toBeNull();

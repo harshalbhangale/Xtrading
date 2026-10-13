@@ -3,7 +3,7 @@ import type { z } from "zod";
 import { verifiedBadge } from "./badge";
 import { appOrigin } from "./config";
 import { el, send, shadowHost } from "./dom";
-import { flagChip, reputation, tierChip } from "./reputation";
+import { reputation, tierChip } from "./reputation";
 
 type Evidence = z.infer<typeof publicCreatorEvidenceSchema>;
 const rendered = new WeakMap<
@@ -131,14 +131,19 @@ export async function addPostBadge(article: HTMLElement, handle: string) {
         tooltip: false,
       }),
     );
-  for (const chip of [tierChip(rep), flagChip(rep)]) if (chip) chips.push(chip);
+  // Deleted-tweet flags live in the profile card, not on bylines.
+  const tier = tierChip(rep);
+  if (tier) chips.push(tier);
   if (!chips.length) return;
   for (const chip of chips) chip.addEventListener("click", openRecord(handle));
   root.append(el("span", { class: "badge" }, ...chips));
   alignToName(host, insertAfterName(name, host));
 }
 
-/** Badge beside the profile display name, with the explanatory tooltip. */
+/**
+ * Badge beside the profile display name, with the explanatory tooltip. Deleted
+ * tweets are shown in the profile card, not beside the name.
+ */
 export async function addProfileBadge(handle: string | null) {
   const existing = document.querySelector<HTMLElement>(
     ".cmb-profile-badge-host",
@@ -172,10 +177,8 @@ export async function addProfileBadge(handle: string | null) {
   badge.addEventListener("keydown", (event) => {
     if (event.key === "Enter") openRecord(handle)(event);
   });
-  const extras = [tierChip(rep), flagChip(rep)].filter(
-    (chip): chip is HTMLElement => chip !== null,
-  );
-  for (const chip of extras) chip.addEventListener("click", openRecord(handle));
-  root.append(el("span", { class: "badge" }, badge, ...extras));
+  const tier = tierChip(rep);
+  tier?.addEventListener("click", openRecord(handle));
+  root.append(el("span", { class: "badge" }, badge, ...(tier ? [tier] : [])));
   alignToName(host, insertAfterName(name, host));
 }

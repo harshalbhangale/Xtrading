@@ -1,5 +1,5 @@
 import "server-only";
-import { postSignals } from "@call-my-bluff/database";
+import { calls, postSignals } from "@call-my-bluff/database";
 import { checkPostAvailability } from "@call-my-bluff/integrations/calls";
 import { and, asc, eq, gte, sql } from "drizzle-orm";
 import { getDatabase } from "./database";
@@ -75,6 +75,74 @@ export async function sweepIndexedPosts(handle?: string) {
   );
 }
 
+/**
+ * Persists one live check against every stored copy of the post (captured
+ * signal and registered call) so a later count sees what the viewer just saw.
+ * Failed lookups ("unavailable") are not evidence and are not stored.
+ */
+export async function recordPostCheck(
+  postId: string,
+  result: { status: string; checkedAt: string },
+) {
+  const database = getDatabase();
+  if (!database || result.status === "unavailable") return;
+  const check = { status: result.status, checkedAt: result.checkedAt };
+  const [signals, callRows] = await Promise.all([
+    database.db
+      .select({
+        postId: postSignals.postId,
+        availability: sql<unknown>`${postSignals.signal}->'availability'`,
+      })
+      .from(postSignals)
+      .where(eq(postSignals.postId, postId)),
+    database.db
+      .select({
+        id: calls.id,
+        availability: sql<unknown>`${calls.evidence}->'availability'`,
+      })
+      .from(calls)
+      .where(eq(calls.postId, postId)),
+  ]);
+  await Promise.all([
+    ...signals.map((row) =>
+      database.db
+        .update(postSignals)
+        .set({
+          signal: sql`jsonb_set(${postSignals.signal}, '{availability}', ${JSON.stringify([...readChecks(row.availability), check].slice(-6))}::jsonb)`,
+        })
+        .where(eq(postSignals.postId, row.postId)),
+    ),
+    ...callRows.map((row) =>
+      database.db
+        .update(calls)
+        .set({
+          evidence: sql`jsonb_set(${calls.evidence}, '{availability}', ${JSON.stringify([...readChecks(row.availability), check].slice(-6))}::jsonb)`,
+        })
+        .where(eq(calls.id, row.id)),
+    ),
+  ]);
+}
+
+/** Merges registered-call checks into captured-post coverage, one entry per post. */
+export function mergeCallAvailability(
+  totals: DeletionReport["totals"],
+  seenPostIds: Set<string>,
+  callChecks: { postId: string; availability?: Check[] }[],
+) {
+  const next = { ...totals };
+  for (const call of callChecks) {
+    if (seenPostIds.has(call.postId)) continue;
+    seenPostIds.add(call.postId);
+    const checks = call.availability ?? [];
+    const status = statusFromChecks(checks);
+    next.indexed++;
+    if (checks.length) next.checked++;
+    if (status === "removed") next.removed++;
+    if (status === "suspected") next.suspected++;
+  }
+  return next;
+}
+
 export type DeletionReport = {
   since: string;
   observedAt: string;
@@ -100,6 +168,8 @@ export type DeletionReport = {
     }[];
   }[];
   note: string;
+  /** Every post counted above; used to dedupe merges, not for public output. */
+  indexedPostIds: string[];
 };
 
 /**
@@ -178,6 +248,7 @@ export async function deletionReport(options: {
       { indexed: 0, checked: 0, removed: 0, suspected: 0 },
     ),
     creators: creators.slice(0, 50),
+    indexedPostIds: rows.map((row) => row.postId),
     note: "Counts posts Xtrading indexed in this window that X's public embed endpoint later stopped serving (two consecutive checks). A missing embed can also mean a protected or suspended account.",
   };
 }

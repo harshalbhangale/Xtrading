@@ -1527,6 +1527,11 @@ p.term-resolution {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+select.wlt-chip {
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
 .wlt-chip i {
   width: 7px;
   height: 7px;

@@ -45,9 +45,17 @@ export function deletedTweetCount(value: KolReputation | null) {
   return coverage && coverage.checked > 0 ? coverage.missing : null;
 }
 
+/** Posts missing in their latest check only; awaiting a confirming re-check. */
+export function suspectedTweetCount(value: KolReputation | null) {
+  const coverage = value?.postAvailability;
+  return coverage && coverage.checked > 0 ? coverage.suspected : null;
+}
+
 export function deletedTweetsLabel(value: KolReputation | null) {
   const count = deletedTweetCount(value);
-  return count === null ? "Unavailable — no checked posts" : String(count);
+  if (count === null) return "Unavailable — no checked posts";
+  const suspected = suspectedTweetCount(value) ?? 0;
+  return suspected ? `${count} · ${suspected} missing once` : String(count);
 }
 
 /** Count tweets, not flag categories. Unknown coverage never becomes zero. */

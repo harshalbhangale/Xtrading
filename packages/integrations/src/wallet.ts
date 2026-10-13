@@ -10,6 +10,7 @@ import {
 } from "viem";
 import { z } from "zod";
 import { kuruNetwork } from "./kuru";
+import { PERPL_TESTNET } from "./perpl-exchange";
 
 /**
  * Plain wallet transfers: MON and the configured Kuru tokens, per chain.
@@ -25,12 +26,20 @@ export type WalletToken = {
 /** Tokens a wallet can hold and send on one chain. Native MON is first. */
 export function walletTokens(chainId: WalletChainId): WalletToken[] {
   const network = kuruNetwork(chainId);
-  return [
+  const tokens = [
     network.markets.MON.base,
     network.quote,
     network.markets.WETH.base,
     network.markets.WBTC.base,
   ];
+  // Perpl's testnet collateral (AUSD from the faucet).
+  if (chainId === PERPL_TESTNET.chainId)
+    tokens.push({
+      symbol: "AUSD",
+      address: PERPL_TESTNET.collateral,
+      decimals: PERPL_TESTNET.collateralDecimals,
+    });
+  return tokens;
 }
 
 export function walletToken(chainId: WalletChainId, symbol: string) {

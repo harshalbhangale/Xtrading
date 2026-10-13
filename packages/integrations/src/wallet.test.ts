@@ -19,6 +19,10 @@ describe("wallet transfers", () => {
     expect(walletTokens(143).map((t) => t.symbol)).toContain("cbBTC");
     expect(walletToken(10143, "cbBTC")).toBeUndefined();
     expect(walletTokens(10143)[0]?.address).toBe(zeroAddress);
+    expect(walletToken(10143, "AUSD")?.address).toBe(
+      "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
+    );
+    expect(walletToken(143, "AUSD")).toBeUndefined();
   });
 
   it("sends native MON as value with empty calldata", () => {

@@ -26,5 +26,6 @@ export async function GET(request: Request) {
     () => null,
   );
   if (!report) return reply({ error: "unavailable" }, 503);
-  return reply(report);
+  const { indexedPostIds: _ids, ...body } = report;
+  return reply(body);
 }

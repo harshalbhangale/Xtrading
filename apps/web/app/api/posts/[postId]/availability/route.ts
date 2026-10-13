@@ -3,6 +3,7 @@ import { checkPostAvailability } from "@call-my-bluff/integrations/calls";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDatabase } from "../../../../../lib/database";
+import { recordPostCheck } from "../../../../../lib/deletions";
 import { reply } from "../../../../../lib/identity-http";
 import { allow, clientKey } from "../../../../../lib/rate-limit";
 
@@ -38,7 +39,10 @@ export async function GET(
           .where(eq(calls.postId, postId.data))
           .limit(1);
     if (!signal && !call) return reply({ error: "post_not_found" }, 404);
-    return reply(await checkPostAvailability(postId.data));
+    const result = await checkPostAvailability(postId.data);
+    // Persist so the creator's deleted count reflects what viewers see live.
+    await recordPostCheck(postId.data, result).catch(() => undefined);
+    return reply(result);
   } catch {
     return reply({ error: "post_check_unavailable" }, 503);
   }
