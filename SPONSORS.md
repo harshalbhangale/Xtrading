@@ -72,6 +72,3 @@ Some calls are leveraged by nature. Xtrading routes those to Perpl.
 
 ---
 
-## Bounty tracks
-
-[Kuru](https://hackathon.monad.xyz/tracks/build-the-next-consumer-trading-app-on-kuru) · [Privy](https://hackathon.monad.xyz/tracks/privy) · [Envio](https://hackathon.monad.xyz/tracks/best-use-of-envio) · [Nansen](https://hackathon.monad.xyz/tracks/best-use-of-nansen)
