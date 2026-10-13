@@ -452,6 +452,7 @@ export function swapCard(input: {
     submit.setAttribute("disabled", "");
     try {
       const result = await directTrade({
+        chainId,
         market: input.market,
         side,
         amount: amount.value,
@@ -467,8 +468,11 @@ export function swapCard(input: {
       walletChip.textContent = `${result.from.slice(0, 6)}…${result.from.slice(-4)}`;
       walletChip.hidden = false;
       status.replaceChildren(
-        `${side === "buy" ? "Bought" : "Sold"} ${asset} on Kuru ✓ `,
-        safeLink(`${explorer}${result.hash}`, "View transaction ↗"),
+        `${side === "buy" ? "Bought" : "Sold"} ${asset} on Kuru${chainId === 143 ? "" : " testnet"} ✓ `,
+        safeLink(
+          `${chainId === 143 ? explorer : "https://testnet.monadvision.com/tx/"}${result.hash}`,
+          "View transaction ↗",
+        ),
         result.creatorPaid
           ? ` · @${input.handle} was paid in the same transaction.`
           : "",
@@ -487,7 +491,7 @@ export function swapCard(input: {
   submit.addEventListener("click", async () => {
     const decimals = side === "buy" ? 6 : tokenDecimals(input.market);
     if (busy || !decimalAtoms(amount.value, decimals)) return;
-    if (chainId === 143 && (await hasBrowserWallet())) return tradeInPlace();
+    if (await hasBrowserWallet()) return tradeInPlace();
     const url = new URL("/trade/inline", appOrigin);
     for (const [key, value] of Object.entries({
       chainId: String(chainId),

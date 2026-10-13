@@ -6,12 +6,16 @@ import {
   flowEntrypoint,
 } from "@call-my-bluff/integrations/creator-fees";
 import {
+  accountCoreAbi,
   type KuruMarketKey,
   kuruV1OrderBookAbi,
+  kuruV2,
   mainnetOrderSize,
   mainnetTradeStep,
   minimumQuotedOutput,
   networkTradeTokens,
+  nextTradeStep,
+  orderBookAbi,
 } from "@call-my-bluff/integrations/kuru";
 import {
   type Address,
@@ -39,18 +43,26 @@ type Receipt = {
   logs: { address: Address; data: Hex; topics: Hex[] }[];
 };
 
-async function ensureMonadMainnet() {
-  if ((await walletRequest<string>("eth_chainId")) === MONAD.chainId) return;
+const MONAD_TESTNET = {
+  chainId: "0x279f",
+  chainName: "Monad Testnet",
+  nativeCurrency: { name: "Monad", symbol: "MON", decimals: 18 },
+  rpcUrls: ["https://testnet-rpc.monad.xyz"],
+  blockExplorerUrls: ["https://testnet.monadvision.com"],
+};
+
+async function ensureNetwork(network: typeof MONAD) {
+  if ((await walletRequest<string>("eth_chainId")) === network.chainId) return;
   try {
     await walletRequest("wallet_switchEthereumChain", [
-      { chainId: MONAD.chainId },
+      { chainId: network.chainId },
     ]);
   } catch (error) {
     if (!(error instanceof WalletError) || error.code !== 4902) throw error;
-    await walletRequest("wallet_addEthereumChain", [MONAD]);
+    await walletRequest("wallet_addEthereumChain", [network]);
   }
-  if ((await walletRequest<string>("eth_chainId")) !== MONAD.chainId)
-    throw new Error("Switch your wallet to Monad mainnet.");
+  if ((await walletRequest<string>("eth_chainId")) !== network.chainId)
+    throw new Error(`Switch your wallet to ${network.chainName}.`);
 }
 
 const call = (
@@ -116,6 +128,7 @@ export type DirectTradeResult = {
  * their wallet. A registered creator is paid inside the same buy via Kuru Flow.
  */
 export async function directTrade(input: {
+  chainId?: 143 | 10143;
   market: KuruMarketKey;
   side: "buy" | "sell";
   amount: string;
@@ -123,6 +136,7 @@ export async function directTrade(input: {
   creator: { wallet: Address; bps: CreatorFeeBps } | null;
   onStatus: (text: string) => void;
 }): Promise<DirectTradeResult> {
+  if (input.chainId === 10143) return testnetTrade(input);
   const tokens = networkTradeTokens(143, input.market, input.side);
   const atoms = decimalAtoms(input.amount, tokens.input.decimals);
   if (!atoms) throw new Error("Enter a valid amount.");
@@ -133,7 +147,7 @@ export async function directTrade(input: {
   if (!account) throw new Error("No wallet account connected.");
   const from = getAddress(account);
   input.onStatus("Checking network…");
-  await ensureMonadMainnet();
+  await ensureNetwork(MONAD);
 
   const balance = await readBalance(from, tokens.input.address);
   const creator =
@@ -232,4 +246,106 @@ export async function directTrade(input: {
   input.onStatus("Confirm the trade in your wallet…");
   const { hash } = await send(from, order);
   return { hash, from, creatorPaid: null };
+}
+
+async function readRootAccount(from: Address) {
+  try {
+    const data = await call(from, {
+      to: kuruV2.accountCore,
+      data: encodeFunctionData({
+        abi: accountCoreAbi,
+        functionName: "rootAccountIdOf",
+        args: [from],
+      }),
+    });
+    return BigInt(data);
+  } catch {
+    return 0n;
+  }
+}
+async function readAccountBalance(from: Address, id: bigint, token: Address) {
+  if (id <= 0n) return 0n;
+  const data = encodeFunctionData({
+    abi: accountCoreAbi,
+    functionName: "getBalance",
+    args: [Number(id), token],
+  });
+  return BigInt(await call(from, { to: kuruV2.accountCore, data }));
+}
+
+/**
+ * Kuru V2 testnet swap from the user's own browser wallet: exact approval and
+ * deposit of only the shortfall into their Kuru account when needed, then a
+ * swap whose minimum output comes from simulating it. One wallet prompt per step.
+ */
+async function testnetTrade(input: {
+  market: KuruMarketKey;
+  side: "buy" | "sell";
+  amount: string;
+  slippageBps: number;
+  onStatus: (text: string) => void;
+}): Promise<DirectTradeResult> {
+  const tokens = networkTradeTokens(10143, input.market, input.side);
+  const atoms = decimalAtoms(input.amount, tokens.input.decimals);
+  if (!atoms) throw new Error("Enter a valid amount.");
+  const amount = BigInt(atoms);
+
+  input.onStatus("Connect your wallet…");
+  const [account] = await walletRequest<string[]>("eth_requestAccounts");
+  if (!account) throw new Error("No wallet account connected.");
+  const from = getAddress(account);
+  input.onStatus("Checking network…");
+  await ensureNetwork(MONAD_TESTNET);
+
+  for (let round = 0; round < 4; round++) {
+    const rootAccountId = await readRootAccount(from);
+    const [accountBalance, walletBalance, allowance] = await Promise.all([
+      readAccountBalance(from, rootAccountId, tokens.input.address),
+      readBalance(from, tokens.input.address),
+      readAllowance(from, tokens.input.address, kuruV2.accountCore),
+    ]);
+    const build = (minimumOutput: bigint) => {
+      try {
+        return nextTradeStep({
+          key: input.market,
+          side: input.side,
+          amount,
+          wallet: from,
+          rootAccountId,
+          accountBalance,
+          walletBalance,
+          allowance,
+          minimumOutput,
+          deadline: BigInt(Math.floor(Date.now() / 1000) + 120),
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === "Insufficient funds")
+          throw new Error(
+            `Not enough ${tokens.input.symbol} on Monad testnet.`,
+          );
+        throw error;
+      }
+    };
+    const step = build(1n);
+    if (step.action === "approve") {
+      input.onStatus(`Approve exactly the ${tokens.input.symbol} to deposit…`);
+      await send(from, step);
+      continue;
+    }
+    if (step.action === "deposit") {
+      input.onStatus(`Deposit ${tokens.input.symbol} into your Kuru account…`);
+      await send(from, step);
+      continue;
+    }
+    const { amountOut } = decodeFunctionResult({
+      abi: orderBookAbi,
+      functionName: "swap",
+      data: await call(from, step),
+    });
+    const order = build(minimumQuotedOutput(amountOut, input.slippageBps));
+    input.onStatus("Confirm the swap in your wallet…");
+    const { hash } = await send(from, order);
+    return { hash, from, creatorPaid: null };
+  }
+  throw new Error("Could not prepare the swap. Try again.");
 }
