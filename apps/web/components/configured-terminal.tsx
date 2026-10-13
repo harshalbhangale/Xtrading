@@ -41,6 +41,7 @@ type Sidebar = {
         medianBps: number | null;
         tier: string | null;
         flags: number;
+        source?: "registered" | "detected";
         verdict: "follow" | "fade" | "neutral" | "unscored";
       }[]
     | null;
@@ -485,7 +486,7 @@ export default function ConfiguredTerminal() {
                   </span>
                   <small>
                     {r.scored
-                      ? `${r.hits}/${r.scored} right · ${r.verdict}`
+                      ? `${r.hits}/${r.scored} right · ${r.verdict}${r.source === "detected" ? " · detected, since post" : ""}`
                       : "no scored calls"}
                     {r.flags ? ` · ⚑ ${r.flags}` : ""}
                   </small>
@@ -513,9 +514,9 @@ export default function ConfiguredTerminal() {
           )}
         </section>
         <p className="small-note">
-          Detected calls are extracted from posts and are not scored; only calls
-          a creator registers are scored. Follow/fade verdicts use median return
-          of scored calls.
+          Follow/fade uses the median move of a creator&apos;s registered calls,
+          or, when they have none, of calls detected in their posts priced from
+          the minute they were posted. Only registered calls count toward tiers.
         </p>
       </aside>
     </div>

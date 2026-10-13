@@ -12,6 +12,7 @@ import { and, desc, gt, ilike, inArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { publicCallLedger } from "./calls";
 import { getDatabase } from "./database";
+import { creatorReputation } from "./insights";
 import { perplSnapshot } from "./markets";
 
 export const terminalQuerySchema = z.object({
@@ -221,6 +222,30 @@ export async function creatorRail(handles: string[]) {
     handles.slice(0, 8).map(async (handle) => {
       const ledger = await publicCallLedger(handle).catch(() => null);
       const a = assessKol({ calls: ledger?.calls ?? [], swaps: [] });
+      // Without registered scored calls, fall back to detected calls priced
+      // from post time (labelled "detected" in the UI).
+      if (a.scored === 0) {
+        const measured = (await creatorReputation(handle).catch(() => null))
+          ?.measured;
+        if (measured?.count) {
+          const median = measured.medianBps ?? 0;
+          return {
+            handle,
+            scored: measured.count,
+            hits: measured.inFavour,
+            medianBps: measured.medianBps,
+            tier: null,
+            flags: 0,
+            source: "detected" as const,
+            verdict:
+              median > 0 && measured.inFavour * 2 >= measured.count
+                ? ("follow" as const)
+                : median < 0
+                  ? ("fade" as const)
+                  : ("neutral" as const),
+          };
+        }
+      }
       const serious = a.flags.some((f) => f.severity === "serious");
       const verdict =
         a.scored === 0
@@ -239,6 +264,7 @@ export async function creatorRail(handles: string[]) {
         medianBps: a.medianBps,
         tier: a.tier,
         flags: a.flags.filter((f) => f.severity === "serious").length,
+        source: "registered" as const,
         verdict,
       };
     }),
