@@ -7,7 +7,7 @@ import {
 import { getAddress } from "viem";
 import { appOrigin } from "./config";
 import { directTrade } from "./direct-trade";
-import { el, poweredBy, safeLink, send } from "./dom";
+import { assetUrl, el, poweredBy, safeLink, send } from "./dom";
 import {
   formatPrice,
   kuruPrice,
@@ -29,7 +29,25 @@ const tokenSymbol = (market: SwapMarket, chainId: 143 | 10143) =>
   market === "WBTC" ? (chainId === 143 ? "cbBTC" : "WBTC") : market;
 const tokenDecimals = (market: SwapMarket) => (market === "WBTC" ? 8 : 18);
 
+/** Real token coins; the coloured glyph below is the fallback. */
+const tokenImages: Record<Asset | "USDC", string> = {
+  ETH: "brand/tokens/eth.png",
+  BTC: "brand/tokens/btc.png",
+  MON: "brand/tokens/mon.png",
+  USDC: "brand/tokens/usdc.png",
+};
+
 function tokenIcon(asset: Asset | "USDC", size = 40) {
+  const image = tokenImages[asset];
+  if (image)
+    return el("img", {
+      class: "swap-icon",
+      src: assetUrl(image),
+      width: String(size),
+      height: String(size),
+      alt: "",
+      style: `width:${size}px;height:${size}px;border-radius:50%`,
+    });
   const colors = {
     ETH: "#627EEA",
     BTC: "#F7931A",
@@ -50,7 +68,7 @@ function tokenIcon(asset: Asset | "USDC", size = 40) {
 
 function logo() {
   try {
-    const url = chrome.runtime.getURL("xtrading-logo.png");
+    const url = assetUrl("brand/xtrading-wordmark.png");
     return el("img", { class: "swap-logo", src: url, alt: "" });
   } catch {
     return el("span", { class: "swap-logo" });
@@ -451,7 +469,19 @@ export function swapCard(input: {
       "div",
       { class: "swap-row" },
       sides,
-      el("span", { class: "swap-row-end" }, walletChip, network),
+      el(
+        "span",
+        { class: "swap-row-end" },
+        walletChip,
+        el("img", {
+          class: "swap-chain",
+          src: assetUrl("brand/monad.png"),
+          alt: "Monad",
+          width: "18",
+          height: "18",
+        }),
+        network,
+      ),
     ),
     el(
       "label",

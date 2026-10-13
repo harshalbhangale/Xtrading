@@ -346,6 +346,7 @@ a { color: inherit; }
 .brand-mark { border-radius: 9px; }
 .powered { display: flex; align-items: center; gap: 6px; margin: 12px 0 0; color: var(--muted); font: 600 11px system-ui, sans-serif; }
 .powered-logo { height: 14px; width: auto; filter: invert(1); }
+.swap-chain { width: 18px; height: 18px; border-radius: 5px; flex: 0 0 auto; }
 .drawer header button { width: 32px; height: 32px; border-radius: 8px; color: var(--soft); }
 .drawer header button:hover { background: var(--hover); color: var(--foreground); }
 .section { padding: 16px; border-color: var(--line); }
