@@ -10,6 +10,7 @@ import {
   publicCallLedgerSchema,
   publicCreatorEvidenceSchema,
   publicPayoutSchema,
+  spotPricesSchema,
   watchlistCommandSchema,
 } from "@call-my-bluff/domain";
 import { appOrigin } from "./config";
@@ -185,6 +186,10 @@ function handleMessage(
       publicPayoutSchema.parse(await getJson(`/api/creators/${handle}/payout`)),
     );
   }
+  if (message.type === "spot-prices")
+    return cached("spot-prices", 30000, async () =>
+      spotPricesSchema.parse(await getJson("/api/markets/prices")),
+    );
   if (message.type === "inline-quote") {
     const input = inlineQuoteRequestSchema.safeParse(message.payload);
     if (!input.success) return Promise.resolve({ error: "invalid_quote" });

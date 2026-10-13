@@ -447,6 +447,9 @@ export {
   inlineQuoteRequestSchema,
   inlineQuoteSchema,
   publicPayoutSchema,
+  type SpotPrice,
+  spotPriceSchema,
+  spotPricesSchema,
 } from "./inline-trade";
 
 export * from "./perp-ticket";

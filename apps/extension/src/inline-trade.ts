@@ -9,6 +9,12 @@ import {
 import { appOrigin } from "./config";
 import { el, safeLink, send } from "./dom";
 import { loadInsights, postAttachments } from "./drawer";
+import {
+  kuruPrice,
+  priceLine,
+  readXTicker,
+  sparklineSvg,
+} from "./ticker-price";
 
 export function inlineMarket(
   signal: PostSignal,
@@ -25,7 +31,11 @@ export function inlineMarket(
 }
 
 /** All amounts stay in the isolated extension; authentication/signing stay on the app origin. */
-export function inlineTrade(signal: PostSignal, route: TradeRoute) {
+export function inlineTrade(
+  signal: PostSignal,
+  route: TradeRoute,
+  article?: HTMLElement,
+) {
   const market = inlineMarket(signal);
   const card = el("section", {
     class: "inline-card",
@@ -48,11 +58,29 @@ export function inlineTrade(signal: PostSignal, route: TradeRoute) {
           ? "Monad"
           : symbol,
   );
-  const price = el(
-    "span",
-    { class: "inline-price" },
-    "Market data unavailable",
+  // Quote-specific line; the live market price sits in the ticker row above it.
+  const price = el("span", { class: "inline-price" });
+  const tickerRow = el(
+    "div",
+    { class: "inline-ticker-row" },
+    el("span", { class: "inline-ticker muted" }, "Loading price…"),
   );
+  const tickerAsset =
+    symbol === "ETH" || symbol === "BTC" || symbol === "MON" ? symbol : null;
+  // Prefer X's own live ticker card in this post; otherwise Kuru mainnet's last trade.
+  const updateTicker = async () => {
+    const fromX = article && tickerAsset ? readXTicker(article, symbol) : null;
+    const live = fromX ?? (tickerAsset ? await kuruPrice(tickerAsset) : null);
+    const spark = live?.sparkline.length
+      ? sparklineSvg(live.sparkline, Number(live.change24hPct ?? 0) >= 0)
+      : null;
+    tickerRow.replaceChildren(priceLine(live), ...(spark ? [spark] : []));
+  };
+  void updateTicker();
+  const tickerTimer = setInterval(() => {
+    if (!card.isConnected && card.dataset.mounted) clearInterval(tickerTimer);
+    else void updateTicker();
+  }, 30000);
   const buy = el(
     "button",
     { type: "button", class: "inline-buy", "aria-expanded": "false" },
@@ -77,7 +105,7 @@ export function inlineTrade(signal: PostSignal, route: TradeRoute) {
         { class: "asset-icon", "aria-hidden": "true" },
         symbol === "ETH" ? "Ξ" : symbol === "BTC" ? "₿" : "M",
       ),
-      el("div", { class: "inline-asset" }, title, price),
+      el("div", { class: "inline-asset" }, title, tickerRow, price),
       buy,
       close,
     ),
@@ -163,7 +191,7 @@ export function inlineTrade(signal: PostSignal, route: TradeRoute) {
     sequence++;
     clearTimeout(timer);
     clearTimeout(expiryTimer);
-    price.textContent = "Market data unavailable";
+    price.textContent = "";
     review.setAttribute("disabled", "");
     result.textContent = "—";
     pay.textContent =
@@ -216,7 +244,7 @@ export function inlineTrade(signal: PostSignal, route: TradeRoute) {
       ) {
         status.textContent =
           "Quote unavailable. Secure review will check live execution; no network fallback.";
-        price.textContent = "Market data unavailable";
+        price.textContent = "Quote unavailable";
         return;
       }
       const gross = quote.data.expectedOutput
@@ -233,8 +261,8 @@ export function inlineTrade(signal: PostSignal, route: TradeRoute) {
           ? `≈ ${displayAtoms(net.toString(), quote.data.output.decimals)}`
           : "Unavailable";
       price.textContent = quote.data.price
-        ? `${symbol} $${quote.data.price} · ${chainId === 143 ? "Mainnet" : "Testnet"}`
-        : "Market data unavailable";
+        ? `Kuru ${chainId === 143 ? "mainnet" : "testnet"} book: $${quote.data.price}${chainId === 143 ? "" : " (test tokens)"}`
+        : "";
       status.textContent = `Indicative · block ${quote.data.blockNumber}. ${quote.data.filled ? "Depth observed; execution still needs simulation." : "Available fill is checked in wallet review."}`;
       expiryTimer = setTimeout(
         () => {
@@ -267,7 +295,7 @@ export function inlineTrade(signal: PostSignal, route: TradeRoute) {
   }
   network.addEventListener("change", () => {
     chainId = network.value === "143" ? 143 : 10143;
-    price.textContent = "Market data unavailable";
+    price.textContent = "";
     refresh();
   });
   feeChoice.addEventListener("change", refresh);
@@ -439,8 +467,8 @@ export function inlineTrade(signal: PostSignal, route: TradeRoute) {
       )
         return;
       price.textContent = quote.data.price
-        ? `${symbol} $${quote.data.price} · Testnet`
-        : "Market data unavailable";
+        ? `Kuru testnet book: $${quote.data.price} (test tokens)`
+        : "";
       expiryTimer = setTimeout(
         () => {
           if (sequence === 0 && card.isConnected)

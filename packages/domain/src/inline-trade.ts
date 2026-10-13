@@ -60,3 +60,23 @@ export const publicPayoutSchema = z.object({
   mainnetFeesEnabled: z.boolean(),
   bps: creatorFeeBpsSchema,
 });
+
+const decimalText = z.string().regex(/^[0-9]+(\.[0-9]+)?$/);
+/** Display-only market prices for inline cards; never used for transaction amounts. */
+export const spotPriceSchema = z.object({
+  asset: z.enum(["MON", "ETH", "BTC"]),
+  price: decimalText,
+  change24hPct: z
+    .string()
+    .regex(/^-?[0-9]+(\.[0-9]+)?$/)
+    .nullable(),
+  sparkline: z.array(decimalText).max(48),
+  source: z.literal("kuru-mainnet"),
+  sparklineSource: z.literal("binance-1h").nullable(),
+  lastTradeAt: z.iso.datetime().nullable(),
+});
+export const spotPricesSchema = z.object({
+  prices: z.array(spotPriceSchema).max(3),
+  observedAt: z.iso.datetime(),
+});
+export type SpotPrice = z.infer<typeof spotPriceSchema>;

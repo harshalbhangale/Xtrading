@@ -57,7 +57,9 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
     route.status === "available" &&
     route.instrument === "spot"
   ) {
-    root.append(inlineTrade(signal, route));
+    const card = inlineTrade(signal, route, article);
+    root.append(card);
+    card.dataset.mounted = "true";
     host.addEventListener("click", (event) => event.stopPropagation());
     rendered.add(article);
     textNode.after(host);

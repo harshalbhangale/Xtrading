@@ -269,6 +269,16 @@ a { color: inherit; }
 .inline-asset { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .inline-asset strong { font-size: 17px; }
 .inline-price, .inline-note { font-size: 12px; color: var(--muted); margin: 4px 0; }
+.inline-ticker-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+.inline-ticker { display: inline-flex; align-items: baseline; gap: 6px; font-size: 14px; }
+.inline-ticker b { font-weight: 700; color: var(--foreground); }
+.inline-ticker em { font-style: normal; font-weight: 600; }
+.inline-ticker em.up { color: var(--positive); }
+.inline-ticker em.down { color: var(--negative); }
+.inline-ticker small { font-size: 11px; color: var(--muted); }
+.inline-ticker.muted { font-size: 12px; color: var(--muted); }
+.inline-spark polyline { stroke: var(--positive); }
+.inline-spark.down polyline { stroke: var(--negative); }
 .inline-buy,.inline-close { cursor: pointer; border-radius: 99px; padding: 8px 15px; font: 700 14px/1.3 inherit; border: 1px solid var(--line); white-space: nowrap; }
 .inline-buy { background: var(--foreground); color: var(--surface); }
 .inline-close { background: transparent; color: var(--foreground); }
