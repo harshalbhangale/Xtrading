@@ -67,9 +67,9 @@ export function flagChip(value: KolReputation | null) {
     "span",
     {
       class: "chip flag",
-      title: `${count} captured posts were not publicly available in two consecutive checks, out of ${coverage?.checked} checked posts. Protected or suspended posts can look deleted. Not a complete X timeline.`,
+      title: `${count} of ${coverage?.checked} checked posts are no longer on X.`,
     },
-    `${count} deleted / unavailable tweet${count === 1 ? "" : "s"}`,
+    `${count} deleted tweet${count === 1 ? "" : "s"}`,
   );
 }
 

@@ -185,7 +185,7 @@ export function reputationSection(
   return section(
     "Creator",
     tier ? row("Tier", tierLabel(tier)) : null,
-    row("Deleted / unavailable tweets", deletedTweetsLabel(tier)),
+    row("Deleted tweets", deletedTweetsLabel(tier)),
     el(
       "p",
       { class: "note" },

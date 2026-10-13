@@ -68,8 +68,8 @@ describe("reputation chips", () => {
       },
     };
     const chip = flagChip(record);
-    expect(chip?.textContent).toBe("3 deleted / unavailable tweets");
-    expect(chip?.title).toContain("out of 10 checked posts");
+    expect(chip?.textContent).toBe("3 deleted tweets");
+    expect(chip?.title).toContain("3 of 10 checked posts");
     expect(deletedTweetCount(record)).toBe(3);
     expect(deletedTweetsLabel(record)).toBe("3 · 1 missing once");
   });

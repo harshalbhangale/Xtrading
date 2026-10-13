@@ -147,8 +147,8 @@ export function kolFlags(input: {
     flags.push({
       kind: "removed_post",
       severity: "serious",
-      title: `${plural(gone.length, "registered call")} no longer public`,
-      detail: `X stopped serving ${gone.length === 1 ? "this post" : "these posts"} in two consecutive checks${wrong ? `; ${wrong} had resolved wrong` : ""}. Deleted, protected or suspended posts look the same from outside. The text archived at registration is kept.`,
+      title: `${plural(gone.length, "registered call")} deleted`,
+      detail: `${gone.length === 1 ? "This post is" : "These posts are"} no longer on X.${wrong ? (gone.length === 1 ? " It was a wrong call." : ` ${wrong} were wrong calls.`) : ""} We kept a copy of the text.`,
       callIds: gone.map((c) => c.id),
       transactions: [],
       posts: [],
@@ -163,8 +163,8 @@ export function kolFlags(input: {
     flags.push({
       kind: "deleted_post",
       severity: "serious",
-      title: `${plural(deleted.length, "captured post")} deleted or unavailable`,
-      detail: `Xtrading captured ${deleted.length === 1 ? "this post" : "these posts"} on X, then X stopped serving ${deleted.length === 1 ? "it" : "them"} in two consecutive checks. Deleted, protected or suspended posts look the same from outside.`,
+      title: `${plural(deleted.length, "post")} deleted`,
+      detail: `${deleted.length === 1 ? "This post is" : "These posts are"} no longer on X.`,
       callIds: [],
       transactions: [],
       posts: deleted.map((p) => ({
@@ -198,7 +198,7 @@ export function kolFlags(input: {
       kind: "unverified_token",
       severity: "warning",
       title: `Shared a contract that isn't the original token in ${plural(ids.length, "post")}`,
-      detail: `${[...new Set(unverified.map((u) => u.summary))].slice(0, 2).join(" ")} It could be a bridged copy or a fake; Nansen has not checked it yet.`,
+      detail: `${[...new Set(unverified.map((u) => u.summary))].slice(0, 2).join(" ")} It may be a copy or a fake. Not checked by Nansen yet.`,
       callIds: [],
       transactions: [],
       posts: ids.map((postId) => ({
@@ -229,8 +229,7 @@ export function kolFlags(input: {
       kind: "counter_trade",
       severity: "serious",
       title: `Traded against ${plural(calls.length, "own call")}`,
-      detail:
-        "The creator's bound wallet swapped in the opposite direction of an open call on the same asset (Kuru fills indexed by Envio). Hedging is possible; the swaps are shown as recorded.",
+      detail: "Their wallet traded the other way while the call was open.",
       callIds: calls,
       transactions: [...new Set(counter.map((c) => c.swap.transactionHash))],
       posts: [],

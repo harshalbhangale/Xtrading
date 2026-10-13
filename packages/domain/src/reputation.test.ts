@@ -119,7 +119,7 @@ describe("assessKol", () => {
     expect(result.earnedTier).toBe("max");
     expect(result.tier).toBe("pro");
     expect(result.flags[0]?.kind).toBe("removed_post");
-    expect(result.flags[0]?.detail).toContain("1 had resolved wrong");
+    expect(result.flags[0]?.detail).toContain("It was a wrong call.");
   });
 });
 

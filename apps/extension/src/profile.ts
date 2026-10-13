@@ -205,15 +205,8 @@ export async function scanProfile() {
     (deletedTweetCount(rep) ?? 0) + (suspectedTweetCount(rep) ?? 0) > 0;
   // Missing tweets are a red flag: a red box in the card, never beside the name.
   panel.set("deleted-tweets", {
-    label: "Deleted / unavailable tweets",
-    value: el(
-      "span",
-      {
-        title:
-          "Captured posts missing in two consecutive public checks. Protection or suspension can look like deletion; this does not cover all of X.",
-      },
-      deletedTweetsLabel(rep),
-    ),
+    label: "Deleted tweets",
+    value: el("span", {}, deletedTweetsLabel(rep)),
     ...(flagged
       ? { kind: "chip" as const, tone: "bad" as const, group: "Red flags" }
       : { kind: "row" as const }),
@@ -223,7 +216,7 @@ export async function scanProfile() {
     if (flag.kind !== "deleted_post" && flag.kind !== "mostly_wrong")
       panel.set(`flag:${flag.kind}`, {
         label: flag.title,
-        value: el("span", { title: flag.detail }, flag.detail),
+        value: el("span", {}, flag.detail),
         kind: "chip",
         tone: "bad",
         group: "Red flags",
