@@ -27,7 +27,7 @@ Crypto Twitter runs on calls. Someone posts "$ETH to 3k this week", thousands of
 
 ## What you can do
 
-More screenshots of the website, trader dashboard, creator studio and agent access: **[Product tour](docs/product-tour.md)**.
+The extension, trader dashboard, creator studio and agent access in screenshots: **[Product tour](docs/product-tour.md)**.
 
 ### Trade from the timeline
 
@@ -36,21 +36,6 @@ More screenshots of the website, trader dashboard, creator studio and agent acce
 - **Perps on Perpl.** When a call is explicitly long or short, you can trade it as a perp on Perpl, with leverage and size caps.
 - **Your wallet, your signature.** Sign in with X through Privy and get an embedded wallet, or bring MetaMask or Rabby. Every transaction is shown to you and signed by you. Xtrading never holds keys and never signs anything.
 
-|                                                                                                          |                                                                                             |
-| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| ![A bullish $ETH post gets a Long card right under the text](docs/assets/screenshots/post-long-card.png) | ![Buy on Kuru without leaving X](docs/assets/screenshots/spot-kuru-buy.png) |
-| A bullish $ETH post gets a Long card right under the text                                                | Buy on Kuru without leaving X                                               |
-
-|                                                  |                                                                                                      |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| ![](docs/assets/screenshots/post-short-card.png) | ![Short ETH-PERP on Perpl with 1–5x leverage and size caps](docs/assets/screenshots/perp-ticket.png) |
-| "go short on ETH" is read as a bearish perp call | Short ETH-PERP on Perpl with 1–5x leverage and size caps                                             |
-
-|                                                                                                          |                                                                                                |
-| -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| p-![Review the order: value, margin, fee and liquidation price](docs/assets/screenshots/perp-review.png) | ![Every step is listed, then signed by your own wallet](docs/assets/screenshots/perp-sign.png) |
-| Review the order: value, margin, fee and liquidation price                                               | Every step is listed, then signed by your own wallet                                           |
-
 ### Check the caller first
 
 - **Call record.** Creators register their calls. Each one is priced at the minute it was posted and scored at expiry, so a creator's hit rate and median return come from prices, not screenshots.
@@ -58,13 +43,10 @@ More screenshots of the website, trader dashboard, creator studio and agent acce
 - **Wallet check by Nansen.** For a creator's linked wallet, Nansen shows whether they actually bought what they told you to buy, or sold into it.
 - **Tiers that are earned.** Creators move from Verified to Pro, Max and Ultra as they build a record (for example, Ultra needs 30 scored calls, a 65% hit rate and a positive 7-day median).
 
-|                                                                                                                    |                                                                                                                                         |
-| ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| ![Call check: what the post says, the Nansen wallet check and token flows](docs/assets/screenshots/call-check.png) | ![Every Nansen request is listed, next to the creator's tier, identity and record](docs/assets/screenshots/post-call-check-creator.png) |
-| Call check: what the post says, the Nansen wallet check and token flows                                            | Every Nansen request is listed, next to the creator's tier, identity and record                                                         |
-
-![Creator record on an X profile](docs/assets/screenshots/profile-record.png)  
-The creator's record appears on their X profile: linked wallet, tier, red flags and recent calls
+<p align="center">
+  <img src="docs/assets/screenshots/fake-token-flag.png" width="460" alt="Warning under a post that shills a fake PEPE contract" /><br />
+  <sub>A post shills "PEPE" with a contract that isn't PEPE. Nansen's warning appears right under it, before anyone clicks.</sub>
+</p>
 
 ### Get paid for good calls
 
