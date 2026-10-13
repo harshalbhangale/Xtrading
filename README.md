@@ -3,7 +3,7 @@
 # Xtrading
 
 **Trade the calls you see on X, and know who's worth following.**  
-[xtradingnow.xyz](https://xtradingnow.xyz) · [Chrome extension](https://xtradingnow.xyz/extension) · [Live onchain activity](https://xtradingnow.xyz/dashboard/onchain)
+[xtradingnow.xyz](https://xtradingnow.xyz) · [Chrome extension](https://xtradingnow.xyz/extension) · [Live onchain activity](https://xtradingnow.xyz/dashboard/onchain) · [Product tour](docs/product-tour.md)
 
 ---
 
@@ -26,6 +26,8 @@ Crypto Twitter runs on calls. Someone posts "$ETH to 3k this week", thousands of
 - **Receipts over claims.** A submitted order isn't a fill until the chain says so. Indexed events are checked against receipts and reorgs are rolled back. When a data source is down, the app says so instead of guessing.
 
 ## What you can do
+
+More screenshots of the website, trader dashboard, creator studio and agent access: **[Product tour](docs/product-tour.md)**.
 
 ### Trade from the timeline
 
@@ -161,4 +163,4 @@ Configuration, database setup, the indexer, contracts and deployment are covered
 
 ## Docs
 
-[Architecture](docs/architecture.md) · [Development](docs/development.md) · [X extension](docs/x-extension.md) · [Identity binding](docs/identity-binding.md) · [Inline trading and creator fees](docs/inline-trading-and-creator-fees.md) · [Envio demo](docs/envio-demo.md) · [Perpl exits](docs/perpl-exits.md)
+[Product tour](docs/product-tour.md) · [Architecture](docs/architecture.md) · [Development](docs/development.md) · [X extension](docs/x-extension.md) · [Identity binding](docs/identity-binding.md) · [Inline trading and creator fees](docs/inline-trading-and-creator-fees.md) · [Envio demo](docs/envio-demo.md) · [Perpl exits](docs/perpl-exits.md)
