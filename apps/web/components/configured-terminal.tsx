@@ -5,6 +5,7 @@ import {
   type PostSignal,
 } from "@call-my-bluff/domain";
 import { usePrivy } from "@privy-io/react-auth";
+import Image from "next/image";
 import Link from "next/link";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { bridge as readFollowing } from "./browser-following";
@@ -397,12 +398,17 @@ export default function ConfiguredTerminal() {
         <aside className="term-left">
           <button
             type="button"
-            className="button"
+            className="term-trade-cta"
             onClick={() =>
               setTrade("/dashboard/trade?market=MON&instrument=spot")
             }
           >
-            Trade on Monad
+            <Image src="/brand/monad.png" alt="" width={32} height={32} />
+            <span>
+              <strong>Trade on Monad</strong>
+              <small>Kuru spot · mainnet</small>
+            </span>
+            <i aria-hidden="true">↗</i>
           </button>
           <p className="term-live" data-status={status}>
             <i />{" "}

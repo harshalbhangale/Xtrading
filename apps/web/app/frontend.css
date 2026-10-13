@@ -1248,3 +1248,65 @@ p.term-resolution {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+
+/* Terminal: primary trade entry */
+.term-trade-cta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #a6d63f;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #d6f58a 0%, #c6f25a 55%, #b4e64a 100%);
+  box-shadow:
+    0 0 0 1px rgba(198, 242, 90, 0.18),
+    0 8px 24px rgba(198, 242, 90, 0.18);
+  color: #10160a;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+.term-trade-cta:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(198, 242, 90, 0.35),
+    0 12px 30px rgba(198, 242, 90, 0.28);
+}
+.term-trade-cta:focus-visible {
+  outline: 2px solid #e6ebe3;
+  outline-offset: 3px;
+}
+.term-trade-cta img {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+.term-trade-cta span {
+  display: grid;
+  flex: 1 1 auto;
+  line-height: 1.2;
+}
+.term-trade-cta strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+.term-trade-cta small {
+  color: #33461a;
+  font: 600 11px var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.term-trade-cta i {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(16, 22, 10, 0.12);
+  font-style: normal;
+  font-weight: 700;
+}
