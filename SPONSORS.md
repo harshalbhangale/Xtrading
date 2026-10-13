@@ -24,7 +24,6 @@ Privy is the front door to the app.
 
 - **Sign in with X.** Every creator profile, call and fee is tied to the stable X user ID, so changing a handle doesn't break a record.
 - **Embedded wallets** for people who don't have one yet. External wallets such as MetaMask and Rabby also work.
-- **Explicit signing.** Each trade opens in Privy's confirmation dialog. The server only prepares transactions and never signs them.
 - **Wallet binding.** A creator proves they own their payout wallet by signing a one-time nonce. Privy sessions are verified on the server before a binding is saved.
 
 **Code:** [`apps/web/lib/identity-auth.ts`](apps/web/lib/identity-auth.ts), [`packages/database`](packages/database), [`apps/web/lib/trading-wallet.ts`](apps/web/lib/trading-wallet.ts). Design notes are in [docs/identity-binding.md](docs/identity-binding.md).
