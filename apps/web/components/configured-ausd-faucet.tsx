@@ -25,7 +25,21 @@ export default function ConfiguredAusdFaucet() {
   const { ready, authenticated, login } = usePrivy();
   const { wallets } = useWallets();
   const { sendTransaction } = useWalletSend();
-  const wallet = wallets.find((item) => item.walletClientType === "privy");
+  // Any wallet linked to this login: the Privy wallet or a linked MetaMask.
+  const linked = wallets.filter(
+    (item, index) =>
+      (item.linked || item.walletClientType === "privy") &&
+      wallets.findIndex(
+        (other) => other.address.toLowerCase() === item.address.toLowerCase(),
+      ) === index,
+  );
+  const [selected, setSelected] = useState("");
+  const wallet =
+    linked.find(
+      (item) => item.address.toLowerCase() === selected.toLowerCase(),
+    ) ??
+    linked.find((item) => item.walletClientType !== "privy") ??
+    linked[0];
   const owner = useRef(wallet?.address);
   owner.current = authenticated ? wallet?.address : undefined;
   const locked = useRef(false);
@@ -133,15 +147,35 @@ export default function ConfiguredAusdFaucet() {
   if (!wallet)
     return (
       <p>
-        Connect your project’s Privy embedded wallet to claim. No private key is
-        needed.
+        Link a wallet on the Portfolio page (Privy wallet or MetaMask) to claim.
+        No private key is needed.
       </p>
     );
   return (
     <>
-      <p>
-        Receiving wallet: <code>{wallet.address}</code>
-      </p>
+      {linked.length > 1 ? (
+        <label>
+          Receiving wallet:{" "}
+          <select
+            value={wallet.address}
+            disabled={busy}
+            onChange={(event) => setSelected(event.target.value)}
+          >
+            {linked.map((item) => (
+              <option key={item.address} value={item.address}>
+                {item.address} ·{" "}
+                {item.walletClientType === "privy"
+                  ? "Privy wallet"
+                  : item.walletClientType}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <p>
+          Receiving wallet: <code>{wallet.address}</code>
+        </p>
+      )}
       <p>
         Network: Monad testnet · 10143. Native value: 0 MON; gas is paid in test
         MON.
