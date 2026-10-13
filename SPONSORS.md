@@ -37,8 +37,9 @@ Envio lets Xtrading show what happened onchain, not just what someone claims hap
 - **HyperIndex** indexes Kuru swaps, deposits, withdrawals and account registrations, plus Kuru Flow creator payments. Events are keyed by `chain:block:logIndex` and rolled back on reorgs.
 - **HyperSync** scans the Kuru Flow `FeeCollected` events live. Each event is checked against its transaction receipt and block hash before it's shown, and the page reports how fresh the data is.
 - **Creator earnings** read from the same source, so the dashboard total matches what the chain shows.
+- **Portfolio history** for a wallet's mainnet transactions also comes from HyperSync.
 
-**Code:** [`services/indexer`](services/indexer), [`apps/web/lib/envio-evidence.ts`](apps/web/lib/envio-evidence.ts), [`packages/integrations/src/envio-events.ts`](packages/integrations/src/envio-events.ts)
+**Code:** [`services/indexer`](services/indexer), [`apps/web/lib/envio-evidence.ts`](apps/web/lib/envio-evidence.ts), [`packages/integrations/src/envio-events.ts`](packages/integrations/src/envio-events.ts). How the data flows: [Technical overview](docs/architecture.md#onchain-data-with-envio).
 
 **Live:** [xtradingnow.xyz/dashboard/onchain](https://xtradingnow.xyz/dashboard/onchain) shows creator payments with transaction links and indexed block height. You don't need a wallet to view it.
 
@@ -65,10 +66,11 @@ Some calls are leveraged by nature. Xtrading routes those to Perpl.
 - **Only when the call says so.** Bearish wording alone never opens a leveraged short. The user picks the perp explicitly.
 - **The user's own account.** Orders, closes and withdrawals are signed by the user's wallet against their own Perpl exchange account. Xtrading holds no Perpl key.
 - **Guard rails.** Leverage and size caps are enforced, and fills are read from the order transaction's events.
+- **Testnet and mainnet.** Testnet is the default everywhere. On X, in the app and through the MCP server, the user can choose Perpl mainnet with real AUSD when the server enables it, with lower leverage and margin caps.
 
 **Code:** [`packages/integrations/src/perpl-exchange.ts`](packages/integrations/src/perpl-exchange.ts), [`apps/web/lib/perpl-trade.ts`](apps/web/lib/perpl-trade.ts), [`apps/extension/src/perp-card.ts`](apps/extension/src/perp-card.ts). The exit flow is described in [docs/perpl-exits.md](docs/perpl-exits.md).
 
-**Exchange:** [`0x1964…80cc`](https://testnet.monadvision.com/address/0x1964c32f0be608e7d29302aff5e61268e72080cc).
+**Exchange:** testnet [`0x1964…80cc`](https://testnet.monadvision.com/address/0x1964c32f0be608e7d29302aff5e61268e72080cc), mainnet [`0x34B6…2a6F`](https://monadvision.com/address/0x34B6552d57a35a1D042CcAe1951BD1C370112a6F).
 
 ---
 

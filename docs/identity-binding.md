@@ -1,6 +1,6 @@
 # Verified identity binding
 
-The creator profile connects a server-verified Privy/X session to a wallet using an explicit off-chain ownership signature. Identity does not imply an active stake, accurate calls or profitable wallet returns.
+The creator profile connects a server-verified Privy/X session to a wallet using an explicit off-chain ownership signature. Identity does not imply accurate calls or profitable wallet returns. Trading doesn't need a binding: it only needs a Privy login and a wallet Privy lists for that user. The binding is for creators: payouts, registered calls and the public record. The flow as a diagram: [Technical overview](architecture.md#identity-and-wallet-binding).
 
 ## Configuration and flow
 
@@ -18,7 +18,7 @@ All endpoints require `Authorization: Bearer <Privy access token>`. The server v
 | `POST /api/identity/challenge` | `{ "wallet": "0x…" }` | Challenge ID, immutable signing message, wallet and expiry |
 | `POST /api/identity/bind` | `{ "challengeId": "<UUID>", "signature": "0x…" }` | Persisted stable X ID, handle, wallet and link timestamp |
 
-The API does not accept client-supplied identity IDs, chain IDs or signing messages. `bindingCurrent` requires the persisted identity, current handle and currently linked wallet to match the provider record. This is a private onboarding API; public creator/extension lookup is a later milestone.
+The API does not accept client-supplied identity IDs, chain IDs or signing messages. `bindingCurrent` requires the persisted identity, current handle and currently linked wallet to match the provider record. Public lookups use `GET /api/creators/:handle`, which returns only the bound X user ID, wallet and link time, and nothing when a handle matches more than one binding.
 
 ## Persistence and failure behavior
 

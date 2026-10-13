@@ -200,9 +200,15 @@ function handleMessage(
       `/api/extension/perp/${message.type === "perp-prepare" ? "prepare" : "confirm"}`,
       { wallet: message.wallet, order: message.order },
     );
-  if (message.type === "markets")
+  if (message.type === "markets") {
     // Public market data only; a short cache keeps the ticket's mark price fresh.
+    // perplChainId 143 asks for Perpl mainnet markets; anything else is testnet.
+    if (message.perplChainId === 143)
+      return cached("markets:143", 10000, () =>
+        getJson("/api/markets?perplChainId=143"),
+      );
     return cached("markets", 10000, () => getJson("/api/markets"));
+  }
   if (message.type === "classify-post") {
     const input = postSignalRequestSchema.safeParse(message.payload);
     if (!input.success) return Promise.resolve({ error: "invalid_post" });

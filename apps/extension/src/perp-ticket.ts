@@ -13,7 +13,11 @@ import { z } from "zod";
 import { appOrigin } from "./config";
 import { el, send } from "./dom";
 import { tradeUrl } from "./drawer";
-import { type PerplWalletStep, signPerplSteps } from "./perp-wallet";
+import {
+  type PerplChainId,
+  type PerplWalletStep,
+  signPerplSteps,
+} from "./perp-wallet";
 import { hasBrowserWallet, walletRequest } from "./wallet";
 
 const errors: Record<string, string> = {
@@ -21,10 +25,11 @@ const errors: Record<string, string> = {
   leverage_above_market_max: "Leverage is above this market's maximum.",
   slippage_above_market_max: "Slippage is above this market's maximum.",
   size_above_cap: "Size is above the cap.",
+  collateral_above_cap: "Margin is above the mainnet cap. Use a smaller size.",
+  perpl_mainnet_disabled: "Perpl mainnet is switched off on this server.",
   market_closed: "Market is closed.",
   market_unpriced: "No mark price right now. Try again shortly.",
-  collateral_insufficient:
-    "Not enough test AUSD in your wallet. Claim some from the faucet in the app.",
+  collateral_insufficient: "Not enough AUSD in your wallet for this order.",
   perpl_account_frozen: "Your Perpl account is frozen.",
   perpl_exchange_mismatch: "Perpl's exchange address changed. Not sending.",
   transaction_pending: "Transaction not found yet.",
@@ -66,53 +71,107 @@ const marketsSchema = z.object({
     markets: z.array(marketSchema),
     limits: z.object({
       maxLeverage: z.number().int().min(1).max(50),
-      maxSize: z.string().regex(/^[0-9]+(\.[0-9]+)?$/),
+      maxSize: z
+        .string()
+        .regex(/^[0-9]+(\.[0-9]+)?$/)
+        .nullable(),
+      maxCollateral: z
+        .string()
+        .regex(/^[0-9]+(\.[0-9]+)?$/)
+        .nullable()
+        .optional(),
     }),
   }),
 });
 
+const networks = {
+  10143: { label: "testnet", explorer: "https://testnet.monadvision.com" },
+  143: { label: "mainnet · real AUSD", explorer: "https://monadvision.com" },
+} as const;
+
 /**
  * Trader-style perp ticket on the X card. With a browser wallet (MetaMask, Rabby)
  * the order is prepared and signed right here on X, step by step, on the user's
- * own Perpl testnet account. Without one it opens the Xtrading (Privy) window.
+ * own Perpl account. Without one it opens the Xtrading (Privy) window. Testnet
+ * unless the user picks mainnet; mainnet only works when the server enables it.
  */
 export function perpTicket(
   postId: string,
   signal: PostSignal,
   route: Extract<TradeRoute, { status: "available" }>,
 ) {
+  const network = el(
+    "select",
+    { class: "swap-network", "aria-label": "Perpl network" },
+    el("option", { value: "10143" }, "Monad testnet"),
+    el("option", { value: "143" }, "Monad mainnet"),
+  ) as HTMLSelectElement;
+  const body = el("div", {});
   const root = el(
     "div",
     { class: "ticket" },
-    el("p", { class: "note" }, "Loading market…"),
+    el("div", { class: "ticket-row" }, el("span", {}, "Network"), network),
+    body,
   );
-  void send<unknown>({ type: "markets" }).then((raw) => {
-    const parsed = marketsSchema.safeParse(raw);
-    const market = parsed.data?.perpl.markets.find(
-      (m) => String(m.marketId) === route.marketId,
+  let sequence = 0;
+  function load(chainId: PerplChainId) {
+    const current = ++sequence;
+    body.replaceChildren(el("p", { class: "note" }, "Loading market…"));
+    void send<unknown>({ type: "markets", perplChainId: chainId }).then(
+      (raw) => {
+        if (current !== sequence) return;
+        const parsed = marketsSchema.safeParse(raw);
+        // Market IDs differ per network; the detected call's market is matched by
+        // ID on testnet (where it was routed) and by symbol on mainnet.
+        const market = parsed.data?.perpl.markets.find((m) =>
+          chainId === 10143
+            ? String(m.marketId) === route.marketId
+            : m.symbol === route.market,
+        );
+        const disabled =
+          (raw as { perpl?: { status?: unknown } } | null)?.perpl?.status ===
+          "disabled";
+        if (!parsed.success || !market?.open) {
+          body.replaceChildren(
+            el(
+              "p",
+              { class: "note" },
+              disabled
+                ? "Perpl mainnet is switched off on this server."
+                : parsed.success && chainId === 143
+                  ? `No open Perpl mainnet market for ${route.market}.`
+                  : "Perpl market data unavailable. Try again shortly.",
+            ),
+          );
+          return;
+        }
+        render(
+          body,
+          chainId,
+          postId,
+          signal,
+          route,
+          market,
+          parsed.data.perpl.limits,
+        );
+      },
     );
-    if (!parsed.success || !market?.open) {
-      root.replaceChildren(
-        el(
-          "p",
-          { class: "note" },
-          "Perpl market data unavailable. Try again shortly.",
-        ),
-      );
-      return;
-    }
-    render(root, postId, signal, route, market, parsed.data.perpl.limits);
-  });
+  }
+  network.addEventListener("change", () =>
+    load(network.value === "143" ? 143 : 10143),
+  );
+  load(10143);
   return root;
 }
 
 function render(
   root: HTMLElement,
+  chainId: PerplChainId,
   postId: string,
   signal: PostSignal,
   route: Extract<TradeRoute, { status: "available" }>,
   market: z.infer<typeof marketSchema>,
-  limits: { maxLeverage: number; maxSize: string },
+  limits: z.infer<typeof marketsSchema>["perpl"]["limits"],
 ) {
   let side: "long" | "short" = route.side === "short" ? "short" : "long";
   // Perpl's market maximum and the app's cap both apply; the lower one wins.
@@ -123,7 +182,9 @@ function render(
   let leverage = Math.min(Math.max(signal.leverage ?? 2, 1), maxLeverage);
   let unit: "base" | "usd" = "base";
   const mark = market.quote.mark ? BigInt(market.quote.mark) : null;
-  const maxUnits = toUnits(limits.maxSize, market.sizeDecimals);
+  const maxUnits = limits.maxSize
+    ? toUnits(limits.maxSize, market.sizeDecimals)
+    : null;
   const usd = (value: bigint | null) =>
     value === null ? "—" : formatUsd(value, market.priceDecimals);
   const change =
@@ -251,13 +312,14 @@ function render(
     el(
       "p",
       { class: "note" },
-      `Max ${limits.maxSize} ${market.symbol}, ${maxLeverage}x · ${(slippageBps / 100).toFixed(2)}% max slippage · estimates before fees and funding · testnet · not advice`,
+      `Max ${limits.maxSize ? `${limits.maxSize} ${market.symbol}` : `${limits.maxCollateral ?? "—"} AUSD margin`}, ${maxLeverage}x · ${(slippageBps / 100).toFixed(2)}% max slippage · estimates before fees and funding · ${networks[chainId].label} · not advice`,
     ),
   );
 
   // The app's perp window, prefilled and set to review on open; Privy signs there.
   function walletWindowUrl(order: Record<string, unknown>) {
     const url = new URL("/trade/perp", appOrigin);
+    url.searchParams.set("chainId", String(chainId));
     for (const key of ["marketId", "side", "leverage", "size"])
       url.searchParams.set(key, String(order[key]));
     url.searchParams.set("slippage", String(order.slippageBps));
@@ -289,6 +351,7 @@ function render(
       if (!prepared?.result)
         throw new Error(explain(prepared?.failure ?? "unavailable"));
       const hash = await signPerplSteps({
+        chainId,
         wallet: prepared.result.wallet,
         steps: prepared.result.steps,
         onStatus: (text) => say(text),
@@ -300,6 +363,7 @@ function render(
           type: "perp-confirm",
           wallet: prepared.result.wallet,
           order: {
+            chainId,
             transactionHash: hash,
             requestId: prepared.result.requestId,
             sourcePostId: order.sourcePostId ?? null,
@@ -311,7 +375,7 @@ function render(
       const link = el(
         "a",
         {
-          href: `https://testnet.monadvision.com/tx/${hash}`,
+          href: `${networks[chainId].explorer}/tx/${hash}`,
           target: "_blank",
           rel: "noopener noreferrer",
         },
@@ -415,6 +479,7 @@ function render(
     const label = `${side === "long" ? "Long" : "Short"} ${fromUnits(units ?? 0n, market.sizeDecimals)} ${market.symbol} · ${leverage}x`;
     current = ready
       ? {
+          chainId,
           marketId: market.marketId,
           side,
           size: fromUnits(units ?? 0n, market.sizeDecimals),

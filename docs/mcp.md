@@ -37,10 +37,10 @@ Any other MCP client works the same way: send JSON-RPC over `POST` with `Accept:
 
 | Tool | Inputs | Returns |
 |---|---|---|
-| `get_creator` | `handle` | Identity binding (stable X user ID to wallet) and stake status. A binding proves account ownership, not accuracy. |
+| `get_creator` | `handle` | Identity binding (stable X user ID to wallet). A binding proves account ownership, not accuracy. The `stake` field is always `unavailable`: staking was removed. |
 | `list_calls` | `handle` | Calls the creator registered, priced at posting and scored at expiry ([`directional-return-v1`](https://xtradingnow.xyz/methodology)). Outcomes are hypothetical, not wallet returns. |
 | `recent_calls` | `handle`, `since?` (ISO time) | Trade calls detected in the creator's recent posts, newest first, with the tradable route. Only covers posts seen by Xtrading users, not the full X feed. |
-| `classify_post` | `postId`, `handle`, `text` | Asset, direction and instrument found in the post text, and a route to a testnet market (Kuru spot or Perpl perp). A Kuru route is only offered while that side of the order book has orders. Bearish text never becomes a leveraged short. Nothing is saved. |
+| `classify_post` | `postId`, `handle`, `text` | Asset, direction and instrument found in the post text, and a route to a testnet market (Kuru spot or Perpl perp). A Kuru route is only offered while that side of the order book has orders. Bearish text never becomes a leveraged short. The result is saved to the creator's captured posts only if X confirms the post exists, that handle wrote it and it says this text. |
 | `get_markets` | none | Kuru testnet books (MON, WETH, WBTC against USDC), Perpl testnet markets (`perpl`) and, when the server enables it, Perpl mainnet markets (`perplMainnet`), each with its `marketId`. |
 | `quote_trade` | `market`, `side`, `amount`, `chainId?` | Indicative Kuru output after the taker fee. Returns `status: "unavailable"` when the book has no orders on that side or the amount is too small. Display only; `prepare_trade` sets the real minimum. |
 

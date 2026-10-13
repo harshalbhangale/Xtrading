@@ -124,6 +124,9 @@ export default function ConfiguredPerpTrade({
   owner.current = user?.id;
   // Opened from X with review=1: review once the session and markets are ready.
   const autoReview = useRef(false);
+  // The detected call's asset: market IDs differ per network, so it picks the market
+  // when a link's marketId (routed on testnet) is not on this network.
+  const asset = useRef<string | null>(null);
   useEffect(() => {
     const params = new URLSearchParams(initialParams ?? window.location.search);
     autoReview.current = params.get("review") === "1";
@@ -132,7 +135,9 @@ export default function ConfiguredPerpTrade({
       source = params.get("postId"),
       lev = params.get("leverage"),
       amount = params.get("size"),
-      bps = params.get("slippage");
+      bps = params.get("slippage"),
+      symbol = params.get("asset")?.toUpperCase();
+    if (symbol && /^[A-Z0-9]{1,12}$/.test(symbol)) asset.current = symbol;
     if (market && /^[0-9]{1,6}$/.test(market)) setMarketId(market);
     if (requested === "long" || requested === "short") setSide(requested);
     if (source && /^[0-9]{1,30}$/.test(source)) setPostId(source);
@@ -147,15 +152,18 @@ export default function ConfiguredPerpTrade({
         const open = (value.perpl?.markets ?? []).filter((m) => m.open);
         setMarkets(open);
         setLimits(value.perpl?.limits ?? null);
-        setMarketId(
-          (current) =>
-            current ||
-            String(
-              open.find((m) => m.symbol === "MON")?.marketId ??
-                open[0]?.marketId ??
-                "",
-            ),
-        );
+        setMarketId((current) => {
+          const named = open.find((m) => m.symbol === asset.current);
+          if (named) return String(named.marketId);
+          if (open.some((m) => String(m.marketId) === current)) return current;
+          // A link's marketId that is not on this network: let the user choose.
+          if (current) return "";
+          return String(
+            open.find((m) => m.symbol === "MON")?.marketId ??
+              open[0]?.marketId ??
+              "",
+          );
+        });
       })
       .catch(() => setMarkets([]));
   }, [chainId]);

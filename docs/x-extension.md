@@ -1,68 +1,86 @@
-# X extension: badges, call detection and trade handoff
+# X extension
 
-The extension is the primary product surface. On x.com it adds:
+The Chrome extension (Manifest V3, version 0.12.4) is where most people use Xtrading. It reads posts on x.com, shows a trade card under the ones it can route, shows who is behind the call, and lets the user sign a trade without leaving X. Architecture diagrams for everything below: [Technical overview](architecture.md#the-x-extension).
 
-1. **Inline spot cards** under supported trading calls: ticker and live book price, expanding into Buy/Sell amounts, explicit testnet/mainnet choice and secure wallet review. Unknown addresses and explicit perp calls retain a details entry; address-only mentions are not scored calls.
-2. **A profile-header card** on X profile pages with separate recorded binding, refundable stake, detected-call count and pending score; it links to the creator dashboard. Untracked accounts show missing evidence honestly.
-3. **Expandable creator evidence**, separate from the swap form: linked account, call count/performance, sourced Nansen observations and creator dashboard. Details for unsupported/perp routes open inside the post rather than a fixed sidebar.
-4. **Expand calls & wallet activity** on the profile card: ongoing registered calls and indexed Kuru swaps. Creator-specific Perpl positions are not shown yet; orders already trade the creator's own wallet account.
-5. **Optional viewed-follow sync** into Watchlist using local extension storage. It observes profiles and visible rows in your own following list, with no paid X following API. Opt in on the Watchlist page; it records only follows you view, never cookies or tokens.
+## What it adds to X
 
-Ordinary posts receive no trade cards. Bound authors can show a quiet identity badge; a badge does not establish performance or unique humanity. Profile evidence refreshes every minute while the tab is visible; expanded evidence loads when opened.
+**Under posts**
 
-Signing never happens in the extension. Spot cards open `/trade/inline` in a compact secure wallet window with the route, amount and explicit chain prefilled. The user reviews balances, gas, minimum received and any selected creator fee before approving. Perp review still uses the dashboard.
+| Card | When it appears | What it does |
+|---|---|---|
+| Kuru swap card | X shows its ticker card for MON, ETH or BTC, the post has a supported cashtag, or the post is classified as a spot call | Live Kuru price, Buy or Sell, amount, network choice (mainnet selected, testnet available), creator fee line, then signing |
+| Perpl tab or perp card | The post explicitly says long, short, leverage or perp, and Perpl has an open market for the asset | Long or short ticket with leverage, size or USD amount, slippage, estimated margin, fee and liquidation price. Testnet by default; mainnet (real AUSD) when picked and enabled on the server |
+| Call check | Any classified call | What the post says, the creator's record and tier, and Nansen's wallet check of the creator |
+| Fake-token warning | The post shares a token contract | Nansen's verdict on the contract, for example "The post says PEPE, but this isn't PEPE's contract" |
+| Flagged-token card | The post names a token by contract and there is nothing safe to route | Nansen's verdict only. Nothing can be bought. |
+| Creator badge | The author has bound their X account to a wallet | A small mark next to their name. It means the account is bound, not that the calls are good. |
 
-Creator fees require opt-in payout registration and server enablement. Eligible mainnet buys offer 0.5% of bought-token output to the registered creator; testnet and ordinary fee-disabled swaps charge no creator fee. Identity control, call performance and actual wallet returns remain distinct. Source attribution is browser-supplied. Version 0.7.0 has automated expiry, stale-response, amount, fee-output and X-rerender coverage; real-X validation still needs Chrome reload.
+Ordinary posts get nothing. One card per post: a card drawn from a cashtag is upgraded in place when the classification arrives.
 
-## Flow
+**On profiles**
+
+- A creator card: binding, tier, red flags and recent registered calls.
+- Save to watchlist. The website's Watchlist page reads the saved handles through the app bridge.
+- Optional follow sync. With opt-in on the Watchlist page, it records which accounts you follow as you scroll your own following list. It's stored locally in the extension and never reads X cookies or calls X's paid APIs.
+
+**In the toolbar popup:** the app it's connected to and which providers are live (`/api/health`).
+
+## Signing a trade
+
+Nothing in the extension holds a key or a session. Each transaction is confirmed by the user in their own wallet.
+
+| User has | Spot (Kuru) | Perp (Perpl) |
+|---|---|---|
+| MetaMask or Rabby in the browser | Signed on X. The card builds the exact Kuru step (approval, deposit or swap), simulates it for the minimum output, and the wallet signs it. A registered creator's fee is paid inside the same mainnet buy through Kuru Flow. | Signed on X. The service worker asks `/api/extension/perp/prepare` for the steps, the wallet signs each one, and `/api/extension/perp/confirm` reads the fill from the receipt. |
+| No browser wallet | Opens the compact Xtrading window (`/trade/inline`), where the Privy wallet signs | Opens `/trade/perp` on the same network, where the Privy wallet signs |
+
+The wallet must be on the right network; the card asks it to switch first.
+
+**Creator fees.** On mainnet buys from a creator who registered a payout wallet, the card shows the creator's cut (0.1%, 0.5%, 1% or 2% by tier) and the wallet it goes to. The buyer can untick it. Testnet trades and sells never carry a fee.
+
+## How data flows
 
 ```
-X post → content script → service worker → POST /api/signals/classify
-       → signal (Groq or rules) + deterministic route (Kuru spot / Perpl perp / unavailable)
-Trade ▸ → GET /api/creators/:handle/insights?asset&direction → evidence + reputation + Nansen check
-       → app /dashboard/trade?instrument=…&side=…&postId=…&handle=… → review → wallet / Perpl order
+X post ─▶ content script ─▶ service worker ─▶ POST /api/signals/classify
+                                               └▶ signal (Groq or rules) + route (Kuru spot, Perpl perp or unavailable)
+card opens ─▶ /api/markets/quote, /api/markets, /api/creators/:handle/payout
+call check ─▶ /api/creators/:handle/insights, /reputation, /calls, /overview
+signing    ─▶ wallet bridge ─▶ MetaMask or Rabby   (or the Xtrading window ─▶ Privy)
 ```
 
-## Provider modes
+The content script never calls the API itself. The service worker accepts a fixed set of message types only from x.com and twitter.com tabs, validates every response with the shared schemas, runs at most four requests at a time, deduplicates and caches them, and sends no cookies or tokens.
 
-| Provider | Key(s) | Live | Without keys |
+The wallet bridge runs in X's page, where wallets inject `window.ethereum`, and forwards only these methods: `eth_requestAccounts`, `eth_accounts`, `eth_chainId`, `wallet_switchEthereumChain`, `wallet_addEthereumChain`, `eth_call`, `eth_getBalance`, `eth_sendTransaction` and `eth_getTransactionReceipt`.
+
+## Rules that keep it honest
+
+- **The model extracts, code routes.** A perp route needs explicit perp wording in the post, whatever the model says. Bearish wording alone becomes a spot sell, never a short.
+- **No substitution.** A post that names a contract address is never routed to a ticker market. An asset with no configured market shows as not tradable.
+- **Detection isn't scoring.** Detected calls feed the terminal and the call check. Only calls a creator registers count toward tiers ([Technical overview](architecture.md#calls-scoring-and-reputation)).
+- **Stored posts are verified.** A classified post is saved only when X's public embed confirms the post exists, the handle wrote it and it says the captured text.
+- **Nansen findings are observations.** A sale isn't proof of bad faith, and one wallet never covers all of someone's activity. Missing or failed checks are shown as missing, never as clean.
+- **Untrusted text** is rendered with `textContent` inside shadow roots. Responses for a post that X has since recycled are discarded.
+
+## Providers
+
+| Provider | Server setting | With it | Without it |
 |---|---|---|---|
-| Groq (call extraction) | `GROQ_API_KEY`, optional `GROQ_MODEL` (default `openai/gpt-oss-120b`, strict JSON-schema output, temperature 0) | Structured-output extraction | Deterministic rules extractor, labelled `RULES` / "rule-extracted" |
-| Nansen | `NANSEN_API_KEY` | `POST /api/v1/profiler/dex-trades` for the bound wallet on Monad mainnet, 30 days | Deterministic demo finding labelled `DEMO DATA`; never stored |
-| Perpl | none beyond `MONAD_RPC_URL` | The user's own wallet signs `execOrder` on Perpl's testnet Exchange (IOC, limit at mark ± slippage) for its own exchange account; the server reads the result from the receipt | — (the server holds no Perpl key) |
-| Kuru | none beyond RPC | Existing live testnet simulation and Privy-signed transactions | — |
+| Groq | `GROQ_API_KEY`, optional `GROQ_MODEL` (default `openai/gpt-oss-120b`) | Structured extraction, temperature 0 | Rules extractor, labelled as rule-extracted |
+| Nansen | `NANSEN_API_KEY` | Wallet and token checks on Monad mainnet and other covered chains | Labelled demo finding, never stored |
+| Kuru | `MONAD_RPC_URL`, plus `KURU_MAINNET_ENABLED` for server-prepared mainnet trades | Live books and simulated quotes | Unavailable |
+| Perpl | `MONAD_RPC_URL` | Perpl context and the user's own exchange account | Unavailable |
 
-`GET /api/health` reports `modes` (credential presence only). The extension popup shows them.
+## Limits
 
-## Rules that keep the output honest
-
-- Extraction is not advice. The model extracts; deterministic code routes. A perp route requires explicit perp/leverage/long/short wording in the post, even if the model says otherwise. Bearish language alone routes to a Kuru **spot sale of owned MON**, never a short.
-- No venue substitution: an asset without a configured Kuru spot market or an open Perpl market shows "No testnet market".
-- Reputation counts calls extracted from posts seen by extension users (`post_signals`, methodology `signal-v1`). The score stays pending until calls are evaluated against sourced expiry prices.
-- A Nansen sale is an observation, not proof of deception; one wallet never covers all activity. The bound wallet is a testnet embedded wallet, so live mainnet checks often return "no matching activity".
-- Spot (Kuru) and perp (Perpl) trades both open the Xtrading window and are signed there by the user's own Privy wallet (X, email or an external wallet like MetaMask). Trading needs a login, not an X binding; the server checks the wallet is linked to the logged-in Privy user, and the extension never signs, holds a session or injects a script into X. For Perpl the server returns unsigned steps (exact AUSD approval, account opening or top-up when needed, then `execOrder`) with caps from `PERPL_MAX_LEVERAGE` and `PERPL_MAX_SIZE`; the result is read from the transaction's events and must come from the wallet that placed it. The X binding stays for creators (payouts, registered calls, verified identity, Nansen wallet check).
-
-## Limits and protections
-
-- `POST /api/signals/classify`: public, 90 requests/min per client, body ≤ 8 KB, text ≤ 2000 chars, up to four validated X media URLs, global LLM budget 120 calls/min (overflow falls back to rules), cached by post ID + text hash.
-- Provider requests accept messages only from x.com/twitter.com tabs, cap concurrency at 4, deduplicate requests and send no cookies or tokens. The local following bridge accepts only the configured app origin's Watchlist page.
-- Untrusted post text is rendered with `textContent` only and isolated in shadow roots.
-- Delayed classification responses are discarded if X has recycled the post. Missing or invalid classification produces no injected UI.
-
-Eleven extension UI cases cover ordinary posts, click-only drawers and expansion, profile records, navigation during evidence reads, invalid/mismatched responses, recycled posts, address-only references and separate trade review links. Two media tests exclude quoted-post images and avatars. Five follow-observation and three storage tests cover scoping, opt-in, isolation and clearing. Extension 0.4.0 profile expansion and opt-in following-list sync were verified on real X against the production backend on 12 October 2026. Wider feed/navigation coverage, live account switching and unfollow checks remain.
-
-## Post images and token references (0.5.0)
-
-The extension captures original-post photo URLs when it observes a detected call or an explicit address mention. The drawer and expanded creator dashboard show those attachments, full address references and a canonical **View post** link. These are browser-submitted observations, not authenticated X evidence. Old records acquire attachments only when observed again; changed text cannot overwrite a previous text-hash record.
-
-The dashboard's optional **Read image text** uses Tesseract.js in the browser. It downloads the OCR engine/language data on first use and requires no paid image API. Results remain unverified text; possible addresses must be checked against the original. OCR does not set entry/target/expiry, modify routes, or submit trades. Completely image-only posts are not automatically classified.
-
-Buy/sell links open review for explicitly configured Monad testnet markets; perp routes use long/short labels. Address-bearing posts require verified network/token mapping before execution and show unavailable trade buttons, including Solana/Pump.fun references. A ticker never substitutes for a different token address. Detected posts have no evaluated outcomes yet and do not represent a creator's actual positions.
+- `POST /api/signals/classify`: public, 90 requests a minute per client, body up to 8 KB, text up to 2,000 characters, up to four X media URLs. A global budget of 120 model calls a minute falls back to rules. Results are cached by post ID and text hash.
+- Detected calls only cover posts that Xtrading users have seen. Image-only posts aren't classified.
+- The spot card defaults to Kuru mainnet and builds trades in the browser, so it doesn't depend on the server's mainnet switch. Perp tickets default to testnet; mainnet needs `PERPL_MAINNET_ENABLED=true` on the server and has lower caps.
 
 ## Build and install
 
 ```sh
-pnpm --filter @call-my-bluff/extension build   # default origin http://localhost:3000
+pnpm --filter @call-my-bluff/extension build     # talks to http://localhost:3000
+pnpm --filter @call-my-bluff/extension package   # production build, writes apps/web/public/downloads/xtrading-extension.zip
 ```
 
-Load `apps/extension/dist` as an unpacked extension in `chrome://extensions`. Restart `pnpm dev` after adding keys or pulling schema changes, then run `pnpm db:migrate` for the `post_signals` table.
+Load `apps/extension/dist` as an unpacked extension at `chrome://extensions` with developer mode on. A build only talks to the origin it was built for. Code: [`apps/extension/src`](../apps/extension/src).

@@ -1,13 +1,23 @@
 import { type Address, getAddress, type Hex } from "viem";
 import { WalletError, walletRequest } from "./wallet";
 
-const MONAD_TESTNET = {
-  chainId: "0x279f",
-  chainName: "Monad Testnet",
-  nativeCurrency: { name: "Monad", symbol: "MON", decimals: 18 },
-  rpcUrls: ["https://testnet-rpc.monad.xyz"],
-  blockExplorerUrls: ["https://testnet.monadvision.com"],
-};
+const NETWORKS = {
+  10143: {
+    chainId: "0x279f",
+    chainName: "Monad Testnet",
+    nativeCurrency: { name: "Monad", symbol: "MON", decimals: 18 },
+    rpcUrls: ["https://testnet-rpc.monad.xyz"],
+    blockExplorerUrls: ["https://testnet.monadvision.com"],
+  },
+  143: {
+    chainId: "0x8f",
+    chainName: "Monad",
+    nativeCurrency: { name: "Monad", symbol: "MON", decimals: 18 },
+    rpcUrls: ["https://rpc.monad.xyz"],
+    blockExplorerUrls: ["https://monadvision.com"],
+  },
+} as const;
+export type PerplChainId = keyof typeof NETWORKS;
 
 export type PerplWalletStep = {
   kind: "approve" | "create-account" | "deposit" | "order";
@@ -16,19 +26,20 @@ export type PerplWalletStep = {
   data: Hex;
 };
 
-async function ensureMonadTestnet() {
-  if ((await walletRequest<string>("eth_chainId")) === MONAD_TESTNET.chainId)
-    return;
+/** Puts the wallet on the reviewed chain; never signs on any other. */
+async function ensureNetwork(chainId: PerplChainId) {
+  const network = NETWORKS[chainId];
+  if ((await walletRequest<string>("eth_chainId")) === network.chainId) return;
   try {
     await walletRequest("wallet_switchEthereumChain", [
-      { chainId: MONAD_TESTNET.chainId },
+      { chainId: network.chainId },
     ]);
   } catch (error) {
     if (!(error instanceof WalletError) || error.code !== 4902) throw error;
-    await walletRequest("wallet_addEthereumChain", [MONAD_TESTNET]);
+    await walletRequest("wallet_addEthereumChain", [network]);
   }
-  if ((await walletRequest<string>("eth_chainId")) !== MONAD_TESTNET.chainId)
-    throw new Error("Switch your wallet to Monad testnet.");
+  if ((await walletRequest<string>("eth_chainId")) !== network.chainId)
+    throw new Error(`Switch your wallet to ${network.chainName}.`);
 }
 
 async function sendAndWait(from: Address, step: PerplWalletStep) {
@@ -58,6 +69,7 @@ async function sendAndWait(from: Address, step: PerplWalletStep) {
  * wallet's own Perpl account and is read back against the binding.
  */
 export async function signPerplSteps(input: {
+  chainId: PerplChainId;
   wallet: string;
   steps: PerplWalletStep[];
   onStatus: (text: string) => void;
@@ -72,7 +84,7 @@ export async function signPerplSteps(input: {
       `Your browser wallet is ${from.slice(0, 6)}…${from.slice(-4)}, but your Xtrading wallet is ${bound.slice(0, 6)}…${bound.slice(-4)}. Switch accounts, or finish in the app.`,
     );
   input.onStatus("Checking network…");
-  await ensureMonadTestnet();
+  await ensureNetwork(input.chainId);
   let orderHash: Hex | null = null;
   for (const [index, step] of input.steps.entries()) {
     input.onStatus(

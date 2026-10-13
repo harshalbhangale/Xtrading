@@ -19,6 +19,7 @@ Crypto Twitter runs on calls. Someone posts "$ETH to 3k this week", thousands of
 
 ![Xtrading architecture: people, the Xtrading API, Privy wallet, off-chain data, Envio and Monad](docs/assets/diagrams/architecture.png)
 
+Every part in detail, with a diagram for each (extension, trade routing, Kuru, creator fees, Perpl, scoring, Envio, MCP, website, database): **[Technical overview](docs/architecture.md)**.
 
 ## What you can do
 
@@ -28,11 +29,11 @@ The extension, trader dashboard, creator studio and agent access in screenshots:
 
 - **One-click trades on X.** The Chrome extension adds a trade card to cashtags and ticker cards inside X. Pick an amount, approve in your wallet, and you're done. You never leave the post.
 - **Spot on Kuru.** MON, WETH and cbBTC against USDC on Kuru's order books on Monad. Quotes are simulated against the live book, so the minimum output you approve is what the chain will enforce.
-- **Perps on Perpl.** When a call is long or short, you can trade it as a perp on Perpl, with leverage and size caps.
+- **Perps on Perpl.** When a call is long or short, you can trade it as a perp on Perpl, with leverage and size caps. Testnet by default; mainnet with real AUSD when you pick it and the server enables it.
 
 ### Check the caller first
 
-- **Call record.** Creators register their calls. Each one is priced at the minute it was posted and scored at expiry, so a creator's hit rate and median return come from prices, not screenshots.
+- **Call record.** Creators register their calls within 15 minutes of posting, and the post has to state the asset and direction they register. Each call is priced at the minute it was posted and scored at expiry, so a creator's hit rate and median return come from prices, not screenshots.
 - **Red flags.** Xtrading keeps re-checking registered posts and flags any that stop being public. It also flags creators who trade against their own calls and creators who are wrong most of the time.
 - **Wallet check by Nansen.** For a creator's linked wallet, Nansen shows whether they actually bought what they told you to buy, or sold into it.
 - **Tiers that are earned.** Creators move from Verified to Pro, Max and Ultra as they build a record (for example, Ultra needs 30 scored calls, a 65% hit rate and a positive 7-day median).
@@ -127,6 +128,7 @@ Configuration, database setup, the indexer, contracts and deployment are covered
 | [`packages/database`](packages/database)         | Postgres schema and identity service                 |
 | [`services/indexer`](services/indexer)           | Envio HyperIndex config and handlers                 |
 | [`contracts`](contracts)                         | Foundry tests, including Kuru creator-fee fork tests |
+| [`docs`](docs/README.md)                         | Technical overview, product tour and feature notes   |
 
 ## What's next
 
@@ -136,4 +138,4 @@ Configuration, database setup, the indexer, contracts and deployment are covered
 
 ## Docs
 
-[All docs](docs/README.md) · [Presentation](docs/presentation/Xtrading-presentation.pptx) · [Product tour](docs/product-tour.md) · [Development](docs/development.md) · [X extension](docs/x-extension.md) · [Identity binding](docs/identity-binding.md) · [Envio demo](docs/envio-demo.md) · [Perpl exits](docs/perpl-exits.md)
+[All docs](docs/README.md) · [Technical overview](docs/architecture.md) · [Presentation](docs/presentation/Xtrading-presentation.pptx) · [Product tour](docs/product-tour.md) · [Development](docs/development.md) · [MCP server](docs/mcp.md) · [X extension](docs/x-extension.md) · [Identity binding](docs/identity-binding.md) · [Envio demo](docs/envio-demo.md) · [Perpl exits](docs/perpl-exits.md)
