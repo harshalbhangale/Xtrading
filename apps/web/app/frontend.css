@@ -1150,3 +1150,40 @@ p.term-resolution {
     position: static;
   }
 }
+
+/* Agent access: follow-and-take-profit prompt builder */
+.agent-builder {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.agent-builder label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.agent-builder input {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--raised, #131815);
+  color: var(--ink);
+  font: inherit;
+}
+.agent-prompt {
+  margin: 0 0 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0b0e0c;
+  color: var(--soft, #b8c2b7);
+  font: 12px / 1.6 var(--mono);
+  white-space: pre-wrap;
+}
+@media (max-width: 700px) {
+  .agent-builder {
+    grid-template-columns: 1fr;
+  }
+}
