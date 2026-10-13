@@ -25,7 +25,7 @@ import {
 } from "@call-my-bluff/integrations/calls";
 import { and, desc, eq, gt, sql } from "drizzle-orm";
 import { getAddress } from "viem";
-import { onchainCallId } from "./call-bond";
+import { onchainCallId } from "./call-settlement";
 import { getDatabase } from "./database";
 import { envioQuery } from "./envio";
 import { identityContext, requireX } from "./identity-http";

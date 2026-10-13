@@ -196,8 +196,7 @@ export default function ConfiguredIdentity() {
         </p>
       )}
       <p className="small-note">
-        Identity proof does not establish active stake, reputation or profitable
-        advice.
+        Identity proof does not establish reputation or profitable advice.
       </p>
       {!user?.twitter && (
         <button
