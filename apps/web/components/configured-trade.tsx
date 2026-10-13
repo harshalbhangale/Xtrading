@@ -64,7 +64,13 @@ const stepTitle = {
 const units = (value: string | null, decimals: number, symbol: string) =>
   value === null ? "—" : `${formatUnits(BigInt(value), decimals)} ${symbol}`;
 
-export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
+export default function ConfiguredTrade({
+  chainId,
+  initialParams,
+}: {
+  chainId: 10143 | 143;
+  initialParams?: string;
+}) {
   const mainnet = chainId === 143;
   const network = kuruNetwork(chainId);
   const explorer = mainnet
@@ -100,7 +106,7 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
   owner.current = user?.id;
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(initialParams ?? window.location.search);
     const handle = params.get("handle");
     let cancelled = false;
     if (handle && /^[a-zA-Z0-9_]{1,15}$/.test(handle)) {
@@ -185,7 +191,7 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
       cancelled = true;
       document.documentElement.classList.remove("popup-mode");
     };
-  }, []);
+  }, [initialParams]);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => {

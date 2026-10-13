@@ -13,7 +13,7 @@ export default function PortfolioPage() {
     <>
       <PageHeading
         title="Portfolio"
-        description="Your confirmed Kuru fills, each linked to its transaction and the post that prompted it. Current balances are on the Trade page."
+        description="Swaps your wallet confirmed, with the transaction and the post that prompted it. Balances stay on the trade screen."
       />
       <Panel title="Confirmed fills">
         <ActivityControl view="fills" />

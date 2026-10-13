@@ -44,8 +44,8 @@ export default function ProfilePage() {
         <ActionCard
           href="/dashboard/faucet"
           icon="faucet"
-          title="Get test funds"
-          description="Testnet AUSD for Perpl"
+          title="Perp test funds"
+          description="Test AUSD for Perpl only. Mainnet spot does not use this."
         />
       </div>
       <div className="dashboard-two-column">

@@ -78,7 +78,11 @@ type Result = {
   message: string;
 };
 
-export default function ConfiguredPerpTrade() {
+export default function ConfiguredPerpTrade({
+  initialParams,
+}: {
+  initialParams?: string;
+} = {}) {
   const { ready, authenticated, user, login, getAccessToken } = usePrivy();
   const [marketId, setMarketId] = useState("");
   const [side, setSide] = useState<"long" | "short">("long");
@@ -99,7 +103,7 @@ export default function ConfiguredPerpTrade() {
   const owner = useRef(user?.id);
   owner.current = user?.id;
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(initialParams ?? window.location.search);
     const market = params.get("marketId"),
       requested = params.get("side"),
       source = params.get("postId"),
@@ -112,7 +116,7 @@ export default function ConfiguredPerpTrade() {
     if (lev && /^[0-9]{1,2}$/.test(lev)) setLeverage(lev);
     if (amount && /^[0-9]{1,12}(\.[0-9]{1,18})?$/.test(amount)) setSize(amount);
     if (bps && /^[0-9]{1,3}$/.test(bps)) setSlippage(bps);
-  }, []);
+  }, [initialParams]);
   useEffect(() => {
     fetch("/api/markets", { cache: "no-store" })
       .then((r) => r.json())

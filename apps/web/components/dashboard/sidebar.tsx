@@ -3,10 +3,9 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Brand } from "../brand";
 import { Icon, type IconName } from "./icons";
-import { NetworkSwitch } from "./network-switch";
 
 type Item = { href: string; label: string; icon: IconName };
 
@@ -14,12 +13,9 @@ const navigation: Record<"user" | "creator", Item[]> = {
   user: [
     { href: "/dashboard", label: "Terminal", icon: "activity" },
     { href: "/dashboard/profile", label: "Profile", icon: "overview" },
-    { href: "/dashboard/trade", label: "Trade", icon: "trade" },
     { href: "/dashboard/portfolio", label: "Portfolio", icon: "portfolio" },
-    { href: "/dashboard/activity", label: "Activity", icon: "activity" },
     { href: "/dashboard/watchlist", label: "Watchlist", icon: "watchlist" },
     { href: "/creators", label: "Creators", icon: "creators" },
-    { href: "/dashboard/faucet", label: "Test funds", icon: "faucet" },
   ],
   creator: [
     { href: "/creator", label: "Overview", icon: "overview" },
@@ -31,10 +27,8 @@ const navigation: Record<"user" | "creator", Item[]> = {
 };
 
 const tools: Item[] = [
-  { href: "/dashboard/onchain", label: "Onchain evidence", icon: "activity" },
   { href: "/extension", label: "X extension", icon: "extension" },
   { href: "/integrations", label: "Agent access", icon: "agent" },
-  { href: "/setup", label: "System status", icon: "status" },
 ];
 
 const SidebarAccount = dynamic(() => import("./sidebar-account"), {
@@ -121,18 +115,16 @@ export function Sidebar({ audience }: { audience: "user" | "creator" }) {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <p className="sidebar-label">Network</p>
-          <Suspense fallback={null}>
-            <NetworkSwitch compact />
-          </Suspense>
+          <p className="account-meta">
+            Spot · Monad mainnet
+            <br />
+            Perps · Monad testnet
+          </p>
           {process.env.NEXT_PUBLIC_PRIVY_APP_ID ? (
             <SidebarAccount />
           ) : (
             <div className="account-card">
               <p className="account-meta">Sign-in is not configured.</p>
-              <Link className="text-link" href="/setup">
-                System status
-              </Link>
             </div>
           )}
         </div>

@@ -2,13 +2,14 @@
 import { identityStatusSchema, type PostSignal } from "@call-my-bluff/domain";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { bridge as readFollowing } from "./browser-following";
 import {
   extensionWatchlist,
   readLocalHandles,
   storageKey,
 } from "./dashboard/watchlist";
+import TerminalTradeModal from "./terminal-trade-modal";
 
 type Item = {
   signal: PostSignal;
@@ -128,6 +129,7 @@ export default function ConfiguredTerminal() {
   const [status, setStatus] = useState<"live" | "error">("live");
   const [sidebar, setSidebar] = useState<Sidebar | null>(null);
   const [notice, setNotice] = useState("");
+  const [trade, setTrade] = useState<string | null>(null);
   const [checks, setChecks] = useState<Record<string, string>>({});
 
   // Followed creators: saved watchlist (extension or this browser) plus follows observed on X.
@@ -271,271 +273,270 @@ export default function ConfiguredTerminal() {
   }
 
   return (
-    <div className="terminal">
-      <aside className="term-left">
-        <p className="term-live" data-status={status}>
-          <i /> {status === "live" ? "Live · polls every 15s" : "Reconnecting…"}
-        </p>
-        <label className="term-label" htmlFor="term-search">
-          Search feed
-        </label>
-        <input
-          id="term-search"
-          className="term-input"
-          placeholder="handle, $ticker, text"
-          maxLength={40}
-          value={q}
-          onChange={(e) => setQ(e.target.value.replace(/[^\w$@ .-]/g, ""))}
-        />
-        <p className="term-label">Source</p>
-        <div className="term-options">
+    <>
+      <div className="terminal">
+        <aside className="term-left">
           <button
             type="button"
-            aria-pressed={source === "following"}
-            disabled={!followed?.length}
-            onClick={() => setSource("following")}
+            className="button"
+            onClick={() =>
+              setTrade("/dashboard/trade?market=MON&instrument=spot")
+            }
           >
-            Following{followed ? ` · ${followed.length}` : ""}
+            Trade on Monad
           </button>
-          <button
-            type="button"
-            aria-pressed={source === "everyone"}
-            onClick={() => setSource("everyone")}
-          >
-            Everyone
-          </button>
-        </div>
-        <p className="term-label">Filter</p>
-        <div className="term-options">
-          {(
-            [
-              ["all", "All posts"],
-              ["calls", "Calls only"],
-              ["high", "High conviction"],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={filter === value}
-              onClick={() => setFilter(value)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        {sidebar?.integrity && (
-          <dl className="term-integrity">
-            <dt>Posts indexed</dt>
-            <dd>{sidebar.integrity.indexed}</dd>
-            <dt>Calls detected</dt>
-            <dd>{sidebar.integrity.callsDetected}</dd>
-            <dt>Registered calls</dt>
-            <dd>{sidebar.integrity.registered}</dd>
-            <dt>Scored</dt>
-            <dd>{sidebar.integrity.scored}</dd>
-            {(["testnet", "mainnet"] as const).map((chain) => {
-              const status = sidebar.integrity?.indexer?.[chain];
-              return (
-                <Fragment key={chain}>
-                  <dt>Envio · {chain}</dt>
-                  <dd>
-                    {status
-                      ? `block ${status.block.toLocaleString("en-US")}${status.ready ? "" : " · syncing"}`
-                      : "unavailable"}
-                  </dd>
-                </Fragment>
-              );
-            })}
-          </dl>
-        )}
-        {followed !== null && followed.length === 0 && (
-          <p className="small-note">
-            Follow creators here, save them from X profiles with the extension,
-            or turn on following sync on the{" "}
-            <Link className="text-link" href="/dashboard/watchlist">
-              Watchlist
-            </Link>
-            .
+          <p className="term-live" data-status={status}>
+            <i />{" "}
+            {status === "live"
+              ? "Latest calls"
+              : "Feed temporarily unavailable"}
           </p>
-        )}
-      </aside>
-
-      <section className="term-feed" aria-live="polite">
-        <div className="term-feed-head">
-          <strong>
-            {source === "following" ? "Following" : "Everyone"} ·{" "}
-            {filter === "all"
-              ? "all posts"
-              : filter === "high"
-                ? "high conviction"
-                : "calls"}
-          </strong>
-          <span>{items ? `${items.length} posts` : "Loading…"}</span>
-        </div>
-        {notice && <p className="small-note">{notice}</p>}
-        {items?.length === 0 && (
-          <div className="dashboard-empty">
-            <h3>Nothing here yet.</h3>
-            <p>
-              Posts appear as extension users see them on X. Try “Everyone” or
-              “All posts”.
-            </p>
-          </div>
-        )}
-        {items?.map((item) => {
-          const s = item.signal;
-          const faded = fades.includes(s.handle);
-          const isFollowed = followed?.includes(s.handle);
-          return (
-            <article
-              key={s.postId}
-              className="term-card"
-              data-faded={faded || undefined}
+          <label className="term-label" htmlFor="term-search">
+            Search feed
+          </label>
+          <input
+            id="term-search"
+            className="term-input"
+            placeholder="handle, $ticker, text"
+            maxLength={40}
+            value={q}
+            onChange={(e) => setQ(e.target.value.replace(/[^\w$@ .-]/g, ""))}
+          />
+          <p className="term-label">Source</p>
+          <div className="term-options">
+            <button
+              type="button"
+              aria-pressed={source === "following"}
+              disabled={!followed?.length}
+              onClick={() => setSource("following")}
             >
-              <header>
-                <span className="term-avatar" aria-hidden="true">
-                  {s.handle.slice(0, 2).toUpperCase()}
-                </span>
-                <div>
-                  <Link href={`/creators/${s.handle}`}>@{s.handle}</Link>
-                  <span> · {age(item.ageMs)}</span>
-                  {faded && <span className="term-fading"> · fading</span>}
-                </div>
-                <nav>
-                  <button
-                    type="button"
-                    className="text-link"
-                    onClick={() => void reportDeleted(s.postId)}
-                  >
-                    ⚑ Report deleted
-                  </button>
-                  <a
-                    className="text-link"
-                    href={`https://x.com/${s.handle}/status/${s.postId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Original ↗
-                  </a>
-                </nav>
-              </header>
-              {item.removed && (
-                <p className="term-removed">
-                  This registered call is no longer public on X.
-                </p>
-              )}
-              <p className="term-text">{s.summary || "(no text)"}</p>
-              <div className="term-chips">
-                {s.instrument && <span>{s.instrument.toUpperCase()}</span>}
-                {s.asset && (
-                  <span
-                    className={
-                      s.direction === "bullish"
-                        ? "up"
-                        : s.direction === "bearish"
-                          ? "down"
-                          : ""
-                    }
-                  >
-                    ${s.asset}{" "}
-                    {s.direction === "bullish"
-                      ? "▲ long"
-                      : s.direction === "bearish"
-                        ? "▼ short"
-                        : ""}
-                    {s.leverage ? ` · ${s.leverage}x` : ""}
-                  </span>
-                )}
-                <span>{s.confidence} confidence</span>
-                {!s.isCall && <span>not a call</span>}
-              </div>
-              <Resolution item={item} />
-              {checks[s.postId] && (
-                <p className="small-note">{checks[s.postId]}</p>
-              )}
-              <footer>
-                <div className="term-vote">
-                  <button
-                    type="button"
-                    aria-pressed={Boolean(isFollowed)}
-                    onClick={() => void follow(s.handle)}
-                  >
-                    ▲ {isFollowed ? "Following" : "Follow"}
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={faded}
-                    onClick={() => fade(s.handle)}
-                  >
-                    ▼ {faded ? "Fading" : "Fade"}
-                  </button>
-                </div>
-                {item.trade.buy && (
-                  <Link className="button" href={item.trade.buy}>
-                    Trade ${s.asset}
-                  </Link>
-                )}
-              </footer>
-            </article>
-          );
-        })}
-      </section>
-
-      <aside className="term-right">
-        <section>
-          <p className="term-label">Who to follow or fade</p>
-          {!sidebar?.rail?.length ? (
+              Following{followed ? ` · ${followed.length}` : ""}
+            </button>
+            <button
+              type="button"
+              aria-pressed={source === "everyone"}
+              onClick={() => setSource("everyone")}
+            >
+              Everyone
+            </button>
+          </div>
+          <p className="term-label">Filter</p>
+          <div className="term-options">
+            {(
+              [
+                ["all", "All posts"],
+                ["calls", "Calls only"],
+                ["high", "High conviction"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={filter === value}
+                onClick={() => setFilter(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {followed !== null && followed.length === 0 && (
             <p className="small-note">
-              Verdicts appear for creators in this feed with scored calls.
+              Follow creators here, save them from X profiles with the
+              extension, or turn on following sync on the{" "}
+              <Link className="text-link" href="/dashboard/watchlist">
+                Watchlist
+              </Link>
+              .
             </p>
-          ) : (
-            <ul className="term-rail">
-              {sidebar.rail.map((r) => (
-                <li key={r.handle}>
-                  <Link href={`/creators/${r.handle}`}>@{r.handle}</Link>
-                  <span className={`term-verdict term-${r.verdict}`}>
-                    {r.verdict === "unscored"
-                      ? "unscored"
-                      : r.medianBps !== null
-                        ? pct(r.medianBps)
-                        : "—"}
+          )}
+        </aside>
+
+        <section className="term-feed" aria-live="polite">
+          <div className="term-feed-head">
+            <strong>
+              {source === "following" ? "Following" : "Everyone"} ·{" "}
+              {filter === "all"
+                ? "all posts"
+                : filter === "high"
+                  ? "high conviction"
+                  : "calls"}
+            </strong>
+            <span>{items ? `${items.length} posts` : "Loading…"}</span>
+          </div>
+          {notice && <p className="small-note">{notice}</p>}
+          {items?.length === 0 && (
+            <div className="dashboard-empty">
+              <h3>Nothing here yet.</h3>
+              <p>
+                Posts appear as extension users see them on X. Try “Everyone” or
+                “All posts”.
+              </p>
+            </div>
+          )}
+          {items?.map((item) => {
+            const s = item.signal;
+            const faded = fades.includes(s.handle);
+            const isFollowed = followed?.includes(s.handle);
+            return (
+              <article
+                key={s.postId}
+                className="term-card"
+                data-faded={faded || undefined}
+              >
+                <header>
+                  <span className="term-avatar" aria-hidden="true">
+                    {s.handle.slice(0, 2).toUpperCase()}
                   </span>
-                  <small>
-                    {r.scored
-                      ? `${r.hits}/${r.scored} right · ${r.verdict}${r.source === "detected" ? " · detected, since post" : ""}`
-                      : "no scored calls"}
-                    {r.flags ? ` · ⚑ ${r.flags}` : ""}
-                  </small>
-                </li>
-              ))}
-            </ul>
-          )}
+                  <div>
+                    <Link href={`/creators/${s.handle}`}>@{s.handle}</Link>
+                    <span> · {age(item.ageMs)}</span>
+                    {faded && <span className="term-fading"> · fading</span>}
+                  </div>
+                  <nav>
+                    <button
+                      type="button"
+                      className="text-link"
+                      onClick={() => void reportDeleted(s.postId)}
+                    >
+                      ⚑ Report deleted
+                    </button>
+                    <a
+                      className="text-link"
+                      href={`https://x.com/${s.handle}/status/${s.postId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Original ↗
+                    </a>
+                  </nav>
+                </header>
+                {item.removed && (
+                  <p className="term-removed">
+                    This registered call is no longer public on X.
+                  </p>
+                )}
+                <p className="term-text">
+                  {s.capturedText || s.summary || "(no text)"}
+                </p>
+                <div className="term-chips">
+                  {s.instrument && <span>{s.instrument.toUpperCase()}</span>}
+                  {s.asset && (
+                    <span
+                      className={
+                        s.direction === "bullish"
+                          ? "up"
+                          : s.direction === "bearish"
+                            ? "down"
+                            : ""
+                      }
+                    >
+                      ${s.asset}{" "}
+                      {s.direction === "bullish"
+                        ? "▲ long"
+                        : s.direction === "bearish"
+                          ? "▼ short"
+                          : ""}
+                      {s.leverage ? ` · ${s.leverage}x` : ""}
+                    </span>
+                  )}
+                  <span>{s.confidence} confidence</span>
+                  {!s.isCall && <span>not a call</span>}
+                </div>
+                <Resolution item={item} />
+                {checks[s.postId] && (
+                  <p className="small-note">{checks[s.postId]}</p>
+                )}
+                <footer>
+                  <div className="term-vote">
+                    <button
+                      type="button"
+                      aria-pressed={Boolean(isFollowed)}
+                      onClick={() => void follow(s.handle)}
+                    >
+                      ▲ {isFollowed ? "Following" : "Follow"}
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={faded}
+                      onClick={() => fade(s.handle)}
+                    >
+                      ▼ {faded ? "Fading" : "Fade"}
+                    </button>
+                  </div>
+                  {item.trade.buy && (
+                    <button
+                      type="button"
+                      className="button"
+                      onClick={() => setTrade(item.trade.buy)}
+                    >
+                      Trade ${s.asset}
+                    </button>
+                  )}
+                </footer>
+              </article>
+            );
+          })}
         </section>
-        <section>
-          <p className="term-label">Trending tickers · 7d</p>
-          {!sidebar?.trending?.length ? (
-            <p className="small-note">No calls detected this week.</p>
-          ) : (
-            <ol className="term-trending">
-              {sidebar.trending.map((t) => (
-                <li key={t.asset}>
-                  <strong>${t.asset}</strong>
-                  <span className={`term-bias term-${t.bias}`}>{t.bias}</span>
-                  <small>
-                    {t.calls} {t.calls === 1 ? "call" : "calls"}
-                  </small>
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
-        <p className="small-note">
-          Follow/fade uses the median move of a creator&apos;s registered calls,
-          or, when they have none, of calls detected in their posts priced from
-          the minute they were posted. Only registered calls count toward tiers.
-        </p>
-      </aside>
-    </div>
+
+        <aside className="term-right">
+          <section>
+            <p className="term-label">Who to follow or fade</p>
+            {!sidebar?.rail?.length ? (
+              <p className="small-note">
+                Verdicts appear for creators in this feed with scored calls.
+              </p>
+            ) : (
+              <ul className="term-rail">
+                {sidebar.rail.map((r) => (
+                  <li key={r.handle}>
+                    <Link href={`/creators/${r.handle}`}>@{r.handle}</Link>
+                    <span className={`term-verdict term-${r.verdict}`}>
+                      {r.verdict === "unscored"
+                        ? "unscored"
+                        : r.medianBps !== null
+                          ? pct(r.medianBps)
+                          : "—"}
+                    </span>
+                    <small>
+                      {r.scored
+                        ? `${r.hits}/${r.scored} right · ${r.verdict}${r.source === "detected" ? " · detected, since post" : ""}`
+                        : "no scored calls"}
+                      {r.flags ? ` · ⚑ ${r.flags}` : ""}
+                    </small>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+          <section>
+            <p className="term-label">Trending tickers · 7d</p>
+            {!sidebar?.trending?.length ? (
+              <p className="small-note">No calls detected this week.</p>
+            ) : (
+              <ol className="term-trending">
+                {sidebar.trending.map((t) => (
+                  <li key={t.asset}>
+                    <strong>${t.asset}</strong>
+                    <span className={`term-bias term-${t.bias}`}>{t.bias}</span>
+                    <small>
+                      {t.calls} {t.calls === 1 ? "call" : "calls"}
+                    </small>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+          <p className="small-note">
+            Follow/fade uses the median move of a creator&apos;s registered
+            calls, or, when they have none, of calls detected in their posts
+            priced from the minute they were posted. Only registered calls count
+            toward tiers.
+          </p>
+        </aside>
+      </div>
+      {trade && (
+        <TerminalTradeModal href={trade} onClose={() => setTrade(null)} />
+      )}
+    </>
   );
 }

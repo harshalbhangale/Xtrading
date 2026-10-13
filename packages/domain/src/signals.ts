@@ -56,6 +56,7 @@ export const postSignalSchema = z.object({
   leverage: z.number().int().min(1).max(200).nullable(),
   horizon: z.string().max(60).nullable(),
   summary: z.string().max(280),
+  capturedText: z.string().max(2000).optional(),
   source: z.enum(["llm", "heuristic"]),
   model: z.string().max(64).nullable(),
   methodologyVersion: z.literal(signalMethodologyVersion),

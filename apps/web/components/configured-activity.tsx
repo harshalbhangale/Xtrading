@@ -91,14 +91,14 @@ export default function ConfiguredActivity({
     );
 
   const status =
-    activity.status === "current"
-      ? `Envio index current at block ${activity.progressBlock} (chain head ${activity.headBlock}, unfinalized).`
-      : activity.status === "lagging"
-        ? `Envio index is behind: block ${activity.progressBlock} of ${activity.headBlock}. Recent fills may be missing.`
-        : "Envio index unavailable. Fills cannot be shown right now; this is not an empty history.";
+    activity.status === "lagging"
+      ? `Recent fills may be missing. The index is behind at block ${activity.progressBlock} of ${activity.headBlock}.`
+      : activity.status === "unavailable"
+        ? "Fill history is unavailable right now. This is not an empty wallet."
+        : null;
   return (
     <>
-      <p className="small-note">{status}</p>
+      {status && <p className="small-note">{status}</p>}
       {activity.swaps.length === 0 ? (
         <div className="dashboard-empty">
           <h3>No confirmed fills yet.</h3>

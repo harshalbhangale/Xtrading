@@ -84,7 +84,7 @@ async function persist(signal: PostSignal, textHash: string) {
       // First classification wins; an edited post with new text is re-keyed by hash on read.
       .onConflictDoNothing();
     // Enrich the same captured text with image metadata; never replace changed text.
-    if (signal.images.length)
+    if (signal.images.length || signal.capturedText)
       await database.db
         .update(postSignals)
         .set({ signal })
@@ -122,6 +122,7 @@ export async function classifyPost(input: PostSignalRequest) {
   }
   signal = {
     ...signal,
+    capturedText: input.text,
     images: input.images.length ? input.images : signal.images,
     tokenReferences: tokenReferences(input.text),
     tokenMention:

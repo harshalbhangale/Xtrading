@@ -20,13 +20,13 @@ export default async function TradePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  // An explicit URL choice wins; otherwise the dashboard switch; else testnet.
+  // An explicit URL choice wins; otherwise the dashboard switch; else mainnet.
   const saved = (await cookies()).get("xt_network")?.value;
   const network =
     params.chainId === undefined
-      ? saved === "143"
-        ? "143"
-        : "10143"
+      ? saved === "10143"
+        ? "10143"
+        : "143"
       : (one(params.chainId) ?? "invalid");
   const mainnetEnabled = process.env.KURU_MAINNET_ENABLED === "true";
   const supportedNetwork = network === "10143" || network === "143";

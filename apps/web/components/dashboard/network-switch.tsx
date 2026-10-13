@@ -7,18 +7,18 @@ type Network = "10143" | "143";
 
 function readCookie(): Network {
   const match = document.cookie.match(/(?:^|;\s*)xt_network=(10143|143)\b/);
-  return (match?.[1] as Network | undefined) ?? "10143";
+  return (match?.[1] as Network | undefined) ?? "143";
 }
 
 /**
  * Explicit testnet/mainnet choice for trading, remembered per browser.
- * Testnet is the default; mainnet is never selected implicitly.
+ * Mainnet is the product default; the selected network is always displayed.
  */
 export function NetworkSwitch({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const [network, setNetwork] = useState<Network>("10143");
+  const [network, setNetwork] = useState<Network>("143");
   const fromUrl = params.get("chainId");
   // biome-ignore lint/correctness/useExhaustiveDependencies: Re-read after navigation.
   useEffect(() => {
