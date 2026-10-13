@@ -9,6 +9,7 @@ import { callInsights } from "./call-insights";
 import { appOrigin } from "./config";
 import { el, safeLink, send } from "./dom";
 import { perpTicket } from "./perp-ticket";
+import { riskLine } from "./risk-line";
 import { logo, tokenIcon } from "./swap-card";
 
 const names: Record<string, string> = {
@@ -104,7 +105,15 @@ export function perpCard(input: {
     // Build the ticket on first open; it fetches markets and session state.
     if (open && !mounted) {
       mounted = true;
+      const risk = riskLine({
+        postId: input.postId,
+        handle: signal.handle,
+        asset,
+        signal,
+      });
+      risk.load();
       panel.append(
+        risk.line,
         perpTicket(input.postId, signal, route),
         el(
           "footer",
