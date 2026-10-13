@@ -43,10 +43,7 @@ The extension, trader dashboard, creator studio and agent access in screenshots:
 - **Wallet check by Nansen.** For a creator's linked wallet, Nansen shows whether they actually bought what they told you to buy, or sold into it.
 - **Tiers that are earned.** Creators move from Verified to Pro, Max and Ultra as they build a record (for example, Ultra needs 30 scored calls, a 65% hit rate and a positive 7-day median).
 
-<p align="center">
-  <img src="docs/assets/screenshots/fake-token-flag.png" width="460" alt="Warning under a post that shills a fake PEPE contract" /><br />
-  <sub>A post shills "PEPE" with a contract that isn't PEPE. Nansen's warning appears right under it, before anyone clicks.</sub>
-</p>
+
 
 ### Get paid for good calls
 
