@@ -177,5 +177,26 @@ export const reputationSchema = z.object({
     )
     .max(10),
   status: z.enum(["ready", "unavailable"]),
+  // Detected calls priced from the post's timestamp to now (unregistered, unscored).
+  measured: z
+    .object({
+      count: z.number().int().nonnegative(),
+      inFavour: z.number().int().nonnegative(),
+      medianBps: z.number().int().nullable(),
+      items: z
+        .array(
+          z.object({
+            postId: postIdSchema,
+            asset: symbolSchema,
+            direction: z.enum(["bullish", "bearish"]),
+            entryPrice: z.string(),
+            nowPrice: z.string(),
+            moveBps: z.number().int(),
+            postedAt: z.iso.datetime(),
+          }),
+        )
+        .max(20),
+    })
+    .optional(),
 });
 export type Reputation = z.infer<typeof reputationSchema>;

@@ -4,7 +4,7 @@ import {
   type Reputation,
   watchlistSchema,
 } from "@call-my-bluff/domain";
-import { callStats, statTiles } from "./card-metrics";
+import { callStats, formatBps, statTiles } from "./card-metrics";
 import { appOrigin } from "./config";
 import { addProfileBadge } from "./creator-badge";
 import {
@@ -221,7 +221,7 @@ export async function scanProfile() {
     panel.set(`detected${index}`, {
       ...tile,
       kind: "stat",
-      group: "Detected on X · unverified",
+      group: "Detected on X · priced from post time, unregistered",
     });
   });
   panel.set("saiddid", checked);
@@ -292,13 +292,28 @@ function followButton(handle: string) {
 /** Counts from creator evidence seen by extension users. They are unverified and unscored. */
 function detectedTiles(reputation: Reputation) {
   if (reputation.status !== "ready" || !reputation.trackedCalls) return [];
-  return [
-    { label: "Detected", value: String(reputation.trackedCalls) },
+  const measured = reputation.measured;
+  const tiles: { label: string; value: string; tone?: "good" | "bad" }[] = [
+    { label: "Detected calls", value: String(reputation.trackedCalls) },
+  ];
+  if (measured?.count) {
+    tiles.push({
+      label: "Moved their way",
+      value: `${measured.inFavour}/${measured.count}`,
+      tone: measured.inFavour * 2 >= measured.count ? "good" : "bad",
+    });
+    if (measured.medianBps !== null)
+      tiles.push({
+        label: "Median since post",
+        value: formatBps(measured.medianBps),
+        tone: measured.medianBps >= 0 ? "good" : "bad",
+      });
+  }
+  tiles.push(
     { label: "Bullish", value: String(reputation.bullish) },
     { label: "Bearish", value: String(reputation.bearish) },
-    { label: "Perp", value: String(reputation.perpCalls) },
-    { label: "Scored", value: String(reputation.evaluated) },
-  ];
+  );
+  return tiles;
 }
 
 /** The latest detected calls, shown as observations. Unclassified fields say so. */

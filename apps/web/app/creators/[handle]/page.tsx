@@ -149,7 +149,7 @@ export default async function CreatorPage({
       {detected?.status === "ready" && detected.recent.length > 0 && (
         <Panel
           title="Calls detected in posts"
-          description="Extracted automatically from posts seen by extension users. Not registered by the creator and not evaluated."
+          description={`Extracted automatically from posts seen by extension users and priced from the minute they were posted to now, in the call's direction. Not registered by the creator.${detected.measured?.count ? ` ${detected.measured.inFavour} of ${detected.measured.count} moved their way.` : ""}`}
         >
           <div className="table-scroll">
             <table className="record-table">
@@ -159,6 +159,7 @@ export default async function CreatorPage({
                   <th scope="col">Asset / direction</th>
                   <th scope="col">Instrument</th>
                   <th scope="col">Detected</th>
+                  <th scope="col">Since post</th>
                 </tr>
               </thead>
               <tbody>
@@ -179,6 +180,24 @@ export default async function CreatorPage({
                     <td>{call.instrument}</td>
                     <td>
                       {call.classifiedAt.slice(0, 16).replace("T", " ")} UTC
+                    </td>
+                    <td>
+                      {(() => {
+                        const m = detected.measured?.items.find(
+                          (i) => i.postId === call.postId,
+                        );
+                        return m ? (
+                          <span
+                            className={`call-outcome call-${m.moveBps >= 0 ? "success" : "failure"}`}
+                          >
+                            {m.moveBps >= 0 ? "+" : "−"}
+                            {Math.abs(m.moveBps / 100).toFixed(2)}% · $
+                            {m.entryPrice} → ${m.nowPrice}
+                          </span>
+                        ) : (
+                          "—"
+                        );
+                      })()}
                     </td>
                   </tr>
                 ))}
