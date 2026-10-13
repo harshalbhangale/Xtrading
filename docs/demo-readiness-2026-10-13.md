@@ -69,4 +69,6 @@ The new authenticated `/api/trades/perp/account` route scopes data to the config
 
 Evidence: `contracts/deployments/perpl-testnet-evidence.json`. No new orders, deposits, withdrawals or position closes were sent during this integration work. These historical fills are not proof of a new trade from X. Closing positions and withdrawing collateral still require a reviewed flow and user approval.
 
-Before filming: confirm installed extension version, wallet access, payout/eligibility behavior, dashboard attribution, Nansen card and authenticated Perpl account display. Existing mainnet scripts are useful receipt evidence but not proof of the complete X UI flow.
+Authenticated UI verification completed in Chrome as **@xtradingnow** at [the testnet Perpl page](https://xtradingnow.xyz/dashboard/trade?instrument=perp&chainId=10143). The panel displayed account 1096, 99.145768 AUSD available, forwarding on, not frozen, ETH long 0.001 at 3x (0.840907 AUSD collateral), MON short 1 at 2x (0.012445 AUSD collateral), and both fill links. These matched the signed exchange reads. No new order was submitted during verification.
+
+Before filming: confirm installed extension version, buyer wallet access, payout/eligibility behavior, dashboard attribution and the Nansen card. Perpl's signed-in account display is now verified; reviewed close/withdraw flows remain. Existing mainnet scripts are useful receipt evidence but not proof of the complete X UI flow.
