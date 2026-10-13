@@ -79,7 +79,7 @@ External testnet contracts used: Kuru Spot V2 AccountCore [`0xdbaaDe7B42c95399bb
 | Kuru | Real scripted mainnet buy, sell and same-transaction creator payment; recorded testnet fill; live prices and book-history charts | Complete one trade from the actual X interface and confirm output, fee and history together |
 | Envio | Live HyperSync payment and bond-free settlement evidence; creator earnings fallback; HyperIndex testnet activity | Repair the hosted GitHub deployment connection for the newest HyperIndex handlers; this does not block the HyperSync demo |
 | Creator analytics | Call records, outcomes, sample sizes, tier calculation and repeated post-availability flags implemented | Implement verified realized-profit accounting and the five-call fee gate; missing posts must remain “not publicly available,” not assumed deleted |
-| Perpl | Testnet market/account reads, capped operator order review/submission and status routes implemented | Demonstrate an actual filled order and resulting position; general-user account onboarding and reduce-only exits remain |
+| Perpl | Signed testnet reads confirm account 1096, 99.145768 AUSD available, two fills and two open positions; both fill receipts succeeded. Authenticated account panel shows balances, positions and recent fills; review checks forwarding/frozen/collateral state | Rehearse the authenticated UI as @xtradingnow; general-user onboarding, reduce-only closes and withdrawal remain |
 | Nansen | Server-side wallet/token context integration and sourced coverage states implemented | Record a useful live insight for a supported mainnet wallet with real history |
 | Chainlink CRE | Hourly workflow source, tests and real testnet broadcast settlement | DON deployment and production forwarder configuration; broadcast simulation is not autonomous scheduling |
 | MCP | Live endpoint and public tool listing; authenticated unsigned trade preparation implemented | Demonstrate an authenticated agent flow; tools do not sign or submit trades |
@@ -88,7 +88,7 @@ External testnet contracts used: Kuru Spot V2 AccountCore [`0xdbaaDe7B42c95399bb
 
 1. **Fix creator fee eligibility.** No fees before five distinct correct calls with verified positive realized user profit after trading costs. Build entry/exit fill matching and call attribution, exclude self-trades, and invalidate orphaned evidence. The existing base fee and tier thresholds do not enforce this rule.
 2. **Finish the X → Kuru demo.** Confirm the installed extension, network, quote, explicit wallet approval, actual output, creator payment and dashboard record. Resolve the current default mismatch: dashboard starts on testnet, inline cards currently start on mainnet.
-3. **Complete sponsor demonstrations.** One real Perpl fill/position and one sourced Nansen mainnet finding. Keep unavailable evidence labelled.
+3. **Complete sponsor demonstrations.** Show the verified Perpl fills/positions in the authenticated UI and one useful sourced Nansen mainnet finding. Keep unavailable evidence labelled.
 4. **Activate autonomous CRE if deployment access permits.** Deploy the DON workflow and configure the approved forwarder. Keep the existing testnet broadcast clearly described if deployment remains unavailable.
 5. **Finish delivery.** Record the product and sponsor demos; document Kuru target users, actual usage, acquisition and roadmap. Repair the hosted HyperIndex connection separately. Document access to historical testnet deposits: the old staking UI was removed, but deployed contracts and any existing funds remain.
 
@@ -208,7 +208,7 @@ The script forks Monad testnet about three hours back (anvil dev account, port 8
 IDENTITY_TEST_DATABASE_URL=postgresql://cmb:cmb_local@localhost:5433/call_my_bluff pnpm check
 ```
 
-Latest `pnpm check` passed formatting, TypeScript, 171 application tests, 30 Foundry tests and web/extension builds. Six database tests and four optional fork tests were skipped without their explicit configuration; they are not counted as passes. Six database integration tests are skipped without a test database URL; CI provisions its own Postgres service. Mainnet fork suites require their explicit RPC variables and do not run as ordinary offline checks.
+Latest `pnpm check` passed formatting, TypeScript, 175 application tests, 30 Foundry tests and web/extension builds. Six database tests and four optional fork tests were skipped without their explicit configuration; they are not counted as passes. Six database integration tests are skipped without a test database URL; CI provisions its own Postgres service. Mainnet fork suites require their explicit RPC variables and do not run as ordinary offline checks.
 
 ## Developer documents
 

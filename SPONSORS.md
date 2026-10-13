@@ -17,7 +17,7 @@ Current evidence, verified 13 October 2026:
 - Privy: identity and wallet-binding flows implemented. Rehearse the exact demo account and wallet approval.
 - Envio: mainnet creator payments and testnet bond-free call outcomes are live through HyperSync and checked against receipts. HyperIndex supplies historical testnet activity. Repairing the hosted deployment connection is separate from this working feature.
 - Nansen: integration implemented; a useful sourced mainnet wallet finding still needs demonstration.
-- Perpl: testnet operator account/order routes implemented; a live fill and resulting position still need demonstration.
+- Perpl: signed API reads confirm account 1096 with two filled orders and two open positions; both testnet transaction receipts succeeded. Authenticated account panel is implemented. User-interface rehearsal and reviewed close/withdraw flows remain.
 - Chainlink CRE: real testnet broadcast settlement exists. DON deployment and production forwarder setup remain pending.
 
 Staking is removed. The approved creator fee rule requires five distinct correct calls with verified profitable user trades; current tier/base-fee logic does not enforce it yet. Creator payments, hypothetical call performance and realized user profit are separate evidence.

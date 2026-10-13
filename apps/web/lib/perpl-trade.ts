@@ -4,6 +4,10 @@ import {
   buildPerplOpenOrder,
   signPerplRequest,
 } from "@call-my-bluff/integrations/perpl";
+import {
+  perplWalletSchema,
+  projectPerplAccount,
+} from "@call-my-bluff/integrations/perpl-account";
 import { stakeUnits } from "@call-my-bluff/integrations/stake";
 import { z } from "zod";
 import { identityContext } from "./identity-http";
@@ -124,6 +128,19 @@ async function reviewed(
   };
 }
 
+async function operatorAccount(c: ReturnType<typeof config>) {
+  const value = perplWalletSchema.parse(
+    await signedGet(c, "/v1/trading/wallet"),
+  );
+  const account = value.as.find((a) => String(a.id) === c.accountId);
+  if (!account) throw new IdentityError("perpl_account_not_owned", 409);
+  if (account.fr) throw new IdentityError("perpl_account_frozen", 409);
+  if (!account.fw) throw new IdentityError("perpl_forwarding_disabled", 409);
+  if (BigInt(account.b) <= 0n)
+    throw new IdentityError("perpl_collateral_empty", 409);
+  return account;
+}
+
 export async function preparePerp(
   request: Request,
   input: z.infer<typeof perpRequestSchema>,
@@ -134,7 +151,11 @@ export async function preparePerp(
     input,
     context,
   );
+  const account = mode === "live" ? await operatorAccount(c) : null;
   return {
+    accountId: account?.id ?? null,
+    availableCollateral: account?.b ?? null,
+    collateralDecimals: market.collateral.decimals,
     status: "prepared" as const,
     venue: "Perpl" as const,
     instrument: "perp" as const,
@@ -179,7 +200,10 @@ export async function submitPerp(
     )
   )
     throw new IdentityError("duplicate_order", 409);
-  const requestId = Date.now();
+  const account = mode === "live" ? await operatorAccount(c) : null;
+  const requestId = Math.max(Date.now(), (account?.lfr ?? 0) + 1);
+  if (!Number.isSafeInteger(requestId))
+    throw new IdentityError("invalid_request_id");
   const order = buildPerplOpenOrder({
     marketId: market.marketId,
     accountId: mode === "live" ? c.accountId : "0",
@@ -377,5 +401,46 @@ export async function perpStatus(
         }
       : null,
     observedAt: new Date().toISOString(),
+  };
+}
+
+/** Operator-only, account-scoped exchange snapshot; independent of an order request ID. */
+export async function perpAccount(
+  request: Request,
+  context: Context = identityContext,
+) {
+  const { user, service, chainId } = await context(request);
+  if (chainId !== 10143) throw new IdentityError("trading_testnet_only", 409);
+  const binding = await service.current(user.privyUserId);
+  if (
+    !binding ||
+    binding.xUserId !== user.xAccount?.xUserId ||
+    !user.wallets.some(
+      (w) => w.toLowerCase() === binding.wallet.toLowerCase(),
+    ) ||
+    perplMode(binding.xUserId) !== "live"
+  )
+    throw new IdentityError("perpl_operator_only", 403);
+  const c = config();
+  const [wallet, positions, history, snapshot] = await Promise.all([
+    signedGet(c, "/v1/trading/wallet"),
+    signedGet(c, "/v1/trading/positions"),
+    signedGet(c, "/v1/trading/order-history?count=20"),
+    perplSnapshot(),
+  ]);
+  const state = projectPerplAccount(c.accountId, wallet, positions, history);
+  return {
+    ...state,
+    chainId: 10143,
+    collateralSymbol: "AUSD",
+    collateralDecimals: 6,
+    source: "Perpl testnet API",
+    observedAt: new Date().toISOString(),
+    markets: snapshot.markets.map((m) => ({
+      marketId: m.marketId,
+      symbol: m.symbol,
+      priceDecimals: m.priceDecimals,
+      sizeDecimals: m.sizeDecimals,
+    })),
   };
 }

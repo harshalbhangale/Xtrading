@@ -1,0 +1,65 @@
+{
+  "chainId": 10143,
+  "source": "Perpl signed testnet API",
+  "observedAt": "2026-10-13T08:07:33.104Z",
+  "accountId": 1096,
+  "wallet": "0x072ecc90fa0ac2292e760a57304a87ad6c32bc89",
+  "availableCollateral": "99145768",
+  "forwarding": true,
+  "frozen": false,
+  "lastRequestId": 1791838401646,
+  "positions": [
+    {
+      "marketId": 64,
+      "positionId": "4619400773633",
+      "side": "short",
+      "size": "1",
+      "entryPrice": "2487",
+      "collateral": "12445",
+      "leverageHundredths": 200
+    },
+    {
+      "marketId": 32,
+      "positionId": "4620147294209",
+      "side": "long",
+      "size": "1",
+      "entryPrice": "252272",
+      "collateral": "840907",
+      "leverageHundredths": 300
+    }
+  ],
+  "fills": [
+    {
+      "marketId": 32,
+      "requestId": 1791838401646,
+      "statusCode": 4,
+      "filledSize": "1",
+      "fillPrice": "252272",
+      "fee": "871",
+      "block": 70497853,
+      "transactionHash": "0x300226fd29539f6944c0fb519f9e4cfc2122d9497f0f975ef1fd33e3406000dc"
+    },
+    {
+      "marketId": 64,
+      "requestId": 1791834963743,
+      "statusCode": 4,
+      "filledSize": "1",
+      "fillPrice": "2487",
+      "fee": "9",
+      "block": 70486462,
+      "transactionHash": "0x5d61af92db20eafad6f29ac141bab6790c1794c2f389306896bd2f48366da7b2"
+    }
+  ],
+  "receiptChecks": [
+    {
+      "transactionHash": "0x300226fd29539f6944c0fb519f9e4cfc2122d9497f0f975ef1fd33e3406000dc",
+      "status": "success",
+      "block": "70497853"
+    },
+    {
+      "transactionHash": "0x5d61af92db20eafad6f29ac141bab6790c1794c2f389306896bd2f48366da7b2",
+      "status": "success",
+      "block": "70486462"
+    }
+  ]
+}

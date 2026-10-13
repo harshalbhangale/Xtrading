@@ -58,4 +58,15 @@ Useful next UI addition: a mainnet USDC context card showing top returned holder
 5. Explicitly switch to Perpl testnet. Sign in as @xtradingnow, confirm live operator mode and account 1096, review a small low-leverage order, then let the user confirm. Show an actual fill/position; accepted forwarding alone is insufficient.
 6. End on the dashboard. Describe CRE as a tested real testnet broadcast with autonomous deployment pending.
 
-Before filming: confirm installed extension version, wallet access, payout/eligibility behavior, dashboard attribution, Nansen card and one real Perpl filled order. Existing mainnet scripts are useful receipt evidence but not proof of the complete X UI flow.
+## Perpl integration update
+
+Signed API reads confirm two existing filled orders and two open positions on team account 1096. The ETH long used 3x leverage; the MON short used 2x. Both corresponding transactions succeeded:
+
+- [ETH fill](https://testnet.monadvision.com/tx/0x300226fd29539f6944c0fb519f9e4cfc2122d9497f0f975ef1fd33e3406000dc), block 70497853.
+- [MON fill](https://testnet.monadvision.com/tx/0x5d61af92db20eafad6f29ac141bab6790c1794c2f389306896bd2f48366da7b2), block 70486462.
+
+The new authenticated `/api/trades/perp/account` route scopes data to the configured team account and requires the bound operator. The Perpl page displays available AUSD, forwarding/frozen state, open positions, recent fills and explorer links. It does not rely on position request IDs: Perpl returned `rq: 0` for these open positions. Order review/submission checks account ownership, forwarding, frozen state and a nonzero available collateral balance. Request IDs advance beyond the account's last forwarded ID.
+
+Evidence: `contracts/deployments/perpl-testnet-evidence.json`. No new orders, deposits, withdrawals or position closes were sent during this integration work. These historical fills are not proof of a new trade from X. Closing positions and withdrawing collateral still require a reviewed flow and user approval.
+
+Before filming: confirm installed extension version, wallet access, payout/eligibility behavior, dashboard attribution, Nansen card and authenticated Perpl account display. Existing mainnet scripts are useful receipt evidence but not proof of the complete X UI flow.
