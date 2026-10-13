@@ -3,6 +3,7 @@ import type { z } from "zod";
 import { verifiedBadge } from "./badge";
 import { appOrigin } from "./config";
 import { el, send, shadowHost } from "./dom";
+import { flagChip, reputation, tierChip } from "./reputation";
 
 type Evidence = z.infer<typeof publicCreatorEvidenceSchema>;
 const rendered = new WeakMap<
@@ -115,6 +116,9 @@ export async function addPostBadge(article: HTMLElement, handle: string) {
   const request = begin(name, handle, "cmb-badge-host");
   if (!request) return;
   const value = await evidence(handle);
+  // Tiers and flags need registered calls, which need a binding.
+  const rep =
+    value?.identity.status === "bound" ? await reputation(handle) : null;
   if (!stillCurrent(name, request)) return;
   const { host, root } = shadowHost("cmb-badge-host");
   const chips: HTMLElement[] = [];
@@ -127,6 +131,7 @@ export async function addPostBadge(article: HTMLElement, handle: string) {
         tooltip: false,
       }),
     );
+  for (const chip of [tierChip(rep), flagChip(rep)]) if (chip) chips.push(chip);
   if (!chips.length) return;
   for (const chip of chips) chip.addEventListener("click", openRecord(handle));
   root.append(el("span", { class: "badge" }, ...chips));
@@ -153,6 +158,8 @@ export async function addProfileBadge(handle: string | null) {
   const value = await evidence(handle);
   if (!stillCurrent(name, request) || value?.identity.status !== "bound")
     return;
+  const rep = await reputation(handle);
+  if (!stillCurrent(name, request)) return;
   const { host, root } = shadowHost("cmb-profile-badge-host");
   host.dataset.handle = handle;
   const badge = verifiedBadge({
@@ -165,6 +172,10 @@ export async function addProfileBadge(handle: string | null) {
   badge.addEventListener("keydown", (event) => {
     if (event.key === "Enter") openRecord(handle)(event);
   });
-  root.append(badge);
+  const extras = [tierChip(rep), flagChip(rep)].filter(
+    (chip): chip is HTMLElement => chip !== null,
+  );
+  for (const chip of extras) chip.addEventListener("click", openRecord(handle));
+  root.append(el("span", { class: "badge" }, badge, ...extras));
   alignToName(host, insertAfterName(name, host));
 }

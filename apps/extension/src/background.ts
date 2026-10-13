@@ -2,6 +2,7 @@ import {
   creatorOverviewSchema,
   inlineQuoteRequestSchema,
   inlineQuoteSchema,
+  kolReputationSchema,
   normalizeHandle,
   postAvailabilitySchema,
   postSignalRequestSchema,
@@ -134,6 +135,20 @@ function handleMessage(
     return cached(`overview:${handle}`, 30000, async () => {
       const value = creatorOverviewSchema.parse(
         await getJson(`/api/creators/${handle}/overview`),
+      );
+      if (value.handle !== handle) throw new Error("mismatched_handle");
+      return value;
+    });
+  }
+  if (
+    message.type === "creator-reputation" &&
+    typeof message.handle === "string"
+  ) {
+    const handle = normalizeHandle(message.handle);
+    if (!handle) return Promise.resolve({ error: "invalid_handle" });
+    return cached(`reputation:${handle}`, 60000, async () => {
+      const value = kolReputationSchema.parse(
+        await getJson(`/api/creators/${encodeURIComponent(handle)}/reputation`),
       );
       if (value.handle !== handle) throw new Error("mismatched_handle");
       return value;

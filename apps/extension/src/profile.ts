@@ -18,6 +18,7 @@ import {
 } from "./dom";
 import { type Insights, loadInsights } from "./drawer";
 import { renderOverview } from "./overview";
+import { reputation, seriousFlags, tierLabel } from "./reputation";
 
 const reserved = new Set([
   "home",
@@ -179,11 +180,27 @@ export async function scanProfile() {
         }
       : { label: "Wallet", value: null, reason: "not linked" },
   );
-  const [ledgerRaw, checked] = await Promise.all([
+  const [ledgerRaw, checked, rep] = await Promise.all([
     send<unknown>({ type: "creator-ledger", handle }),
     sayDid(handle, insights),
+    reputation(handle),
   ]);
   if (!host.isConnected || profileHandle() !== handle) return;
+  panel.set(
+    "tier",
+    rep
+      ? { label: "Tier", value: tierLabel(rep), kind: "row" }
+      : { label: "Tier", value: null, reason: "unavailable" },
+  );
+  if (rep)
+    panel.set("flags", {
+      label: "Red flags",
+      value: rep.assessment.flags.length
+        ? rep.assessment.flags.map((f) => f.title).join(" · ")
+        : "None found",
+      kind: "row",
+      ...(seriousFlags(rep).length ? { tone: "bad" as const } : {}),
+    });
   const ledger = publicCallLedgerSchema.safeParse(ledgerRaw);
   const tiles = statTiles(callStats(ledger.success ? ledger.data.calls : []));
   tiles.forEach((tile, index) => {
@@ -212,7 +229,7 @@ export async function scanProfile() {
 
 /**
  * Save or remove the creator in the extension's watchlist, which the dashboard reads.
- * Only the handle is stored; no X, wallet or stake data is written.
+ * Only the handle is stored; no X or wallet data is written.
  */
 function followButton(handle: string) {
   const button = el(
@@ -293,7 +310,7 @@ function recentCalls(handle: string, reputation: Reputation) {
     el(
       "p",
       { class: "note" },
-      "Detected from posts seen by Xtrading users. Unverified and unscored; no wallet or stake claim.",
+      "Detected from posts seen by Xtrading users. Unverified and unscored; no wallet claim.",
     ),
     el(
       "ul",
