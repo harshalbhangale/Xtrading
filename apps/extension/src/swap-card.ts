@@ -10,6 +10,7 @@ import { callInsights } from "./call-insights";
 import { appOrigin } from "./config";
 import { directTrade } from "./direct-trade";
 import { assetUrl, el, safeLink, send } from "./dom";
+import { riskLine } from "./risk-line";
 import {
   formatPrice,
   kuruPrice,
@@ -160,6 +161,13 @@ export function swapCard(input: {
     close,
   );
 
+  // One-line Nansen verdict right above the trade button.
+  const risk = riskLine({
+    postId: input.postId,
+    handle: input.handle,
+    asset,
+    signal: input.signal,
+  });
   // --- panel ---
   const panel = el("div", { class: "inline-panel", hidden: "" });
   const sides = el("div", {
@@ -522,6 +530,7 @@ export function swapCard(input: {
     meta,
     creatorLine,
     status,
+    risk.line,
     submit,
     el(
       "footer",
@@ -554,6 +563,7 @@ export function swapCard(input: {
     close.hidden = !open;
     buy.setAttribute("aria-expanded", String(open));
     if (open) {
+      risk.load();
       update();
       amount.focus({ preventScroll: true });
     } else sequence++;
@@ -565,6 +575,13 @@ export function swapCard(input: {
       toggle(false);
   });
 
+  // Evidence for every card, call or not: token data loads from the asset alone.
+  const insights = callInsights({
+    postId: input.postId,
+    handle: input.handle,
+    signal: input.signal,
+    asset,
+  });
   if (input.attached) {
     card.hidden = true;
     card.append(
@@ -578,18 +595,10 @@ export function swapCard(input: {
         ),
         close,
       ),
+      insights,
       panel,
     );
-  } else
-    card.append(
-      header,
-      callInsights({
-        postId: input.postId,
-        handle: input.handle,
-        signal: input.signal,
-      }),
-      panel,
-    );
+  } else card.append(header, insights, panel);
   renderTokens();
   return { card, buy };
 }

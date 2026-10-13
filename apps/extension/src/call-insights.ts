@@ -13,8 +13,11 @@ export function callInsights(input: {
   postId: string;
   handle: string;
   signal?: PostSignal;
+  /** The card's asset, so token data loads even when the post is not a call. */
+  asset?: string;
 }) {
   const { signal } = input;
+  const asset = signal?.asset ?? input.asset ?? null;
   const call = signal?.isCall
     ? [
         signal.direction === "bullish"
@@ -44,7 +47,9 @@ export function callInsights(input: {
             },
             call,
           )
-        : null,
+        : asset
+          ? el("span", { class: "ci-chip" }, `${asset} token data`)
+          : null,
       el("span", { class: "ci-chip" }, "Creator record"),
       el("span", { class: "ci-chip" }, "Nansen"),
     ),
@@ -60,7 +65,7 @@ export function callInsights(input: {
     void Promise.all([
       loadInsights(
         input.handle,
-        signal?.asset ?? null,
+        asset,
         signal?.direction ?? null,
         input.postId,
       ),

@@ -509,10 +509,21 @@ export function nansenPanel(check: NansenCheck) {
     "div",
     { class: "section nansen" },
     heading,
-    hero(check),
-    timeline(check),
-    trades(check),
-    el("p", { class: "note" }, check.note),
+    // No bound wallet: there is no wallet to compare, so lead with token data.
+    ...(check.wallet
+      ? [
+          hero(check),
+          timeline(check),
+          trades(check),
+          el("p", { class: "note" }, check.note),
+        ]
+      : [
+          el(
+            "p",
+            { class: "note" },
+            "No verified wallet for this creator, so there is no wallet check. Token data below is from Nansen.",
+          ),
+        ]),
     tokenBlock(check),
     flagsBlock(check),
     walletBlock(check),

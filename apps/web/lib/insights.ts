@@ -239,7 +239,8 @@ export async function creatorInsights(
           ? (evidence.identity.wallet ?? null)
           : null,
       // The stored classification wins over request parameters.
-      asset: signal ? signal.asset : asset,
+      // A stored non-call has no asset; keep the card's asset for token data.
+      asset: signal?.asset ?? asset,
       direction: signal ? signal.direction : direction,
       instrument: signal?.instrument ?? null,
       tokenReferences: signal?.tokenReferences ?? [],

@@ -597,4 +597,16 @@ a { color: inherit; }
 .perp-card .ticket-size, .perp-card .ticket-sum { border-radius: 14px; background: var(--raised); }
 .perp-card .ticket-side { border-radius: 99px; }
 .perp-card .ticket-side .side { border-radius: 99px; }
+
+/* One-line pre-trade verdict from Nansen. */
+.risk-line { display: flex; align-items: center; gap: 8px; margin: 0; padding: 9px 12px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--raised); color: var(--foreground); font-size: 13px; font-weight: 600; }
+.risk-line > span:nth-child(2) { flex: 1; }
+.risk-dot { display: grid; place-items: center; width: 18px; height: 18px; flex: 0 0 auto; border-radius: 50%;
+  font: 800 11px/1 system-ui; background: var(--muted); color: var(--surface); }
+.risk-line.risky { border-color: var(--negative); }
+.risk-line.risky .risk-dot { background: var(--negative); }
+.risk-line.clean .risk-dot { background: var(--positive); }
+.risk-line.unknown { color: var(--muted); font-weight: 500; }
+.risk-link { flex: 0 0 auto; font-size: 12px; font-weight: 600; }
 `;
