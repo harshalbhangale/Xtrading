@@ -3,6 +3,7 @@ import { postSignals } from "@call-my-bluff/database";
 import {
   type NansenCheck,
   normalizeHandle,
+  postSignalSchema,
   type Reputation,
 } from "@call-my-bluff/domain";
 import {
@@ -10,14 +11,9 @@ import {
   observePrice,
   postTimestampMs,
 } from "@call-my-bluff/integrations/calls";
-import { createNansenClient } from "@call-my-bluff/integrations/nansen";
-import {
-  assessConsistency,
-  type WalletTrade,
-} from "@call-my-bluff/integrations/signals";
 import { and, desc, eq, sql } from "drizzle-orm";
-import { z } from "zod";
 import { getDatabase } from "./database";
+import { nansenCheck } from "./nansen";
 import { spotPrices } from "./prices";
 import { publicCreatorEvidence } from "./public-creator";
 
@@ -168,116 +164,6 @@ export async function creatorReputation(handle: string): Promise<Reputation> {
   }
 }
 
-const tradeSchema = z.object({
-  data: z
-    .array(
-      z.object({
-        block_timestamp: z.string(),
-        transaction_hash: z.string(),
-        token_bought_symbol: z.string().nullable().optional(),
-        token_sold_symbol: z.string().nullable().optional(),
-        trade_value_usd: z.number().nullable().optional(),
-      }),
-    )
-    .max(1000),
-});
-
-// Live checks cost Nansen credits; cache per wallet/asset/direction.
-const nansenCache = new Map<string, { expires: number; value: NansenCheck }>();
-const NANSEN_TTL_MS = 15 * 60_000;
-
-export async function nansenCheck(input: {
-  handle: string;
-  wallet: string | null;
-  asset: string | null;
-  direction: "bullish" | "bearish" | null;
-}): Promise<NansenCheck> {
-  const observedAt = new Date().toISOString();
-  const to = new Date();
-  const from = new Date(to.getTime() - 30 * 86_400_000);
-  const window = { from: from.toISOString(), to: to.toISOString() };
-  if (!input.asset || !input.direction)
-    return {
-      mode: process.env.NANSEN_API_KEY ? "live" : "demo",
-      verdict: "not-applicable",
-      wallet: input.wallet,
-      chain: "monad",
-      window: null,
-      findings: [],
-      note: "A consistency check needs both an asset and a stated direction.",
-      observedAt,
-    };
-  if (!process.env.NANSEN_API_KEY)
-    return {
-      mode: "demo",
-      verdict: "unavailable",
-      wallet: null,
-      chain: "monad",
-      window,
-      findings: [],
-      note: "Nansen is not configured for this deployment. No wallet observation is made.",
-      observedAt,
-    };
-  if (!input.wallet)
-    return {
-      mode: "live",
-      verdict: "unavailable",
-      wallet: null,
-      chain: "monad",
-      window,
-      findings: [],
-      note: "No verified wallet binding for this creator; there is no wallet to check.",
-      observedAt,
-    };
-  const cacheKey = `${input.wallet.toLowerCase()}:${input.asset}:${input.direction}`;
-  const cached = nansenCache.get(cacheKey);
-  if (cached && cached.expires > Date.now()) return cached.value;
-  try {
-    const result = await createNansenClient(process.env.NANSEN_API_KEY).post(
-      "/api/v1/profiler/dex-trades",
-      {
-        address: input.wallet,
-        chain: "monad",
-        date: window,
-        pagination: { page: 1, per_page: 100 },
-        order_by: [{ field: "block_timestamp", direction: "DESC" }],
-      },
-    );
-    const trades: WalletTrade[] = tradeSchema
-      .parse(result.data)
-      .data.map((t) => ({
-        boughtSymbol: t.token_bought_symbol ?? null,
-        soldSymbol: t.token_sold_symbol ?? null,
-        valueUsd: t.trade_value_usd ?? null,
-        at: t.block_timestamp,
-        transactionHash: t.transaction_hash,
-      }));
-    const value: NansenCheck = {
-      mode: "live",
-      ...assessConsistency({ ...input, trades }),
-      wallet: input.wallet,
-      chain: "monad",
-      window,
-      note: "Nansen DEX trades on Monad mainnet for the bound wallet over 30 days. One wallet never covers all of a creator's activity; a sale is an observation, not proof of deception.",
-      observedAt: result.fetchedAt,
-    };
-    if (nansenCache.size >= 500) nansenCache.clear();
-    nansenCache.set(cacheKey, { expires: Date.now() + NANSEN_TTL_MS, value });
-    return value;
-  } catch {
-    return {
-      mode: "live",
-      verdict: "unavailable",
-      wallet: input.wallet,
-      chain: "monad",
-      window,
-      findings: [],
-      note: "Nansen request failed or returned an unexpected shape. No finding is claimed.",
-      observedAt,
-    };
-  }
-}
-
 export type CreatorInsights = {
   handle: string;
   evidence: Awaited<ReturnType<typeof publicCreatorEvidence>>;
@@ -289,27 +175,65 @@ const insightCache = new Map<
   { expires: number; value: CreatorInsights }
 >();
 
+/**
+ * The classification stored for this creator's post. Token addresses come only
+ * from here, never from the caller, so a request cannot spend credits on
+ * arbitrary contracts.
+ */
+async function storedSignal(handle: string, postId: string) {
+  const database = getDatabase();
+  if (!database) return null;
+  try {
+    const rows = await database.db
+      .select({ signal: postSignals.signal })
+      .from(postSignals)
+      .where(
+        and(eq(postSignals.postId, postId), eq(postSignals.handle, handle)),
+      )
+      .limit(1);
+    const parsed = postSignalSchema.safeParse(rows[0]?.signal);
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Post time from the X post ID (snowflake); null if it is not a plausible past time. */
+function postedAt(postId: string | null) {
+  if (!postId) return null;
+  const ms = Number(postTimestampMs(postId));
+  return ms > 1288834974657 && ms <= Date.now() + 60_000 ? ms : null;
+}
+
 export async function creatorInsights(
   rawHandle: string,
   asset: string | null,
   direction: "bullish" | "bearish" | null,
+  postId: string | null = null,
 ): Promise<CreatorInsights | null> {
   const handle = normalizeHandle(rawHandle);
   if (!handle) return null;
-  const key = `${handle}:${asset}:${direction}`;
+  const post = postId && /^[0-9]{1,30}$/.test(postId) ? postId : null;
+  const key = `${handle}:${asset}:${direction}:${post}`;
   const hit = insightCache.get(key);
   if (hit && hit.expires > Date.now()) return hit.value;
-  const evidence = await publicCreatorEvidence(handle);
+  const [evidence, signal] = await Promise.all([
+    publicCreatorEvidence(handle),
+    post ? storedSignal(handle, post) : Promise.resolve(null),
+  ]);
   const [reputation, nansen] = await Promise.all([
     creatorReputation(handle),
     nansenCheck({
-      handle,
       wallet:
         evidence?.identity.status === "bound"
           ? (evidence.identity.wallet ?? null)
           : null,
-      asset,
-      direction,
+      // The stored classification wins over request parameters.
+      asset: signal ? signal.asset : asset,
+      direction: signal ? signal.direction : direction,
+      instrument: signal?.instrument ?? null,
+      tokenReferences: signal?.tokenReferences ?? [],
+      callAt: postedAt(post),
     }),
   ]);
   const value: CreatorInsights = { handle, evidence, reputation, nansen };

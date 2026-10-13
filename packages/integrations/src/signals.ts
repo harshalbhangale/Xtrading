@@ -1,5 +1,4 @@
 import {
-  type NansenCheck,
   type PostSignal,
   signalMethodologyVersion,
   type TradeRoute,
@@ -173,62 +172,6 @@ export function deriveTradeRoute(
         ? `Spot sell of ${spot.label.split(" ")[0]} you already hold; not a short.`
         : "Spot trade; amounts and slippage are set in review.",
   };
-}
-
-export type WalletTrade = {
-  boughtSymbol: string | null;
-  soldSymbol: string | null;
-  valueUsd: number | null;
-  at: string;
-  transactionHash: string;
-};
-
-/** Observations, not proof of intent. One wallet never covers all of a creator's activity. */
-export function assessConsistency(input: {
-  direction: PostSignal["direction"];
-  asset: string | null;
-  trades: WalletTrade[];
-}): Pick<NansenCheck, "verdict" | "findings"> {
-  if (!input.asset || !input.direction)
-    return { verdict: "not-applicable", findings: [] };
-  const asset = input.asset.toUpperCase();
-  const relevant = input.trades.filter(
-    (trade) =>
-      trade.boughtSymbol?.toUpperCase() === asset ||
-      trade.soldSymbol?.toUpperCase() === asset,
-  );
-  if (relevant.length === 0)
-    return {
-      verdict: "no-activity",
-      findings: [
-        {
-          kind: "no-activity",
-          summary: `No ${asset} trades observed for the bound wallet in this window.`,
-          transactionHash: null,
-          observedAt: null,
-        },
-      ],
-    };
-  let bought = 0,
-    sold = 0;
-  const findings: NansenCheck["findings"] = [];
-  for (const trade of relevant.slice(0, 50)) {
-    const sale = trade.soldSymbol?.toUpperCase() === asset;
-    const value = trade.valueUsd ?? 0;
-    if (sale) sold += value;
-    else bought += value;
-    if (findings.length < 5)
-      findings.push({
-        kind: sale ? "sold-asset" : "bought-asset",
-        summary: `${sale ? "Sold" : "Bought"} ${asset}${trade.valueUsd === null ? "" : ` (~$${Math.round(value).toLocaleString("en-US")})`}`,
-        transactionHash: trade.transactionHash,
-        observedAt: trade.at,
-      });
-  }
-  const contradiction =
-    (input.direction === "bullish" && sold > bought) ||
-    (input.direction === "bearish" && bought > sold);
-  return { verdict: contradiction ? "contradiction" : "consistent", findings };
 }
 
 /** Guard for model output: a perp classification requires explicit perp language in the post. */

@@ -44,6 +44,37 @@ export default function MethodologyPage() {
           floating-point arithmetic is used.
         </li>
       </ul>
+      <h2>Nansen evidence</h2>
+      <ul>
+        <li>
+          Wallet: the bound wallet's DEX trades from 7 days before to 7 days
+          after the post, on every chain the asset is checked on (ETH and BTC on
+          Ethereum, Base and Arbitrum; MON on Monad; a posted contract on the
+          chain where Nansen finds it), plus Hyperliquid perp trades. Tokens are
+          matched by contract address, never by symbol.
+        </li>
+        <li>
+          Positioning with the call before the post and exiting against it after
+          is reported as a front-run pattern. One wallet never covers all of a
+          creator's activity, so this is an observation, not proof.
+        </li>
+        <li>
+          Token: for a contract named in the post, top-10 holder share
+          (excluding labelled exchanges and pools), the largest sellers in the
+          48 hours after the post, and smart-money, whale and fresh-wallet
+          flows.
+        </li>
+        <li>
+          Wallet returns (90-day realized PnL) and Nansen-related wallets are
+          shown separately. A related wallet is a possible link, not proof of
+          control.
+        </li>
+        <li>
+          Nansen covers mainnets only. Solana and Bitcoin wallets are not
+          checked because the bound wallet is EVM. Every request, including
+          failed or skipped ones, is listed with the result.
+        </li>
+      </ul>
       <h2>Outcome</h2>
       <ul>
         <li>
