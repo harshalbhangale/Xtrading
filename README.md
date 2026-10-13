@@ -13,11 +13,11 @@ Crypto Twitter runs on calls. Someone posts "$ETH to 3k this week", thousands of
 
 ## How it works
 
+![Who does what: the step-by-step flow for creators, traders and agents](docs/assets/diagrams/people.png)
+
+### Under the hood
+
 ![Xtrading architecture: people, the Xtrading API, Privy wallet, off-chain data, Envio and Monad](docs/assets/diagrams/architecture.png)
-
-### Buying from a post
-
-![Buying from a post in six steps: see the call, check it, quote, sign, settle, prove it](docs/assets/diagrams/flow.png)
 
 ### Design principles
 

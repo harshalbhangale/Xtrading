@@ -102,29 +102,28 @@ function architecture() {
   text(40, 40, "How Xtrading works", { size: 32, anchor: "start" });
 
   // Left: where people are.
-  frame(30, 80, 320, 640, "People");
-  box(55, 135, 270, 100, { fill: C.blue, title: "Web app", sub: "Terminal · Trade · Portfolio", logo: "xtrading-icon.png" });
-  box(55, 275, 270, 100, { fill: C.blue, title: "AI agent", sub: "any MCP client", logo: "mcp.png" });
-  box(55, 415, 270, 100, { fill: C.blue, title: "Extension", sub: "trade cards on X", logo: "chrome.png" });
-  box(55, 590, 270, 100, { fill: C.gray, title: "Post on X", sub: "“$ETH up this week”", logo: "x.png" });
-  arrow([[190, 588], [190, 520]], "");
+  frame(30, 80, 320, 470, "People");
+  box(55, 135, 270, 100, { fill: C.blue, title: "Creators", sub: "post calls · earn fees", logo: "x.png" });
+  box(55, 275, 270, 100, { fill: C.blue, title: "Traders", sub: "extension · web app", logo: "xtrading-icon.png" });
+  box(55, 415, 270, 100, { fill: C.blue, title: "Agents", sub: "any MCP client", logo: "mcp.png" });
 
   // Middle: the Xtrading server.
   frame(410, 80, 620, 470, "Xtrading API", { logo: "vercel.png", fill: "#fffbea" });
   box(435, 135, 280, 100, { title: "Identity", sub: "X login · wallet binding", logo: "privy.png" });
   box(735, 135, 270, 100, { title: "Call scoring", sub: "priced at post · scored at expiry" });
-  box(435, 275, 280, 100, { title: "MCP server", sub: "read records · prepare trades" });
+  box(435, 275, 280, 100, { title: "Trade prep", sub: "quote · exact approval · min-out" });
   box(735, 275, 270, 100, { title: "Creator record", sub: "tiers · red flags · earnings" });
-  box(435, 415, 280, 100, { title: "Trade prep", sub: "quote · exact approval · min-out" });
+  // Narrower, so the unsigned transaction can drop past it to the wallet.
+  box(435, 415, 200, 100, { title: "MCP server", sub: ["read records", "prepare trades"] });
   box(735, 415, 270, 100, { fill: C.gray, title: "Postgres", sub: "AWS RDS", logo: "aws.png" });
 
   arrow([[327, 185], [433, 185]], "sign in");
-  arrow([[327, 325], [433, 325]], "tools");
-  arrow([[327, 465], [433, 465]], "quote");
+  arrow([[327, 325], [433, 325]], "trade");
+  arrow([[327, 465], [433, 465]], "tools");
 
   // Bottom: the user's own wallet.
-  box(435, 640, 280, 110, { fill: C.violet, title: "Privy wallet", sub: ["embedded or MetaMask / Rabby", "the user signs every tx"], logo: "privy.png" });
-  arrow([[575, 517], [575, 638]], "unsigned tx", { lx: 640, ly: 585 });
+  box(540, 640, 280, 110, { fill: C.violet, title: "Privy wallet", sub: ["embedded or MetaMask / Rabby", "the user signs every tx"], logo: "privy.png" });
+  arrow([[685, 377], [685, 638]], "unsigned tx", { lx: 760, ly: 600 });
 
   // Right: data, indexing and the chain.
   frame(1090, 80, 520, 190, "Off-chain data");
@@ -144,7 +143,7 @@ function architecture() {
   box(1360, 610, 230, 100, { fill: C.green, title: "Kuru books", sub: "MON · WETH · cbBTC", logo: "kuru.png" });
   box(1110, 725, 480, 85, { fill: C.gray, title: "Perpl perps", sub: "long / short, 1–5x, user's own account", logo: "perpl.png" });
   arrow([[1347, 660], [1358, 660]], "");
-  arrow([[717, 695], [1088, 695]], "signed by the user", { lx: 900, ly: 675 });
+  arrow([[822, 695], [1088, 695]], "signed by the user", { lx: 900, ly: 675 });
   arrow([[1350, 608], [1350, 512]], "events", { dashed: true, lx: 1392, ly: 560 });
 }
 
@@ -170,7 +169,63 @@ function flow() {
   text(W - 40, 300, "Xtrading never signs or holds keys", { size: 17, anchor: "end", color: C.muted });
 }
 
-window.render = (name) => { svg.innerHTML = ""; seed = 7; ({ architecture, flow })[name](); };
+
+// One swimlane per kind of user, each read left to right.
+function people() {
+  const W = 1760, laneH = 170, top = 90, gap = 28;
+  const lanes = [
+    {
+      name: "Creators", logo: "x.png", fill: "#fff9db", step: C.yellow,
+      steps: [
+        { title: "Post a call", sub: ["on X, as usual"], logo: "x.png" },
+        { title: "Sign in with X", sub: ["Privy, tied to the", "stable X user ID"], logo: "privy.png" },
+        { title: "Bind a wallet", sub: ["one signed message,", "no deposit"], logo: "privy.png" },
+        { title: "Register it", sub: ["priced at the minute", "it was posted"], logo: "xtrading-icon.png" },
+        { title: "Get scored", sub: ["at expiry; tiers rise,", "red flags demote"] },
+        { title: "Earn per buy", sub: ["0.1–2% via Kuru Flow,", "paid in the same tx"], logo: "kuru.png" },
+      ],
+    },
+    {
+      name: "Traders", logo: "chrome.png", fill: "#e7f5ff", step: C.blue,
+      steps: [
+        { title: "See a call", sub: ["a trade card appears", "under the post"], logo: "x.png" },
+        { title: "Check it", sub: ["creator record, red", "flags, Nansen wallet"], logo: "nansen.png" },
+        { title: "Get a quote", sub: ["Kuru spot or", "Perpl perp"], logo: "kuru.png" },
+        { title: "Sign", sub: ["own wallet: Privy,", "MetaMask or Rabby"], logo: "privy.png" },
+        { title: "Settle", sub: ["on Monad; creator", "fee in the same tx"], logo: "monad.png" },
+        { title: "Track it", sub: ["fills and P&L,", "receipt-checked"], logo: "envio.png" },
+      ],
+    },
+    {
+      name: "Agents", logo: "mcp.png", fill: "#ebfbee", step: C.green,
+      steps: [
+        { title: "Connect", sub: ["any MCP client", "to /api/mcp"], logo: "mcp.png" },
+        { title: "Read records", sub: ["creator tiers,", "calls, red flags"], logo: "xtrading-icon.png" },
+        { title: "Spot a call", sub: ["detect a trade", "call in a post"], logo: "groq.png" },
+        { title: "Prepare", sub: ["an unsigned Kuru", "order, exact amounts"], logo: "kuru.png" },
+        { title: "User signs", sub: ["agents never get", "signing power"], logo: "privy.png" },
+        { title: "Settle", sub: ["on Monad, same", "path as traders"], logo: "monad.png" },
+      ],
+    },
+  ];
+  const H = top + lanes.length * (laneH + gap) + 30;
+  svg.setAttribute("width", W); svg.setAttribute("height", H);
+  text(40, 44, "Who does what", { size: 32, anchor: "start" });
+  const labelW = 170, x0 = 40 + labelW + 10, bw = 222, bg = 30, bh = 120;
+  lanes.forEach((lane, li) => {
+    const y = top + li * (laneH + gap);
+    add(rc.path(rrect(30, y, W - 60, laneH, 18), opt({ fill: lane.fill, fillStyle: "solid", strokeLineDash: [9, 7], strokeWidth: 1.4, roughness: 0.8 })));
+    image(50, y + laneH / 2 - 44, 40, lane.logo);
+    text(50, y + laneH / 2 + 22, lane.name, { size: 28, anchor: "start" });
+    lane.steps.forEach((step, i) => {
+      const x = x0 + i * (bw + bg), by = y + (laneH - bh) / 2;
+      box(x, by, bw, bh, { ...step, fill: lane.step, size: 20 });
+      if (i < lane.steps.length - 1) arrow([[x + bw + 3, by + bh / 2], [x + bw + bg - 3, by + bh / 2]], "");
+    });
+  });
+}
+
+window.render = (name) => { svg.innerHTML = ""; seed = 7; ({ architecture, flow, people })[name](); };
 </script>
 </body>
 </html>
