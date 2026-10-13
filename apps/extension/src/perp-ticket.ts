@@ -13,6 +13,35 @@ import { z } from "zod";
 import { appOrigin } from "./config";
 import { el, send } from "./dom";
 import { tradeUrl } from "./drawer";
+import { type PerplWalletStep, signPerplSteps } from "./perp-wallet";
+import { hasBrowserWallet, walletRequest } from "./wallet";
+
+const errors: Record<string, string> = {
+  leverage_above_cap: "Leverage is above the app cap.",
+  leverage_above_market_max: "Leverage is above this market's maximum.",
+  slippage_above_market_max: "Slippage is above this market's maximum.",
+  size_above_cap: "Size is above the cap.",
+  market_closed: "Market is closed.",
+  market_unpriced: "No mark price right now. Try again shortly.",
+  collateral_insufficient:
+    "Not enough test AUSD in your wallet. Claim some from the faucet in the app.",
+  perpl_account_frozen: "Your Perpl account is frozen.",
+  perpl_exchange_mismatch: "Perpl's exchange address changed. Not sending.",
+  transaction_pending: "Transaction not found yet.",
+  transaction_not_from_wallet: "That transaction was not sent by your wallet.",
+  order_not_found: "No order from your account in that transaction.",
+  perpl_unavailable: "Perpl is unavailable. Try again.",
+  rate_limited: "Too many requests. Wait a moment.",
+};
+const explain = (code: string) => errors[code] ?? code.replaceAll("_", " ");
+type Call<T> = { result?: T; failure?: string } | null;
+type Prepared = { wallet: string; requestId: string; steps: PerplWalletStep[] };
+type Confirmed = {
+  status: string;
+  filledSize?: string;
+  averagePrice?: string | null;
+  message: string;
+};
 
 const integer = z.string().regex(/^[0-9]{1,30}$/);
 const marketSchema = z.object({
@@ -43,9 +72,9 @@ const marketsSchema = z.object({
 });
 
 /**
- * Trader-style perp ticket on the X card. It prices and sizes the order; the
- * order itself is reviewed and signed in the Xtrading window with the user's own
- * (Privy) wallet, on their own Perpl account.
+ * Trader-style perp ticket on the X card. With a browser wallet (MetaMask, Rabby)
+ * the order is prepared and signed right here on X, step by step, on the user's
+ * own Perpl testnet account. Without one it opens the Xtrading (Privy) window.
  */
 export function perpTicket(
   postId: string,
@@ -168,8 +197,14 @@ function render(
     const href = go.getAttribute("href");
     if (!href) return;
     event.preventDefault();
-    openWalletWindow(href);
+    if (busy || !current) return;
+    const order = current;
+    void hasBrowserWallet().then((present) =>
+      present ? placeOnX(order) : openWalletWindow(href),
+    );
   });
+  const status = el("p", { class: "note", "aria-live": "polite" });
+  let busy = false;
   const slippageBps = Math.min(100, market.maxSlippageBps ?? 100);
   let current: Record<string, unknown> | null = null;
 
@@ -212,6 +247,7 @@ function render(
       el("div", {}, el("dt", {}, "Est. liquidation"), liquidation),
     ),
     go,
+    status,
     el(
       "p",
       { class: "note" },
@@ -233,6 +269,83 @@ function render(
   }
   function openWalletWindow(href: string) {
     window.open(href, "xtrading-perp", "popup,width=480,height=820");
+  }
+  /** Prepare for the connected wallet, sign each step in it, read the fill back. */
+  async function placeOnX(order: Record<string, unknown>) {
+    busy = true;
+    go.setAttribute("aria-disabled", "true");
+    const say = (...parts: (string | Node)[]) =>
+      status.replaceChildren(...parts);
+    try {
+      say("Connect your wallet…");
+      const [account] = await walletRequest<string[]>("eth_requestAccounts");
+      if (!account) throw new Error("No wallet account connected.");
+      say("Checking order…");
+      const prepared = await send<Call<Prepared>>({
+        type: "perp-prepare",
+        wallet: account,
+        order,
+      });
+      if (!prepared?.result)
+        throw new Error(explain(prepared?.failure ?? "unavailable"));
+      const hash = await signPerplSteps({
+        wallet: prepared.result.wallet,
+        steps: prepared.result.steps,
+        onStatus: (text) => say(text),
+      });
+      say("Reading the result from chain…");
+      let confirmed: Call<Confirmed> = null;
+      for (let attempt = 0; attempt < 5 && root.isConnected; attempt++) {
+        confirmed = await send<Call<Confirmed>>({
+          type: "perp-confirm",
+          wallet: prepared.result.wallet,
+          order: {
+            transactionHash: hash,
+            requestId: prepared.result.requestId,
+            sourcePostId: order.sourcePostId ?? null,
+          },
+        });
+        if (confirmed?.failure !== "transaction_pending") break;
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      const link = el(
+        "a",
+        {
+          href: `https://testnet.monadvision.com/tx/${hash}`,
+          target: "_blank",
+          rel: "noopener noreferrer",
+        },
+        "View transaction ↗",
+      );
+      const result = confirmed?.result;
+      if (!result)
+        return say(
+          `Sent from your wallet; the result could not be read back (${explain(confirmed?.failure ?? "unavailable")}). `,
+          link,
+        );
+      const filled =
+        result.filledSize && result.filledSize !== "0"
+          ? `${fromUnits(BigInt(result.filledSize), market.sizeDecimals)} ${market.symbol}${result.averagePrice ? ` @ ${usd(BigInt(result.averagePrice))}` : ""} · `
+          : "";
+      say(
+        el("strong", {}, `${result.status.replace("-", " ")} ✓ `),
+        filled,
+        result.message,
+        " ",
+        link,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Wallet request failed.";
+      say(
+        /reject|denied|4001/i.test(message)
+          ? "Cancelled in your wallet. Nothing further was sent."
+          : message,
+      );
+    } finally {
+      busy = false;
+      update();
+    }
   }
   function update() {
     for (const [index, button] of sideButtons.entries())
@@ -312,7 +425,7 @@ function render(
       : null;
     go.className = `ticket-go ${side}${ready ? "" : " disabled"}`;
     go.textContent = ready
-      ? `${label} · Xtrading wallet ↗`
+      ? `${label} · sign with your wallet`
       : `Enter a size to ${side} ${market.symbol}`;
     if (ready && href && current) {
       go.setAttribute("href", walletWindowUrl(current));

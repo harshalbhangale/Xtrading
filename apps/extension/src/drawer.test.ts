@@ -98,7 +98,7 @@ it("prices a perp call in the drawer and hands the order to the app", async () =
   input.value = "4";
   input.dispatchEvent(new Event("input"));
   const go = root?.querySelector<HTMLAnchorElement>(".ticket-go");
-  expect(go?.textContent).toBe("Long 4 MON · 3x · Xtrading wallet ↗");
+  expect(go?.textContent).toBe("Long 4 MON · 3x · sign with your wallet");
   expect(go?.href).toContain("/trade/perp?");
   expect(go?.href).toContain("review=1");
   expect(go?.href).toContain("size=4");
@@ -156,11 +156,13 @@ it("opens the Xtrading wallet window for a perp order, needing no login or bindi
   input.dispatchEvent(new Event("input"));
   const go = root?.querySelector<HTMLAnchorElement>("a.ticket-go");
   // 5x in the post is capped to the market's 3x maximum.
-  expect(go?.textContent).toBe("Long 2 MON · 3x · Xtrading wallet ↗");
-  // The extension never signs or holds a session: it only opens the app window.
+  expect(go?.textContent).toBe("Long 2 MON · 3x · sign with your wallet");
+  // The extension never signs or holds a session. With no browser wallet on X
+  // it falls back to the app window.
   expect(root?.textContent).not.toContain("Connect Xtrading");
   const open = vi.spyOn(window, "open").mockReturnValue(null);
   go?.click();
+  await vi.waitFor(() => expect(open).toHaveBeenCalled(), { timeout: 3000 });
   const url = new URL(String(open.mock.calls[0]?.[0]));
   expect(url.pathname).toBe("/trade/perp");
   expect(Object.fromEntries(url.searchParams)).toMatchObject({

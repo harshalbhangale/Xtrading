@@ -140,7 +140,18 @@ export async function preparePerp(
   input: z.infer<typeof perpRequestSchema>,
   context: Context = identityContext,
 ) {
-  const wallet = await boundWallet(request, context);
+  return preparePerpFor(await boundWallet(request, context), input);
+}
+
+/**
+ * Reviews an order for a wallet the caller names (the X extension, which reads it
+ * from the user's browser wallet). Only unsigned transactions come back; they
+ * are useless unless that same wallet signs them, so no session is needed.
+ */
+export async function preparePerpFor(
+  wallet: `0x${string}`,
+  input: z.infer<typeof perpRequestSchema>,
+) {
   const snapshot = await perplSnapshot().catch(() => {
     throw new IdentityError("perpl_unavailable", 503);
   });
@@ -269,7 +280,14 @@ export async function confirmPerp(
   input: z.infer<typeof perpConfirmSchema>,
   context: Context = identityContext,
 ) {
-  const wallet = await boundWallet(request, context);
+  return confirmPerpFor(await boundWallet(request, context), input);
+}
+
+/** Read-only check of an order the named wallet sent; nothing is recorded. */
+export async function confirmPerpFor(
+  wallet: `0x${string}`,
+  input: z.infer<typeof perpConfirmSchema>,
+) {
   const client = testnetClient();
   const hash = input.transactionHash as `0x${string}`;
   const [transaction, receipt] = await Promise.all([

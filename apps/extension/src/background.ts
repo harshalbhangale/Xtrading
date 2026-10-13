@@ -69,6 +69,30 @@ async function getJson(path: string, init?: RequestInit) {
   return (await response.json()) as unknown;
 }
 
+/** Perpl review/read-back for the wallet MetaMask reports; returns the body or the error code. */
+async function perpCall(path: string, body: unknown) {
+  try {
+    const response = await fetch(`${appOrigin}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(25000),
+      cache: "no-store",
+      credentials: "omit",
+    });
+    const value = (await response.json().catch(() => null)) as {
+      error?: unknown;
+    } | null;
+    if (!response.ok)
+      return {
+        failure: typeof value?.error === "string" ? value.error : "unavailable",
+      };
+    return { result: value };
+  } catch {
+    return { failure: "unavailable" };
+  }
+}
+
 function handleMessage(
   message: Record<string, unknown>,
 ): Promise<unknown> | null {
@@ -164,6 +188,18 @@ function handleMessage(
     );
   }
 
+  // The server only reviews and reads back; the user's browser wallet signs every step.
+  if (
+    (message.type === "perp-prepare" || message.type === "perp-confirm") &&
+    typeof message.wallet === "string" &&
+    /^0x[0-9a-fA-F]{40}$/.test(message.wallet) &&
+    message.order &&
+    typeof message.order === "object"
+  )
+    return perpCall(
+      `/api/extension/perp/${message.type === "perp-prepare" ? "prepare" : "confirm"}`,
+      { wallet: message.wallet, order: message.order },
+    );
   if (message.type === "markets")
     // Public market data only; a short cache keeps the ticket's mark price fresh.
     return cached("markets", 10000, () => getJson("/api/markets"));
