@@ -565,6 +565,13 @@ export function swapCard(input: {
       toggle(false);
   });
 
+  // Evidence for every card, call or not: token data loads from the asset alone.
+  const insights = callInsights({
+    postId: input.postId,
+    handle: input.handle,
+    signal: input.signal,
+    asset,
+  });
   if (input.attached) {
     card.hidden = true;
     card.append(
@@ -578,18 +585,10 @@ export function swapCard(input: {
         ),
         close,
       ),
+      insights,
       panel,
     );
-  } else
-    card.append(
-      header,
-      callInsights({
-        postId: input.postId,
-        handle: input.handle,
-        signal: input.signal,
-      }),
-      panel,
-    );
+  } else card.append(header, insights, panel);
   renderTokens();
   return { card, buy };
 }
