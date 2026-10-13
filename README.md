@@ -11,6 +11,21 @@ Crypto Twitter runs on calls. Someone posts "$ETH to 3k this week", thousands of
 
 **Xtrading closes that gap.** It puts a Buy button directly on the post and the caller's real track record right next to it. Spot trades settle on Monad through Kuru, long and short calls trade as perps on Perpl, creators get paid onchain when people trade their calls, and every number links back to a transaction or a post.
 
+## How it works
+
+![Xtrading architecture: people, the Xtrading API, Privy wallet, off-chain data, Envio and Monad](docs/assets/diagrams/architecture.png)
+
+### Buying from a post
+
+![Buying from a post in six steps: see the call, check it, quote, sign, settle, prove it](docs/assets/diagrams/flow.png)
+
+### Design principles
+
+- **Keys stay with users.** The server prepares exact, bounded transactions and the user signs them. There are no blanket token approvals and no hidden relayers.
+- **Identity isn't a track record.** Linking an X account proves you own it. It says nothing about whether your calls make money, so Xtrading keeps identity, call performance and wallet returns separate.
+- **Receipts over claims.** A submitted order isn't a fill until the chain says so. Indexed events are checked against receipts and reorgs are rolled back. When a data source is down, the app says so instead of guessing.
+- **Testnet first.** Monad testnet is the default. Mainnet is an explicit switch, and every trade shows the network it's on.
+
 ## What you can do
 
 ### Trade from the timeline
@@ -66,21 +81,6 @@ The creator's record appears on their X profile: linked wallet, tier, red flags 
 ### Plug in an agent
 
 - **MCP server** at `https://xtradingnow.xyz/api/mcp`. Agents can look up a creator's record, detect a trade call in a post, fetch markets and quotes, and prepare a Kuru trade for the user to sign. Agents never get signing power.
-
-## How it works
-
-![Xtrading architecture: people, the Xtrading API, Privy wallet, off-chain data, Envio and Monad](docs/assets/diagrams/architecture.png)
-
-### Buying from a post
-
-![Buying from a post in six steps: see the call, check it, quote, sign, settle, prove it](docs/assets/diagrams/flow.png)
-
-### Design principles
-
-- **Keys stay with users.** The server prepares exact, bounded transactions and the user signs them. There are no blanket token approvals and no hidden relayers.
-- **Identity isn't a track record.** Linking an X account proves you own it. It says nothing about whether your calls make money, so Xtrading keeps identity, call performance and wallet returns separate.
-- **Receipts over claims.** A submitted order isn't a fill until the chain says so. Indexed events are checked against receipts and reorgs are rolled back. When a data source is down, the app says so instead of guessing.
-- **Testnet first.** Monad testnet is the default. Mainnet is an explicit switch, and every trade shows the network it's on.
 
 ## Built with
 
