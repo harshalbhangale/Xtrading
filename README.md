@@ -3,7 +3,7 @@
 # Xtrading
 
 **Trade the calls you see on X, and know who's worth following.**  
-[xtradingnow.xyz](https://xtradingnow.xyz) · [Chrome extension](https://xtradingnow.xyz/extension) · [Live onchain activity](https://xtradingnow.xyz/dashboard/onchain) · [Product tour](docs/product-tour.md)
+[xtradingnow.xyz](https://xtradingnow.xyz) · [Chrome extension](https://xtradingnow.xyz/extension) · [Live onchain activity](https://xtradingnow.xyz/dashboard/onchain) · [Product tour](docs/product-tour.md) · [Presentation](docs/presentation/Xtrading-presentation.pptx)
 
 ---
 
@@ -142,4 +142,4 @@ Configuration, database setup, the indexer, contracts and deployment are covered
 
 ## Docs
 
-[Product tour](docs/product-tour.md) · [Architecture](docs/architecture.md) · [Development](docs/development.md) · [X extension](docs/x-extension.md) · [Identity binding](docs/identity-binding.md) · [Inline trading and creator fees](docs/inline-trading-and-creator-fees.md) · [Envio demo](docs/envio-demo.md) · [Perpl exits](docs/perpl-exits.md)
+[All docs](docs/README.md) · [Presentation](docs/presentation/Xtrading-presentation.pptx) · [Product tour](docs/product-tour.md) · [Architecture](docs/architecture.md) · [Development](docs/development.md) · [X extension](docs/x-extension.md) · [Identity binding](docs/identity-binding.md) · [Inline trading and creator fees](docs/inline-trading-and-creator-fees.md) · [Envio demo](docs/envio-demo.md) · [Perpl exits](docs/perpl-exits.md)
