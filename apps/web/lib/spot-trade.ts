@@ -425,6 +425,7 @@ async function prepareCreatorSpot(wallet: Address, input: SpotIntent) {
     minimumOutput: 1n,
     allowance,
     recipient: fee.wallet,
+    feeBps: fee.bps,
   });
   if (step.action === "swap") {
     try {
@@ -446,6 +447,7 @@ async function prepareCreatorSpot(wallet: Address, input: SpotIntent) {
         minimumOutput,
         allowance,
         recipient: fee.wallet,
+        feeBps: fee.bps,
       });
     } catch {
       throw new IdentityError(

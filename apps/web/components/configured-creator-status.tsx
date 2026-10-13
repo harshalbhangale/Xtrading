@@ -85,7 +85,7 @@ export default function ConfiguredCreatorStatus() {
             title: "Reach Xtrading Pro",
             done: false,
             detail:
-              "5 scored calls, at least half right, unlocks a 5% share of buyers' profit.",
+              "Verified creators earn 0.1% of each buy from their posts; 5 scored calls with half right unlocks Pro at 0.5%.",
             href: "/creator/reputation",
             action: "See tiers",
           },
@@ -133,10 +133,10 @@ export default function ConfiguredCreatorStatus() {
       title: "Earn a fee tier",
       done: Boolean(reputation?.tier),
       detail: reputation?.tier
-        ? `${tierName(reputation.tier)} · ${reputation.profitShareBps / 100}% of buyers' realized profit${reputation.next ? ` · ${Math.floor(reputation.progressBps / 100)}% to ${reputation.next.name}` : ""}.`
+        ? `${tierName(reputation.tier)} · ${reputation.feeBps / 100}% of each buy from your posts${reputation.next ? ` · ${Math.floor(reputation.progressBps / 100)}% to ${reputation.next.name}` : ""}.`
         : reputation?.next
-          ? `${Math.floor(reputation.progressBps / 100)}% of the way to ${reputation.next.name} (5% of buyers' realized profit).`
-          : "Xtrading Pro (5%), Max (10%) and Ultra (15%) of buyers' realized profit, earned from scored calls.",
+          ? `${Math.floor(reputation.progressBps / 100)}% of the way to ${reputation.next.name} (0.5% of each buy).`
+          : "Verified 0.1%, Xtrading Pro 0.5%, Max 1% and Ultra 2% of each buy from your posts, earned from scored calls.",
       href: "/creator/reputation",
       action: "Track progress",
     },

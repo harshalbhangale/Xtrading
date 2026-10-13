@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PublicCall } from "./index";
-import { assessKol, kolFlags, profitShare } from "./reputation";
+import { assessKol, kolFlags } from "./reputation";
 
 const published = "2026-10-01T00:00:00.000Z";
 const start = Date.parse(published) / 1000;
@@ -70,10 +70,10 @@ const many = (n: number, outcome: "success" | "failure", extra = {}) =>
   Array.from({ length: n }, () => call({ outcome, ...extra }));
 
 describe("assessKol", () => {
-  it("earns no tier and no fee share below the Pro bar, with progress", () => {
+  it("earns the verified 0.1% below the Pro bar, with progress", () => {
     const result = assessKol({ calls: many(3, "success"), swaps: [] });
     expect(result.tier).toBeNull();
-    expect(result.profitShareBps).toBe(0);
+    expect(result.feeBps).toBe(10);
     expect(result.next?.id).toBe("pro");
     // 3/5 scored (60%) and 100% right (capped) → 80%.
     expect(result.progressBps).toBe(8000);
@@ -85,14 +85,14 @@ describe("assessKol", () => {
       swaps: [],
     });
     expect(pro.tier).toBe("pro");
-    expect(pro.profitShareBps).toBe(500);
+    expect(pro.feeBps).toBe(50);
 
     const max = assessKol({
       calls: [...many(10, "success"), ...many(5, "failure")],
       swaps: [],
     });
     expect(max.tier).toBe("max");
-    expect(max.profitShareBps).toBe(1000);
+    expect(max.feeBps).toBe(100);
 
     const ultra = assessKol({
       calls: [
@@ -102,7 +102,7 @@ describe("assessKol", () => {
       swaps: [],
     });
     expect(ultra.tier).toBe("ultra");
-    expect(ultra.profitShareBps).toBe(1500);
+    expect(ultra.feeBps).toBe(200);
     expect(ultra.next).toBeNull();
   });
 
@@ -207,27 +207,5 @@ describe("kolFlags", () => {
       scored: 5,
     }).map((f) => f.kind);
     expect(kinds).toEqual(["mostly_wrong", "slashed_bond"]);
-  });
-});
-
-describe("profitShare", () => {
-  it("takes the tier share of realized profit only", () => {
-    expect(
-      profitShare({
-        proceeds: 1_200_000n,
-        costBasis: 1_000_000n,
-        shareBps: 500,
-      }),
-    ).toBe(10_000n);
-    expect(
-      profitShare({
-        proceeds: 900_000n,
-        costBasis: 1_000_000n,
-        shareBps: 1500,
-      }),
-    ).toBe(0n);
-    expect(
-      profitShare({ proceeds: 1_200_000n, costBasis: 1_000_000n, shareBps: 0 }),
-    ).toBe(0n);
   });
 });

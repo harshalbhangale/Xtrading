@@ -1,5 +1,5 @@
 "use client";
-import { amountSchema } from "@call-my-bluff/domain";
+import { amountSchema, creatorFeeBpsSchema } from "@call-my-bluff/domain";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -13,7 +13,7 @@ const schema = z.object({
   enabled: z.boolean(),
   version: z.number().nullable(),
   mainnetFeesEnabled: z.boolean(),
-  bps: z.literal(50),
+  bps: creatorFeeBpsSchema,
 });
 const earningsSchema = z.object({
   status: z.enum(["unavailable", "current", "lagging"]),
@@ -133,8 +133,10 @@ export default function ConfiguredPayout() {
             Payout wallet: <code>{record.wallet}</code>
           </p>
           <p>
-            Creator fee: 0.5% of the output of eligible Monad mainnet buys. The
-            buyer reviews the fee before signing. No creator deposit required.
+            Your cut: {record.bps / 100}% of each Monad mainnet buy made from
+            your posts, set by your tier (0.1% verified, 0.5% Pro, 1% Max, 2%
+            Ultra). Paid straight to this wallet inside the buy; the buyer sees
+            it before signing. No deposit, nothing to withdraw.
           </p>
           <button
             type="button"

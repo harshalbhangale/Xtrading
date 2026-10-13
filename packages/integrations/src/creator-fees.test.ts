@@ -55,6 +55,7 @@ it("approves only the exact budget to the fixed entrypoint", () => {
     minimumOutput: 1n,
     allowance: 0n,
     recipient,
+    feeBps: 50,
   });
   expect(step.action).toBe("approve");
   expect(decodeFunctionData({ abi: erc20Abi, data: step.data }).args).toEqual([
@@ -62,13 +63,14 @@ it("approves only the exact budget to the fixed entrypoint", () => {
     1000000n,
   ]);
 });
-it("pins the input, output, recipient, 50bps and a single Kuru market", () => {
+it("pins the input, output, recipient, tier rate and a single Kuru market", () => {
   const step = creatorFeeStep({
     market: "MON",
     amount: 1000000n,
     minimumOutput: 123n,
     allowance: 1000000n,
     recipient,
+    feeBps: 200,
   });
   const decoded = decodeFunctionData({ abi: flowAbi, data: step.data });
   expect(decoded.functionName).toBe("executeSwap");
@@ -80,7 +82,7 @@ it("pins the input, output, recipient, 50bps and a single Kuru market", () => {
     tokenUserSells: kuruMainnet.quote.address,
     amountUserSells: 1000000n,
   });
-  expect(decoded.args?.[1].referrerFeeBps).toBe(50n);
+  expect(decoded.args?.[1].referrerFeeBps).toBe(200n);
   expect(decoded.args?.[1].isInTokenFee).toBe(false);
   expect(decoded.args?.[2].toLowerCase()).toContain(
     kuruMainnet.markets.MON.market.slice(2).toLowerCase(),
@@ -95,6 +97,18 @@ it("rejects empty recipients and zero amounts", () => {
       minimumOutput: 1n,
       allowance: 1n,
       recipient: zeroAddress,
+      feeBps: 50,
+    }),
+  ).toThrow();
+  expect(() =>
+    creatorFeeStep({
+      market: "MON",
+      amount: 1n,
+      minimumOutput: 1n,
+      allowance: 1n,
+      recipient,
+      // Not a tier rate.
+      feeBps: 300 as 200,
     }),
   ).toThrow();
 });

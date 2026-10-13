@@ -12,7 +12,7 @@ export default function CreatorPage() {
     <>
       <PageHeading
         title="Creator studio"
-        description="Link X and your wallet, register calls and climb from Xtrading Pro to Ultra. Your tier sets your share of buyers' profit. No staking required."
+        description="Link X and your wallet, register calls and climb from Xtrading Pro to Ultra. Earn a cut of every buy from your posts. No staking required."
       />
       <AccountSummary audience="creator" signedOutPrompt={false} />
       <Panel
@@ -26,7 +26,7 @@ export default function CreatorPage() {
       </Panel>
       <Panel
         title="Your tier"
-        description="Progress toward the next fee tier. You earn only when buyers sell at a profit."
+        description="Progress toward the next fee tier: 0.1% verified, 0.5% Pro, 1% Max, 2% Ultra of each buy."
         action={
           <Link className="text-link" href="/creator/reputation">
             Tiers & red flags
@@ -57,7 +57,7 @@ export default function CreatorPage() {
               <dt>Reputation tier</dt>
               <dd>
                 Xtrading Pro, Max or Ultra, earned from scored calls and demoted
-                by evidence-backed red flags. Sets your share of buyers' profit.
+                by evidence-backed red flags. Sets your cut of each buy.
               </dd>
             </div>
             <div>

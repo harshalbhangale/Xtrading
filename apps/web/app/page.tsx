@@ -124,7 +124,7 @@ export default function LandingPage() {
             <h3>Build a public record</h3>
             <p>
               Bind your X account to a wallet and register calls that are scored
-              at expiry. Climb the tiers to earn from buyers’ profit.
+              at expiry. Earn a cut of every buy from your posts.
             </p>
             <b>Open the creator studio →</b>
           </Link>

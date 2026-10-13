@@ -1,3 +1,4 @@
+import { type CreatorFeeBps, creatorFeeRates } from "@call-my-bluff/domain";
 import {
   type Address,
   decodeEventLog,
@@ -11,7 +12,6 @@ import {
 import { type KuruMarketKey, kuruMainnet, networkTradeTokens } from "./kuru";
 
 // Interfaces/encoding from Kuru-Labs/Kuru-contracts-flow-public. No contract source copied.
-export const creatorFeeBps = 50;
 export const flowEntrypoint =
   "0xb3e6778480b2E488385E8205eA05E20060B813cb" as Address;
 export const flowRouter =
@@ -65,11 +65,14 @@ export function creatorFeeStep(input: {
   minimumOutput: bigint;
   allowance: bigint;
   recipient: Address;
+  /** Tier rate resolved server-side: 10, 50, 100 or 200 bps of gross output. */
+  feeBps: CreatorFeeBps;
 }) {
   if (
     input.amount <= 0n ||
     input.minimumOutput <= 0n ||
-    input.recipient === zeroAddress
+    input.recipient === zeroAddress ||
+    !creatorFeeRates.includes(input.feeBps)
   )
     throw new Error("invalid_creator_fee");
   const tokens = networkTradeTokens(143, input.market, "buy");
@@ -129,7 +132,7 @@ export function creatorFeeStep(input: {
           feeCollectorAddress: zeroAddress,
           feeBps: 0n,
           referrerAddress: input.recipient,
-          referrerFeeBps: BigInt(creatorFeeBps),
+          referrerFeeBps: BigInt(input.feeBps),
           isInTokenFee: false,
         },
         program,

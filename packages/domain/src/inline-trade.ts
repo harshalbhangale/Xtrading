@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { creatorFeeBpsSchema } from "./reputation";
 
 const atoms = z.string().regex(/^(0|[1-9][0-9]{0,77})$/);
 export const inlineQuoteRequestSchema = z
@@ -57,5 +58,5 @@ export const publicPayoutSchema = z.object({
     })
     .nullable(),
   mainnetFeesEnabled: z.boolean(),
-  bps: z.literal(50),
+  bps: creatorFeeBpsSchema,
 });

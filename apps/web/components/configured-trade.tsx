@@ -1,5 +1,7 @@
 "use client";
 import {
+  type CreatorFeeBps,
+  creatorFeeBpsSchema,
   formatUsd,
   fromUnits,
   spotEstimate,
@@ -75,6 +77,7 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
     xUserId: string;
     handle: string;
     wallet: string;
+    bps: CreatorFeeBps;
   } | null>(null);
   const [payCreator, setPayCreator] = useState(false);
   const [creatorStatus, setCreatorStatus] = useState(
@@ -117,10 +120,15 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
                 })
                 .nullable(),
               mainnetFeesEnabled: z.boolean(),
+              bps: creatorFeeBpsSchema,
             })
             .parse(await r.json());
           if (cancelled) return;
-          setCreator(data.mainnetFeesEnabled ? data.creator : null);
+          setCreator(
+            data.mainnetFeesEnabled && data.creator
+              ? { ...data.creator, bps: data.bps }
+              : null,
+          );
           if (
             data.mainnetFeesEnabled &&
             data.creator &&
@@ -129,7 +137,7 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
             setPayCreator(true);
           setCreatorStatus(
             data.mainnetFeesEnabled && data.creator
-              ? "Optional creator fee: 0.5% of bought-token output."
+              ? `Creator cut: ${data.bps / 100}% of bought-token output, set by the creator's tier.`
               : "Creator fees are unavailable for this post. No creator fee will be charged.",
           );
         })
@@ -691,7 +699,8 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
                 setReview(null);
               }}
             />
-            Pay 0.5% of output to @{creator.handle} · {creator.wallet}
+            Pay {creator.bps / 100}% of output to @{creator.handle} ·{" "}
+            {creator.wallet}
           </label>
         )}
         <p className="pt-foot">{creatorStatus}</p>
@@ -845,8 +854,9 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
                 <div>
                   <dt>Creator fee</dt>
                   <dd>
-                    0.5% of gross {review.creatorFee.denomination.symbol} output
-                    to {review.creatorFee.wallet}. Expected and minimum received
+                    {review.creatorFee.bps / 100}% of gross{" "}
+                    {review.creatorFee.denomination.symbol} output to{" "}
+                    {review.creatorFee.wallet}. Expected and minimum received
                     are net of this fee.
                   </dd>
                 </div>

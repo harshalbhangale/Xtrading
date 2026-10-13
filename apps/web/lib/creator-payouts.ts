@@ -1,10 +1,12 @@
 import "server-only";
 import { creatorPayouts, creators } from "@call-my-bluff/database";
 import { IdentityError } from "@call-my-bluff/database/identity";
+import { type CreatorFeeBps, VERIFIED_FEE_BPS } from "@call-my-bluff/domain";
 import { and, eq, sql } from "drizzle-orm";
 import { type Address, getAddress } from "viem";
 import { getDatabase } from "./database";
 import { identityContext } from "./identity-http";
+import { kolRecord } from "./kol-record";
 
 export async function payoutRegistration(request: Request, enabled?: boolean) {
   const { user, service } = await identityContext(request);
@@ -45,11 +47,17 @@ export async function payoutRegistration(request: Request, enabled?: boolean) {
     version: record?.version ?? null,
     updatedAt: record?.updatedAt.toISOString() ?? null,
     mainnetFeesEnabled: process.env.CREATOR_FEES_ENABLED === "true",
-    bps: 50,
+    bps: await tierFeeBps(binding.handle),
   };
 }
 
 /** The caller chooses a creator ID, never a recipient address. Resolve from the verified registry. */
+/** The creator's current tier rate; the verified 0.1% when reputation is unavailable. */
+async function tierFeeBps(handle: string): Promise<CreatorFeeBps> {
+  const record = await kolRecord(handle).catch(() => null);
+  return record?.assessment.feeBps ?? VERIFIED_FEE_BPS;
+}
+
 export async function resolveCreatorFee(xUserId: string, buyer: Address) {
   if (process.env.CREATOR_FEES_ENABLED !== "true")
     throw new IdentityError("creator_fees_disabled", 409);
@@ -58,6 +66,7 @@ export async function resolveCreatorFee(xUserId: string, buyer: Address) {
   const [row] = await database.db
     .select({
       xUserId: creators.xUserId,
+      handle: creators.handle,
       wallet: creatorPayouts.wallet,
       version: creatorPayouts.version,
     })
@@ -82,7 +91,7 @@ export async function resolveCreatorFee(xUserId: string, buyer: Address) {
     xUserId: row.xUserId,
     wallet: getAddress(row.wallet),
     version: row.version,
-    bps: 50 as const,
+    bps: await tierFeeBps(row.handle),
   };
 }
 
@@ -106,9 +115,10 @@ export async function publicPayout(handle: string) {
     )
     .where(eq(creators.handle, handle))
     .limit(2);
+  const creator = rows.length === 1 && rows[0]?.enabled ? rows[0] : null;
   return {
-    creator: rows.length === 1 && rows[0]?.enabled ? rows[0] : null,
+    creator,
     mainnetFeesEnabled: process.env.CREATOR_FEES_ENABLED === "true",
-    bps: 50,
+    bps: creator ? await tierFeeBps(creator.handle) : VERIFIED_FEE_BPS,
   };
 }

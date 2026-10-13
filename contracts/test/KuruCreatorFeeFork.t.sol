@@ -49,7 +49,26 @@ contract KuruCreatorFeeForkTest {
         return abi.encodePacked(uint8(2), USDC, uint8(1), uint16(65535), uint8(3), BOOK, uint8(1), uint32(1e8), uint256(1e10), uint8(6));
     }
     function execute(uint256 minimum) internal returns (uint256) {
-        return FeeFlow(ENTRY).executeSwap(FeeFlow.Intent(address(0), minimum, USDC, 1e6), FeeFlow.Fees(address(0), 0, CREATOR, 50, false), program());
+        return executeAt(minimum, 50);
+    }
+    function executeAt(uint256 minimum, uint256 bps) internal returns (uint256) {
+        return FeeFlow(ENTRY).executeSwap(FeeFlow.Intent(address(0), minimum, USDC, 1e6), FeeFlow.Fees(address(0), 0, CREATOR, bps, false), program());
+    }
+    /// Creator tiers: verified 0.1%, Pro 0.5%, Max 1%, Ultra 2% of gross output.
+    function testForkEveryTierRatePaysTheCreatorExactly() public {
+        vm.skip(!active);
+        uint16[4] memory rates = [uint16(10), 50, 100, 200];
+        // One 1-USDC buy per rate; acquire enough real USDC first.
+        FeeBook(BOOK).placeAndExecuteMarketSell{value: 200 ether}(uint96(200 * 1e10), 1, false, true);
+        for (uint256 i; i < rates.length; ++i) {
+            FeeToken(USDC).approve(ENTRY, 1e6);
+            uint256 creatorBefore = CREATOR.balance;
+            uint256 buyerBefore = address(this).balance;
+            uint256 net = executeAt(1, rates[i]);
+            uint256 fee = CREATOR.balance - creatorBefore;
+            require(address(this).balance - buyerBefore == net, "Net receipt mismatch");
+            require(fee > 0 && fee == (net + fee) * rates[i] / 10000, "Tier fee mismatch");
+        }
     }
     function testForkBuyerGetsNetOutputAndCreatorGetsFeeAtomically() public {
         vm.skip(!active);

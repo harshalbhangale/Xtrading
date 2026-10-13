@@ -33,15 +33,15 @@ function Bar({ value, label }: { value: number; label: string }) {
 
 /** Current tier, fee share and the requirements left for the next tier. */
 export function TierProgress({ assessment }: { assessment: KolAssessment }) {
-  const { tier, earnedTier, demotedBy, next, profitShareBps } = assessment;
+  const { tier, earnedTier, demotedBy, next, feeBps } = assessment;
   return (
     <div className="tier-progress">
       <div className="tier-current">
         <TierBadge tier={tier} />
         <p>
           {tier
-            ? `Earns ${percent(profitShareBps)} of a buyer's realized profit when they sell a position bought from your post.`
-            : "No fee share yet. Reach Xtrading Pro to start earning from profitable trades on your calls."}
+            ? `Earns ${percent(feeBps)} of every buy made from this creator's posts, paid straight to their wallet.`
+            : `Verified rate: ${percent(feeBps)} of every buy made from your posts. Reach Xtrading Pro for 0.5%.`}
         </p>
         {demotedBy > 0 && (
           <p className="tier-demoted">
@@ -90,7 +90,7 @@ export function TierLadder({ current }: { current: KolAssessment["tier"] }) {
       {reputationTiers.map((tier) => (
         <li key={tier.id} data-current={tier.id === current}>
           <TierBadge tier={tier.id} />
-          <strong>{percent(tier.profitShareBps)} of buyer profit</strong>
+          <strong>{percent(tier.feeBps)} of each buy</strong>
           <span>
             ≥{tier.minScored} scored calls · ≥{tier.minHitBps / 100}% right
             {tier.positiveMedian === "all" && " · positive median return"}

@@ -109,7 +109,7 @@ export default async function CreatorPage({
         </Panel>
         <Panel
           title="Reputation tier"
-          description="Earned from scored calls; red flags demote. The tier sets this creator's share of buyers' realized profit."
+          description="Earned from scored calls; red flags demote. The tier sets this creator's cut of each buy from their posts."
         >
           {record ? (
             <>

@@ -40,7 +40,7 @@ export const roles: Record<
     points: [
       "Bind your X account to a wallet with a signed message",
       "Register calls that are priced and scored at expiry",
-      "Climb Xtrading Pro, Max and Ultra to earn a share of buyers’ profit",
+      "Earn 0.1–2% of every buy from your posts as you climb Pro, Max and Ultra",
     ],
     method: "Requires signing in with your X account.",
     href: "/creator",

@@ -6,7 +6,7 @@ import { useId, useState } from "react";
 const tiers = [
   {
     name: "Pro",
-    share: "5%",
+    share: "0.5%",
     mark: "Ⅰ",
     tagline: "Your first proven calls.",
     criteria: [
@@ -15,11 +15,11 @@ const tiers = [
       "No serious red flags (each one costs a tier)",
     ],
     reward:
-      "Earn 5% of a buyer's realized profit on positions bought from your post.",
+      "Earn 0.5% of every buy made from your post, paid to your wallet in the same transaction.",
   },
   {
     name: "Max",
-    share: "10%",
+    share: "1%",
     mark: "Ⅱ",
     tagline: "A record that holds up.",
     criteria: [
@@ -28,11 +28,11 @@ const tiers = [
       "Positive median return across scored calls",
     ],
     reward:
-      "Earn 10% of a buyer's realized profit on positions bought from your post.",
+      "Earn 1% of every buy made from your post, paid to your wallet in the same transaction.",
   },
   {
     name: "Ultra",
-    share: "15%",
+    share: "2%",
     mark: "Ⅲ",
     tagline: "Sustained, verifiable conviction.",
     criteria: [
@@ -41,7 +41,7 @@ const tiers = [
       "Positive median return at the 7-day horizon",
     ],
     reward:
-      "Earn 15% of a buyer's realized profit on positions bought from your post.",
+      "Earn 2% of every buy made from your post, paid to your wallet in the same transaction.",
   },
 ] as const;
 
@@ -79,25 +79,26 @@ export function CreatorProgram() {
           </span>
           <i>→</i>
           <span>
-            ⇄<small>PROFITABLE SELL</small>
+            ⇄<small>BUY FROM POST</small>
           </span>
           <i>→</i>
           <span>
-            ↗<small>PROFIT SHARE</small>
+            ↗<small>CREATOR CUT</small>
           </span>
         </div>
         <div>
-          <p className="xp-eyebrow">POST → BUY → PROFIT → EARN</p>
+          <p className="xp-eyebrow">POST → BUY → EARN</p>
           <h3>
-            Your audience wins.
+            Your audience buys.
             <br />
-            Then you earn.
+            You earn a cut.
           </h3>
           <p>
-            Buying from your post is free. When a buyer sells that position for
-            a profit, you earn a share of the profit, never of the trade, shown
-            to the buyer before wallet approval. No staking, no subscription:
-            link X, prove your wallet and climb the tiers.
+            Every buy made from your post pays you a small cut, from 0.1% when
+            verified up to 2% at Ultra. It lands in your wallet inside the same
+            transaction and the buyer sees it before signing. No staking, no
+            subscription, nothing to withdraw: link X, prove your wallet and
+            climb the tiers.
           </p>
           <p className="x-program-note">
             Payout registration is available. Fee execution depends on
@@ -119,8 +120,9 @@ export function CreatorProgram() {
       <p className="x-tier-intro">
         Tiers are achievements, not plans. Scored calls move you up; evidence of
         bad behaviour, like a deleted call or trading against your own call,
-        moves you down. Your tier sets your share of buyers' realized profit.
-        Live on Monad mainnet and testnet.
+        moves you down. Your tier sets your cut of each buy from your posts:
+        0.1% verified, 0.5% Pro, 1% Max, 2% Ultra. Live on Monad mainnet and
+        testnet.
       </p>
       <fieldset className="x-tier-grid" aria-label="Explore creator tiers">
         {tiers.map((item, index) => (
@@ -137,7 +139,7 @@ export function CreatorProgram() {
             </span>
             <small>XTRADING</small>
             <strong>{item.name}</strong>
-            <em className="x-tier-price">{item.share} of buyer profit</em>
+            <em className="x-tier-price">{item.share} of each buy</em>
             <p>{item.tagline}</p>
             <span className="x-tier-open">
               Explore eligibility <b>↗</b>
@@ -163,8 +165,8 @@ export function CreatorProgram() {
       </div>
       <p className="x-program-note">
         A tier does not verify a person or promise profit; it summarises scored
-        calls under the published methodology. No profit, no fee. Track your
-        progress in the creator studio.
+        calls under the published methodology. Track your progress and earnings
+        in the creator studio.
       </p>
       <div className="x-integrity-panel">
         <div className="x-post-trail" aria-hidden="true">

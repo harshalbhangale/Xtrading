@@ -150,7 +150,7 @@ export function inlineTrade(signal: PostSignal, route: TradeRoute) {
         return;
       feeChoice.hidden = false;
       feeChoice.disabled = chainId !== 143 || side !== "buy";
-      feeText.textContent = `Optional: 0.5% of bought-token output to @${signal.handle} · mainnet buys only.`;
+      feeText.textContent = `Optional: ${payout.data.bps / 100}% of bought-token output to @${signal.handle} (creator tier) · mainnet buys only.`;
     },
   );
   const explanation = el(

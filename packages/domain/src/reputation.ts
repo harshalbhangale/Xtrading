@@ -1,17 +1,28 @@
+import { z } from "zod";
 import type { PublicCall } from "./index";
 
 /**
  * Reputation tiers and accountability flags for a creator (KOL), computed only
  * from evidence we hold: registered calls scored under directional-return-v1,
- * repeated public-availability checks of those posts, onchain bond outcomes
- * and the creator's own indexed swaps. Tiers set the creator's share of a
- * buyer's realized profit; nothing here is a safety guarantee.
+ * repeated public-availability checks of those posts, onchain settlement
+ * outcomes and the creator's own indexed swaps. Tiers set the creator's cut
+ * of each buy made from their post; nothing here is a safety guarantee.
  */
+/** Cut of a buy for a verified creator with a payout wallet but no tier yet. */
+export const VERIFIED_FEE_BPS = 10;
+export const creatorFeeRates = [10, 50, 100, 200] as const;
+export type CreatorFeeBps = (typeof creatorFeeRates)[number];
+export const creatorFeeBpsSchema = z.union([
+  z.literal(10),
+  z.literal(50),
+  z.literal(100),
+  z.literal(200),
+]);
 export const reputationTiers = [
   {
     id: "pro",
     name: "Xtrading Pro",
-    profitShareBps: 500,
+    feeBps: 50,
     minScored: 5,
     minHitBps: 5000,
     positiveMedian: null,
@@ -19,7 +30,7 @@ export const reputationTiers = [
   {
     id: "max",
     name: "Xtrading Max",
-    profitShareBps: 1000,
+    feeBps: 100,
     minScored: 15,
     minHitBps: 6000,
     positiveMedian: "all",
@@ -27,7 +38,7 @@ export const reputationTiers = [
   {
     id: "ultra",
     name: "Xtrading Ultra",
-    profitShareBps: 1500,
+    feeBps: 200,
     minScored: 30,
     minHitBps: 6500,
     positiveMedian: "7d",
@@ -67,7 +78,8 @@ export type KolAssessment = {
   earnedTier: TierId | null;
   tier: TierId | null;
   demotedBy: number;
-  profitShareBps: number;
+  /** Cut of each buy from this creator's posts, in basis points. */
+  feeBps: CreatorFeeBps;
   next: { id: TierId; name: string; requirements: Requirement[] } | null;
   progressBps: number;
 };
@@ -269,7 +281,7 @@ export function assessKol(input: {
     earnedTier: earned >= 0 ? (reputationTiers[earned]?.id ?? null) : null,
     tier: tier?.id ?? null,
     demotedBy: earned >= 0 ? Math.min(demotedBy, earned + 1) : 0,
-    profitShareBps: tier?.profitShareBps ?? 0,
+    feeBps: tier?.feeBps ?? VERIFIED_FEE_BPS,
     next,
     progressBps,
   };
@@ -277,14 +289,4 @@ export function assessKol(input: {
 
 export function tierName(id: TierId | null) {
   return reputationTiers.find((t) => t.id === id)?.name ?? null;
-}
-
-/** Creator share of realized profit, in quote units; zero when there is no profit. */
-export function profitShare(input: {
-  proceeds: bigint;
-  costBasis: bigint;
-  shareBps: number;
-}) {
-  if (input.shareBps <= 0 || input.proceeds <= input.costBasis) return 0n;
-  return ((input.proceeds - input.costBasis) * BigInt(input.shareBps)) / 10000n;
 }

@@ -45,7 +45,7 @@ export default function ForCreatorsPage() {
             <span>02</span> Registered calls & outcomes
           </div>
           <div>
-            <span>03</span> Verified user profit
+            <span>03</span> Tier & earnings
           </div>
           <p>Distinct evidence. Open to inspection.</p>
         </div>
@@ -66,7 +66,7 @@ export default function ForCreatorsPage() {
           [
             "03 / EARN AS THE RECORD GROWS",
             "Pro, Max, then Ultra.",
-            "Scored calls unlock 5%, 10% and 15% of buyers' realized profit on positions bought from your post. Red flags demote. No staking and no subscription.",
+            "Every buy from your post pays you 0.1% when verified; scored calls raise it to 0.5% (Pro), 1% (Max) and 2% (Ultra). Red flags demote. No staking and no subscription.",
           ],
         ].map(([n, title, copy]) => (
           <article className="xp-detail-card" key={n}>

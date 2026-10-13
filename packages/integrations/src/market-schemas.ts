@@ -1,4 +1,4 @@
-import { amountSchema } from "@call-my-bluff/domain";
+import { amountSchema, creatorFeeBpsSchema } from "@call-my-bluff/domain";
 import { z } from "zod";
 
 const uint = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
@@ -125,7 +125,7 @@ export const spotReviewSchema = z.object({
     .object({
       xUserId: z.string(),
       wallet: address,
-      bps: z.literal(50),
+      bps: creatorFeeBpsSchema,
       version: z.number().int().positive(),
       denomination: token,
     })

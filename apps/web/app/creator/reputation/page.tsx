@@ -9,7 +9,7 @@ export default function ReputationPage() {
     <>
       <PageHeading
         title="Reputation"
-        description="Earn Xtrading Pro, Max and Ultra from scored calls. Your tier sets your share of buyers' realized profit; red flags demote. No staking required."
+        description="Earn Xtrading Pro, Max and Ultra from scored calls. Your tier sets your cut of each buy from your posts (0.1% verified, 0.5% Pro, 1% Max, 2% Ultra); red flags demote. No staking required."
       />
       <Panel
         title="Your tier"

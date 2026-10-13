@@ -56,17 +56,20 @@ export default function MethodologyPage() {
           of the entry price.
         </li>
       </ul>
-      <h2>Reward eligibility</h2>
+      <h2>Creator tiers</h2>
       <p>
-        Five distinct correct calls must each be supported by a confirmed
-        profitable user trade. A price outcome alone does not count. Entry and
-        exit fills, trading fees, gas and the original call link must be
-        verified; creator self-trades and duplicate calls do not count.
+        Xtrading Pro needs at least 5 scored calls with half or more right; Max
+        needs 15 with 60% right and a positive median return; Ultra needs 30
+        with 65% right and a positive median return at the 7-day horizon. Each
+        distinct serious red flag (a registered post X stopped serving in two
+        consecutive checks, or the creator's wallet trading against their own
+        open call) costs one tier.
       </p>
       <p>
-        Profit verification and reward eligibility are not live yet. Incorrect
-        calls remain in the public history. Eligibility does not promise future
-        profits or an unfunded bonus.
+        The tier sets the creator's cut of each buy made from their post: 0.1%
+        for a verified creator with a payout wallet, 0.5% Pro, 1% Max and 2%
+        Ultra. Incorrect calls remain in the public history. A tier does not
+        promise future profits.
       </p>
       <h2>What this is not</h2>
       <p>
