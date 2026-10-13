@@ -11,17 +11,27 @@ export default function CreatorPage() {
     <>
       <PageHeading
         title="Creator studio"
-        description="Link X and your wallet to register creator payouts. Staking and bonded calls are optional, separate signals."
+        description="Link X and your wallet, register calls and build a measurable record."
       />
       <AccountSummary audience="creator" signedOutPrompt={false} />
       <Panel
         title="Setup"
-        description="Account linking enables payout registration. Staking is optional."
+        description="Account linking enables payout registration. No deposit is needed."
       >
         <Link className="button" href="/creator/earnings">
           Set up creator earnings →
         </Link>
         <CreatorStatus />
+      </Panel>
+      <Panel
+        title="Reward eligibility"
+        description="Five distinct correct calls must each be backed by a confirmed profitable user trade after costs."
+      >
+        <p className="small-note">
+          Profit verification is not available yet. Correct price predictions
+          alone do not establish eligibility; no reward is promised or
+          activated.
+        </p>
       </Panel>
       <div className="dashboard-two-column">
         <Panel
@@ -39,13 +49,6 @@ export default function CreatorPage() {
               <dd>
                 Your stable X ID bound to a wallet by a signed, single-use
                 message. Proves ownership, not skill.
-              </dd>
-            </div>
-            <div>
-              <dt>Stake</dt>
-              <dd>
-                A refundable deposit with a seven-day withdrawal cooldown. Shows
-                commitment, not accuracy.
               </dd>
             </div>
             <div>

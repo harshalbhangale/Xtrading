@@ -1,5 +1,5 @@
 import { normalizeHandle, publicCallLedgerSchema } from "@call-my-bluff/domain";
-import { callStats, formatUnits6, statTiles } from "./card-metrics";
+import { callStats, statTiles } from "./card-metrics";
 import { appOrigin } from "./config";
 import { addProfileBadge } from "./creator-badge";
 import {
@@ -170,24 +170,6 @@ export async function scanProfile() {
           value: shortAddress(evidence.identity.wallet ?? ""),
         }
       : { label: "Wallet", value: null, reason: "not linked" },
-  );
-  const stake = evidence?.stake;
-  panel.set(
-    "stake",
-    stake?.status === "active" && stake.balance
-      ? {
-          label: "Stake",
-          value:
-            `${formatUnits6(stake.balance)} ${stake.symbol ?? ""} staked`.trim(),
-        }
-      : stake?.status === "withdrawal-pending"
-        ? { label: "Stake", value: "Withdrawing" }
-        : {
-            label: "Stake",
-            value: null,
-            reason:
-              stake?.status === "inactive" ? "none" : "indexer not current",
-          },
   );
   const [ledgerRaw, checked] = await Promise.all([
     send<unknown>({ type: "creator-ledger", handle }),

@@ -6,7 +6,6 @@ import {
   publicCreatorEvidence,
   recentBoundHandles,
 } from "../../lib/public-creator";
-import { stakeLabel } from "../../lib/stake-label";
 
 export const metadata: Metadata = { title: "Creators" };
 export const dynamic = "force-dynamic";
@@ -53,7 +52,6 @@ export default async function CreatorsPage() {
                 <tr>
                   <th scope="col">Creator</th>
                   <th scope="col">Identity</th>
-                  <th scope="col">Stake</th>
                   <th scope="col">Bound</th>
                 </tr>
               </thead>
@@ -72,7 +70,6 @@ export default async function CreatorsPage() {
                             ? "Binding recorded"
                             : "Unavailable"}
                         </td>
-                        <td>{stakeLabel(record.stake)}</td>
                         <td>
                           {record.identity.linkedAt
                             ? new Date(

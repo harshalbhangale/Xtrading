@@ -216,7 +216,9 @@ export default function ConfiguredCalls() {
           <CallSummary calls={calls} bonds={bonds} />
           <CallLedger
             calls={calls}
-            action={(call) => <CallBond callId={call.id} />}
+            action={(call) =>
+              call.bond ? <CallBond callId={call.id} /> : null
+            }
           />
         </>
       )}

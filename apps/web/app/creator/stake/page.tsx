@@ -6,21 +6,21 @@ import {
 } from "../../../components/dashboard/ui";
 import { StakeControl } from "../../../components/stake-control";
 
-export const metadata: Metadata = { title: "Creator stake" };
+export const metadata: Metadata = { title: "Previous deposit recovery" };
 
 export default function StakePage() {
   return (
     <>
       <PageHeading
-        title="Stake"
-        description="A refundable deposit with a seven-day withdrawal cooldown. It shows commitment, not accuracy."
+        title="Previous deposit recovery"
+        description="Staking has been retired. This page only supports recovering funds deposited previously."
       />
-      <Panel title="Your stake">
+      <Panel title="Withdraw an existing deposit">
         <StakeControl />
       </Panel>
       <ConnectionNote>
-        Nothing is slashed for a wrong call. Staking does not verify identity or
-        imply profitability.
+        Existing contracts and withdrawal rights remain available. No deposit is
+        needed to create calls or trade.
       </ConnectionNote>
     </>
   );

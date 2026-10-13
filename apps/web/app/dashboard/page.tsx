@@ -62,17 +62,13 @@ export default function DashboardPage() {
         </Panel>
         <Panel
           title="Look up a creator"
-          description="Identity binding, stake and calls for any X handle."
+          description="Identity binding, call results and wallet activity for any X handle."
         >
           <CreatorSearch />
           <dl className="signal-list lookup-list">
             <div>
               <dt>Identity</dt>
               <dd>Whether the X account is bound to a wallet.</dd>
-            </div>
-            <div>
-              <dt>Stake</dt>
-              <dd>A refundable deposit. Commitment, not accuracy.</dd>
             </div>
             <div>
               <dt>Calls</dt>

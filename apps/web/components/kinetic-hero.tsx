@@ -6,8 +6,8 @@ import { SignalField } from "./signal-field";
 
 const copy = {
   default: {
-    lines: ["THE FEED MOVES.", "THE RECORD", "STAYS."],
-    body: "Check the conviction behind the call.\nCreator records and wallet-reviewed trading,\nright from X. Built on Monad.",
+    lines: ["SEE THE POST.", "TRADE IT.", "STAY ON X."],
+    body: "Discover your favourite KOL’s next call.\nBuy, sell, go spot or perps — right from X.\nYour wallet. Your approval. Built on Monad.",
   },
   Kuru: {
     lines: ["FROM THE POST.", "TO YOUR", "POSITION."],
@@ -19,7 +19,7 @@ const copy = {
   },
   Envio: {
     lines: ["THE CHAIN", "KEEPS THE", "RECEIPTS."],
-    body: "Envio indexes stake and trading events.\nFreshness and confirmed activity matter.\nAn order is only a fill when the evidence says so.",
+    body: "Envio indexes trading and creator payment events.\nFreshness and confirmed activity matter.\nAn order is only a fill when the evidence says so.",
   },
   Nansen: {
     lines: ["LOOK BEYOND", "THE POST.", "CHECK THE WALLET."],
@@ -126,7 +126,7 @@ export function KineticHero() {
         </div>
       </div>
       <span className="x-scroll-note">
-        SCROLL TO THE RECORD <span aria-hidden="true">↓</span>
+        FROM POST TO POSITION <span aria-hidden="true">↓</span>
       </span>
       <button
         className="x-motion-toggle"

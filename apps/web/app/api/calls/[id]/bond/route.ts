@@ -32,9 +32,7 @@ export async function POST(request: Request, context: Params) {
     const id = await callId(context);
     const body = callBondActionSchema.safeParse(await jsonBody(request));
     if (!body.success) throw new IdentityError("invalid_body");
-    return reply(
-      await prepareCallBond(request, id, body.data.action, body.data.amount),
-    );
+    return reply(await prepareCallBond(request, id, body.data.action));
   } catch (error) {
     return identityFailure(error);
   }

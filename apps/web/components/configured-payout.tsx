@@ -134,7 +134,7 @@ export default function ConfiguredPayout() {
           </p>
           <p>
             Creator fee: 0.5% of the output of eligible Monad mainnet buys. The
-            buyer reviews the fee before signing. No staking required.
+            buyer reviews the fee before signing. No creator deposit required.
           </p>
           <button
             type="button"

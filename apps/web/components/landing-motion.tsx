@@ -15,7 +15,13 @@ gsap.registerPlugin(useGSAP, ScrollTrigger);
 const MotionContext = createContext({ paused: false, toggle: () => {} });
 export const useLandingMotion = () => useContext(MotionContext);
 
-export function LandingMotion({ children }: { children: ReactNode }) {
+export function LandingMotion({
+  children,
+  className = "x-home",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   const root = useRef<HTMLDivElement>(null);
   const entered = useRef(false);
   const [paused, setPaused] = useState(false);
@@ -46,7 +52,7 @@ export function LandingMotion({ children }: { children: ReactNode }) {
         }
         root.current
           .querySelectorAll<HTMLElement>(
-            ".x-section-heading, .x-principles > h2, .xp-detail-card, .x-paths > h2, .x-path, .x-install-banner",
+            ".x-section-heading, .x-principles > h2, .xp-detail-card, .x-paths > h2, .x-path, .x-install-banner, .x-flow-heading, .x-flow-board, .xp-detail-hero > div, .xp-detail-note, .x-creator-network, .x-tier-grid, .x-integrity-panel",
           )
           .forEach((element) => {
             gsap.from(element, {
@@ -59,16 +65,17 @@ export function LandingMotion({ children }: { children: ReactNode }) {
               clearProps: "all",
             });
           });
-        gsap.to(".x-signal-field", {
-          yPercent: 15,
-          ease: "none",
-          scrollTrigger: {
-            trigger: ".x-hero",
-            start: "top top",
-            end: "bottom top",
-            scrub: 1,
-          },
-        });
+        if (root.current.querySelector(".x-hero"))
+          gsap.to(".x-signal-field", {
+            yPercent: 15,
+            ease: "none",
+            scrollTrigger: {
+              trigger: ".x-hero",
+              start: "top top",
+              end: "bottom top",
+              scrub: 1,
+            },
+          });
         const progress = root.current.querySelector(".x-scroll-progress");
         gsap.fromTo(
           progress,
@@ -86,6 +93,43 @@ export function LandingMotion({ children }: { children: ReactNode }) {
           },
         );
         const removers: (() => void)[] = [];
+        if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+          root.current
+            .querySelectorAll<HTMLElement>(".xp-detail-card, .x-path")
+            .forEach((element) => {
+              const rotateX = gsap.quickTo(element, "rotationX", {
+                duration: 0.65,
+                ease: "power3.out",
+              });
+              const rotateY = gsap.quickTo(element, "rotationY", {
+                duration: 0.65,
+                ease: "power3.out",
+              });
+              gsap.set(element, { transformPerspective: 1100 });
+              const move = (event: PointerEvent) => {
+                if (event.pointerType !== "mouse") return;
+                const box = element.getBoundingClientRect();
+                const x = (event.clientX - box.left) / box.width;
+                const y = (event.clientY - box.top) / box.height;
+                element.style.setProperty("--spot-x", `${x * 100}%`);
+                element.style.setProperty("--spot-y", `${y * 100}%`);
+                rotateX((0.5 - y) * 5);
+                rotateY((x - 0.5) * 5);
+              };
+              const leave = () => {
+                rotateX(0);
+                rotateY(0);
+              };
+              element.addEventListener("pointermove", move);
+              element.addEventListener("pointerleave", leave);
+              removers.push(() => {
+                element.removeEventListener("pointermove", move);
+                element.removeEventListener("pointerleave", leave);
+                element.style.removeProperty("--spot-x");
+                element.style.removeProperty("--spot-y");
+              });
+            });
+        }
         root.current
           .querySelectorAll<HTMLElement>(".xp-button, .x-install-banner > b")
           .forEach((element) => {
@@ -122,7 +166,7 @@ export function LandingMotion({ children }: { children: ReactNode }) {
         });
         observer.observe(root.current);
         const effects = root.current.querySelectorAll(
-          ".x-signal-art, .x-signal-tape, .x-install-banner",
+          ".x-signal-art, .x-signal-tape, .x-install-banner, .x-earn-flow, .x-post-trail, .x-tier-grid",
         );
         const visibility = new IntersectionObserver((entries) => {
           entries.forEach((entry) => {
@@ -157,7 +201,7 @@ export function LandingMotion({ children }: { children: ReactNode }) {
     >
       <div
         ref={root}
-        className={`xp-page x-home ${paused ? "x-motion-paused" : ""}`}
+        className={`xp-page ${className} ${paused ? "x-motion-paused" : ""}`}
       >
         <div className="x-scroll-progress" aria-hidden="true" />
         {children}

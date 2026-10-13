@@ -12,7 +12,6 @@ import { price } from "./call-ledger";
 import { useWalletSend } from "./use-wallet-send";
 
 type Prepared = ReturnType<typeof preparedCallBondSchema.parse>;
-const BOND_OPTIONS = ["10", "50", "100", "250", "500", "1000"];
 const reasons: Record<string, string> = {
   already_bonded: "Already bonded.",
   call_resolved: "This call has resolved; only open calls can be bonded.",
@@ -37,7 +36,7 @@ const time = (seconds: string) =>
     timeZoneName: "short",
   });
 
-/** Owner-only control to put a refundable mUSDC bond behind a registered call. */
+/** Owner-only recovery for previously funded calls. New call bonds are retired. */
 export function CallBond({ callId }: { callId: string }) {
   const { getAccessToken } = usePrivy();
   const { wallets } = useWallets();
@@ -45,7 +44,6 @@ export function CallBond({ callId }: { callId: string }) {
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<CallBondState | null>(null);
   const [prepared, setPrepared] = useState<Prepared | null>(null);
-  const [amount, setAmount] = useState("100");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
 
@@ -80,14 +78,12 @@ export function CallBond({ callId }: { callId: string }) {
     }
   }
 
-  async function prepare(action: "bond" | "claim" | "refund") {
+  async function prepare(action: "claim" | "refund") {
     setBusy(true);
     setPrepared(null);
     setNotice("");
     try {
-      const value = preparedCallBondSchema.parse(
-        await request({ action, ...(action === "bond" ? { amount } : {}) }),
-      );
+      const value = preparedCallBondSchema.parse(await request({ action }));
       setState(value.state);
       setPrepared(value);
     } catch (error) {
@@ -159,7 +155,7 @@ export function CallBond({ callId }: { callId: string }) {
           void refresh();
         }}
       >
-        Bond this call
+        Recover previous call funds
       </button>
     );
   return (
@@ -183,49 +179,9 @@ export function CallBond({ callId }: { callId: string }) {
                   ` · ${price(state.onchain.entryPrice, 8)} → ${price(state.onchain.exitPrice, 8)}`}
               </span>
             </p>
-          ) : state.bondable && state.horizon ? (
-            <>
-              <label>
-                Bond (mUSDC)
-                <select
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  disabled={busy}
-                >
-                  {BOND_OPTIONS.filter(
-                    (o) =>
-                      BigInt(o) * 1_000_000n >= BigInt(state.minBond) &&
-                      BigInt(o) * 1_000_000n <= BigInt(state.maxBond),
-                  ).map((o) => (
-                    <option key={o}>{o}</option>
-                  ))}
-                </select>
-              </label>
-              <p className="small-note">
-                Right: bond back + {Number(amount) / 2} mUSDC reward. Wrong:
-                bond slashed. Window runs from bonding to{" "}
-                {time(
-                  (
-                    BigInt(state.blockTimestamp) + BigInt(state.horizon)
-                  ).toString(),
-                )}
-                , priced by a Chainlink CRE workflow from Binance 1-minute
-                opens. This is separate from the ledger result, which uses the
-                post time. Wallet: {usdc(state.tokenBalance)} mUSDC · pool{" "}
-                {usdc(state.rewardPool)}.
-              </p>
-              <button
-                type="button"
-                className="button"
-                disabled={busy}
-                onClick={() => void prepare("bond")}
-              >
-                Review bond
-              </button>
-            </>
           ) : (
             <p className="small-note">
-              {reasons[state.reason ?? ""] ?? "Not bondable."}
+              No previous call deposit found. New call bonds are disabled.
             </p>
           )}
           {BigInt(state.claimable) > 0n && (

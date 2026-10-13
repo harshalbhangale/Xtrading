@@ -56,10 +56,6 @@ export async function SourceCall({
             </dd>
           </div>
           <div>
-            <dt>Stake</dt>
-            <dd>{insights.evidence?.stake.status ?? "unavailable"}</dd>
-          </div>
-          <div>
             <dt>Tracked calls</dt>
             <dd>
               {insights.reputation.trackedCalls} ({insights.reputation.bullish}{" "}

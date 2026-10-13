@@ -9,7 +9,7 @@ export default function EarningsPage() {
       />
       <Panel
         title="Payout registration"
-        description="Link X and prove your wallet ownership. No World ID or staking required."
+        description="Link X and prove your wallet ownership. No deposit or World ID required."
       >
         <CreatorPayoutControl />
       </Panel>

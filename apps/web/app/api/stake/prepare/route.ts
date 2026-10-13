@@ -13,9 +13,7 @@ export async function POST(request: Request) {
     requireOrigin(request);
     const body = stakeActionSchema.safeParse(await jsonBody(request));
     if (!body.success) throw new IdentityError("invalid_body");
-    return reply(
-      await prepareStake(request, body.data.action, body.data.amount),
-    );
+    return reply(await prepareStake(request, body.data.action));
   } catch (error) {
     return identityFailure(error);
   }

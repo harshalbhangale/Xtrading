@@ -8,7 +8,6 @@ import { PageHeading, Panel } from "../../../components/dashboard/ui";
 import { publicCallLedger } from "../../../lib/calls";
 import { creatorReputation } from "../../../lib/insights";
 import { publicCreatorEvidence } from "../../../lib/public-creator";
-import { stakeLabel } from "../../../lib/stake-label";
 
 export const dynamic = "force-dynamic";
 const explorer = "https://testnet.monadexplorer.com/address/";
@@ -35,7 +34,6 @@ export default async function CreatorPage({
     creatorReputation(handle).catch(() => null),
   ]);
   const identity = evidence?.identity;
-  const stake = evidence?.stake;
   const bound = identity?.status === "bound";
   return (
     <>
@@ -47,7 +45,7 @@ export default async function CreatorPage({
         title={`@${handle}`}
         description={
           bound
-            ? "This X account is bound to a wallet. Identity, stake and call performance are shown separately."
+            ? "This X account is bound to a wallet. Identity, call performance and wallet returns are shown separately."
             : "No verified binding for this handle. Nothing here should be read as a claim about this account."
         }
         action={
@@ -67,7 +65,7 @@ export default async function CreatorPage({
       <div className="dashboard-two-column">
         <Panel
           title="Identity"
-          description="X sign-in plus a signed wallet message at binding time. Says nothing about stake or accuracy."
+          description="X sign-in plus a signed wallet message at binding time. Proves account ownership, not accuracy."
         >
           {bound && identity.xUserId && identity.wallet && identity.linkedAt ? (
             <dl className="evidence-list">
@@ -91,37 +89,6 @@ export default async function CreatorPage({
           ) : (
             <p className="small-note">No binding recorded.</p>
           )}
-        </Panel>
-        <Panel
-          title="Refundable stake"
-          description="Read from the stake contract and cross-checked against the Envio index. Demo tokens have no monetary value."
-        >
-          <dl className="evidence-list">
-            <dt>Status</dt>
-            <dd>{stake ? stakeLabel(stake) : "Unavailable"}</dd>
-            <dt>Network</dt>
-            <dd>Monad testnet (10143)</dd>
-            {stake?.contract && (
-              <>
-                <dt>Contract</dt>
-                <dd>
-                  <a
-                    href={`${explorer}${stake.contract}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {stake.contract}
-                  </a>
-                </dd>
-              </>
-            )}
-            <dt>Indexer</dt>
-            <dd>
-              {stake?.indexing
-                ? `${stake.indexing.status}, block ${stake.indexing.progressBlock ?? "—"} (unfinalized)`
-                : "Unavailable"}
-            </dd>
-          </dl>
         </Panel>
       </div>
       <Panel

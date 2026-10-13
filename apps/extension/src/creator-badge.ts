@@ -34,7 +34,7 @@ function evidence(handle: string) {
       },
     );
     evidenceRequests.set(handle, request);
-    // Re-check after a minute so new bindings and stake changes appear.
+    // Re-check after a minute so new bindings appear.
     setTimeout(() => evidenceRequests.delete(handle), 60000);
   }
   return request;
@@ -126,17 +126,6 @@ export async function addPostBadge(article: HTMLElement, handle: string) {
         subtitle: "X identity linked · Wallet ownership verified",
         tooltip: false,
       }),
-    );
-  if (value?.stake.status === "active")
-    chips.push(
-      el(
-        "span",
-        {
-          class: "chip staked",
-          title: `Refundable ${value.stake.symbol ?? ""} stake active on Monad testnet`,
-        },
-        "◆ Staked",
-      ),
     );
   if (!chips.length) return;
   for (const chip of chips) chip.addEventListener("click", openRecord(handle));

@@ -9,7 +9,7 @@ export default function ActivityPage() {
     <>
       <PageHeading
         title="Activity"
-        description="Kuru swaps, deposits and withdrawals from your wallet, as indexed by Envio. Stake history is on the creator Stake page."
+        description="Kuru swaps, deposits and withdrawals from your wallet, as indexed by Envio."
       />
       <Panel title="Events">
         <ActivityControl view="all" />

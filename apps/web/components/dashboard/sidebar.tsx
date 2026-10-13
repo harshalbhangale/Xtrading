@@ -24,7 +24,6 @@ const navigation: Record<"user" | "creator", Item[]> = {
     { href: "/creator", label: "Overview", icon: "overview" },
     { href: "/creator/profile", label: "Identity", icon: "identity" },
     { href: "/creator/earnings", label: "Earnings", icon: "portfolio" },
-    { href: "/creator/stake", label: "Stake (optional)", icon: "stake" },
     { href: "/creator/calls", label: "Calls", icon: "calls" },
     { href: "/creator/reputation", label: "Reputation", icon: "reputation" },
   ],

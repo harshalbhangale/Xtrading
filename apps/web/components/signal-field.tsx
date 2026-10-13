@@ -25,7 +25,9 @@ export function SignalField({ mode = "default" }: { mode?: string }) {
       pointerX = 0,
       pointerY = 0,
       targetX = 0,
-      targetY = 0;
+      targetY = 0,
+      currentMorph = 0,
+      currentTint = 0;
     const points: { u: number; v: number }[] = [];
     for (let ring = 0; ring < 180; ring++)
       for (let tube = 0; tube < 28; tube++)
@@ -45,9 +47,10 @@ export function SignalField({ mode = "default" }: { mode?: string }) {
     function draw(now: number) {
       if (!context) return;
       if (now - last > 32 || !last) {
+        const delta = last ? Math.min((now - last) / 1000, 0.05) : 0;
         last = now;
         if (!paused && !reduced.matches && !document.hidden && visible)
-          time = elapsed.current += 0.016;
+          time = elapsed.current += delta * 0.55;
         pointerX += (targetX - pointerX) * 0.065;
         pointerY += (targetY - pointerY) * 0.065;
         context.clearRect(0, 0, width, height);
@@ -55,7 +58,7 @@ export function SignalField({ mode = "default" }: { mode?: string }) {
         const rotation = time * 0.3 + pointerX * 0.65,
           tilt = 0.65 + pointerY * 0.4;
         const variant = activeMode.current;
-        const morph =
+        const targetMorph =
           variant === "Kuru"
             ? 0.28
             : variant === "Privy"
@@ -65,6 +68,11 @@ export function SignalField({ mode = "default" }: { mode?: string }) {
                 : variant === "Nansen"
                   ? -0.1
                   : 0;
+        currentMorph += (targetMorph - currentMorph) * 0.055;
+        currentTint +=
+          ((variant === "Kuru" || variant === "Nansen" ? 1 : 0) - currentTint) *
+          0.055;
+        const morph = currentMorph;
         const ca = Math.cos(rotation),
           sa = Math.sin(rotation),
           ct = Math.cos(tilt),
@@ -85,10 +93,7 @@ export function SignalField({ mode = "default" }: { mode?: string }) {
           const x = width * 0.56 + rx * scale * perspective,
             y = height * 0.5 + ry * scale * perspective;
           const brightness = Math.max(0.12, Math.min(1, (z + 1.8) / 3));
-          context.fillStyle =
-            variant === "Kuru" || variant === "Nansen"
-              ? `rgba(140,176,78,${brightness * 0.38})`
-              : `rgba(118,138,116,${brightness * 0.32})`;
+          context.fillStyle = `rgba(${Math.round(118 + currentTint * 48)},${Math.round(138 + currentTint * 67)},${Math.round(116 - currentTint * 30)},${brightness * (0.36 + currentTint * 0.08)})`;
           context.beginPath();
           context.arc(
             x,

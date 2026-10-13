@@ -56,10 +56,22 @@ export default function MethodologyPage() {
           of the entry price.
         </li>
       </ul>
+      <h2>Reward eligibility</h2>
+      <p>
+        Five distinct correct calls must each be supported by a confirmed
+        profitable user trade. A price outcome alone does not count. Entry and
+        exit fills, trading fees, gas and the original call link must be
+        verified; creator self-trades and duplicate calls do not count.
+      </p>
+      <p>
+        Profit verification and reward eligibility are not live yet. Incorrect
+        calls remain in the public history. Eligibility does not promise future
+        profits or an unfunded bonus.
+      </p>
       <h2>What this is not</h2>
       <p>
         Outcomes are hypothetical. They are not anyone's wallet returns, and a
-        refundable stake or a verified identity does not imply good calls.
+        linked identity does not imply good calls.
       </p>
     </div>
   );

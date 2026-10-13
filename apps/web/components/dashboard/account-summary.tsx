@@ -10,7 +10,7 @@ function SignedOut({ audience }: { audience: "user" | "creator" }) {
         <strong>You’re browsing signed out</strong>
         <span>
           {audience === "creator"
-            ? "Sign in with X to bind your account, stake and register calls."
+            ? "Sign in with X to bind your account and register calls."
             : "Public records and markets work without an account. Sign in to trade and see your activity."}
         </span>
       </div>

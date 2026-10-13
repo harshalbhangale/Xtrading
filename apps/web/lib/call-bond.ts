@@ -40,7 +40,6 @@ const MIN_HORIZON = 3600n;
 // Leaves time for review and inclusion so the onchain expiry stays at or after the ledger expiry.
 const INCLUSION_BUFFER = 60n;
 const REVIEW_MS = 120_000;
-const UNITS = 1_000_000n;
 
 /** Deterministic onchain ID for a registered call; never reused across calls. */
 export const onchainCallId = (id: string) =>
@@ -197,62 +196,14 @@ export async function prepareCallBond(
   request: Request,
   id: string,
   action: "bond" | "claim" | "refund",
-  amount?: string,
 ) {
-  const { client, state, evidence, asset, postId } = await callBondContext(
-    request,
-    id,
-  );
+  if (action === "bond") throw new IdentityError("call_bonds_retired", 409);
+  const { client, state } = await callBondContext(request, id);
   const contract = state.contract as Address;
   let to = contract,
     data: Hex,
-    step: "approve" | "register" | "claim" | "refund",
-    bond: bigint | null = null,
-    reward: bigint | null = null,
-    termsHash: Hex | null = null;
-  if (action === "bond") {
-    if (!state.bondable || !state.horizon)
-      throw new IdentityError(state.reason ?? "not_bondable", 409);
-    if (!amount) throw new IdentityError("invalid_amount");
-    bond = BigInt(amount) * UNITS;
-    if (bond < BigInt(state.minBond) || bond > BigInt(state.maxBond))
-      throw new IdentityError("bond_out_of_range");
-    // The reward pool pays half the bond on a correct call.
-    reward = bond / 2n;
-    if (reward > BigInt(state.rewardPool))
-      throw new IdentityError("reward_pool_exhausted", 409);
-    if (bond > BigInt(state.tokenBalance))
-      throw new IdentityError("insufficient_test_usdc", 409);
-    termsHash = keccak256(
-      stringToHex(JSON.stringify({ postId, terms: evidence.terms })),
-    );
-    if (BigInt(state.allowance) < bond) {
-      // Exact allowance for this bond only; never unlimited.
-      step = "approve";
-      to = state.token as Address;
-      data = encodeFunctionData({
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [contract, bond],
-      });
-    } else {
-      step = "register";
-      data = encodeFunctionData({
-        abi: settlementAbi,
-        functionName: "registerCall",
-        args: [
-          state.onchainId as Hex,
-          asset,
-          evidence.terms.direction === "up" ? 0 : 1,
-          Number(evidence.terms.targetBps),
-          BigInt(state.horizon),
-          bond,
-          reward,
-          termsHash,
-        ],
-      });
-    }
-  } else if (action === "claim") {
+    step: "claim" | "refund";
+  if (action === "claim") {
     if (BigInt(state.claimable) === 0n)
       throw new IdentityError("nothing_to_claim", 409);
     step = "claim";
@@ -293,9 +244,9 @@ export async function prepareCallBond(
     value: "0",
     gas: gas.toString(),
     expiresAt: new Date(Date.now() + REVIEW_MS).toISOString(),
-    bond: bond?.toString() ?? null,
-    reward: reward?.toString() ?? null,
-    termsHash,
+    bond: null,
+    reward: null,
+    termsHash: null,
     state,
   });
 }

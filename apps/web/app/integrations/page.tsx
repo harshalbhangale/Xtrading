@@ -4,16 +4,7 @@ import { McpTokenControl } from "../../components/mcp-token-control";
 
 export const metadata: Metadata = { title: "Agent access" };
 const tools = [
-  [
-    "get_creator",
-    "Identity binding and stake evidence for an X handle.",
-    "Read",
-  ],
-  [
-    "get_stake_status",
-    "Stake balance, withdrawal state and freshness.",
-    "Read",
-  ],
+  ["get_creator", "Identity binding for an X handle.", "Read"],
   ["list_calls", "Registered calls, prices and scored outcomes.", "Read"],
   ["get_markets", "Kuru spot books and open Perpl markets.", "Read"],
   ["quote_trade", "Indicative Kuru output from the order book.", "Read"],

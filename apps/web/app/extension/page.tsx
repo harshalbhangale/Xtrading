@@ -16,7 +16,7 @@ export default function ExtensionPage() {
           </h1>
           <p className="xp-lead">
             A Chrome extension for X. Inspect creator records on profiles and
-            open the call drawer on detected trade calls, with identity, stake
+            open the call drawer on detected trade calls, with identity, calls
             and wallet-reviewed Kuru spot or Perpl perp trade links.
           </p>
           <div className="xp-actions">

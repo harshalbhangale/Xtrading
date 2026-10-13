@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     template: "%s · Xtrading",
   },
   description:
-    "Verified X identity, refundable stake and wallet-approved trading from X, on Monad.",
+    "Linked X identity, creator analytics and wallet-approved trading from X, on Monad.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

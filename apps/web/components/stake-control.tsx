@@ -8,9 +8,6 @@ export function StakeControl() {
   return process.env.NEXT_PUBLIC_PRIVY_APP_ID ? (
     <ConfiguredStake />
   ) : (
-    <p>
-      Configure Privy and verify identity to inspect stake or prepare
-      transactions.
-    </p>
+    <p>Sign-in is required to recover a previous deposit.</p>
   );
 }

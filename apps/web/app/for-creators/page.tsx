@@ -1,24 +1,26 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CreatorProgram } from "../../components/creator-program";
+import { LandingMotion } from "../../components/landing-motion";
 
 export const metadata: Metadata = { title: "For creators" };
 export default function ForCreatorsPage() {
   return (
-    <div className="xp-page xp-detail">
+    <LandingMotion className="xp-detail x-for-creators">
       <section className="xp-detail-hero">
         <div>
           <p className="xp-eyebrow">FOR CREATORS WITH CONVICTION</p>
           <h1>
             Your calls.
             <br />
-            Your name.
+            Your audience.
             <br />
-            <span className="xp-highlight">Your record.</span>
+            <span className="xp-highlight">Your earnings.</span>
           </h1>
           <p className="xp-lead">
-            Give people more than a screenshot of your winners. Build a public
-            creator record with identity, refundable stake and registered calls
-            people can inspect.
+            Link your X identity and payout wallet. Register for eligible
+            creator fees, build an inspectable call history, and grow your
+            reputation.
           </p>
           <div className="xp-actions">
             <Link className="xp-button" href="/creator">
@@ -40,14 +42,15 @@ export default function ForCreatorsPage() {
             <span>01</span> X identity ↔ wallet
           </div>
           <div>
-            <span>02</span> Refundable participation stake
+            <span>02</span> Registered calls & outcomes
           </div>
           <div>
-            <span>03</span> Registered calls & outcomes
+            <span>03</span> Verified user profit
           </div>
           <p>Distinct evidence. Open to inspection.</p>
         </div>
       </section>
+      <CreatorProgram />
       <div className="xp-feature-grid">
         {[
           [
@@ -56,14 +59,14 @@ export default function ForCreatorsPage() {
             "Sign in with X through Privy and sign a one-time wallet message. Your binding uses a stable X user ID, so a handle change doesn’t become a new identity.",
           ],
           [
-            "02 / ADD A REFUNDABLE STAKE",
-            "Show commitment.",
-            "Review a deposit into the configured Monad testnet stake contract. The refundable stake has a seven-day withdrawal cooldown. It shows participation, not profitable advice.",
+            "02 / REGISTER YOUR CALLS",
+            "Build the record.",
+            "Attach the source post and define the asset, direction, target and deadline. Terms stay fixed and all outcomes remain visible.",
           ],
           [
-            "03 / REGISTER YOUR CALLS",
-            "Build the record.",
-            "Attach the source post and define a call’s terms. Open and unevaluated calls remain visible; evaluated outcomes use published rules and stay separate from your wallet returns.",
+            "03 / SUBSCRIBE AS THE RECORD GROWS",
+            "Pro, Max, then Ultra.",
+            "Proposed at 10, 20 and 30 USDC a month on Monad. The price follows published results. Billing is not live, and a USDC payment cannot buy a higher score.",
           ],
         ].map(([n, title, copy]) => (
           <article className="xp-detail-card" key={n}>
@@ -77,10 +80,9 @@ export default function ForCreatorsPage() {
         <div>
           <strong>A clear record beats an ambiguous badge.</strong>
           <p>
-            Your identity, stake and performance remain distinct. A withdrawal
-            request disables active-stake eligibility. Testnet mUSDC has no
-            monetary value. Inspect current contract and provider status before
-            participating.
+            Account ownership, call outcomes and actual user profit are separate
+            records. Keep the full history visible, including incorrect calls. A
+            paid plan cannot buy a higher reputation score.
           </p>
         </div>
         <Link href="/creator" className="xp-button">
@@ -90,31 +92,30 @@ export default function ForCreatorsPage() {
       <section className="xp-faq">
         <h2>Before your first call.</h2>
         <details>
-          <summary>Can I withdraw the refundable stake?</summary>
+          <summary>When would the subscription price go up?</summary>
           <p>
-            The refundable stake contract supports a withdrawal request with a
-            seven-day cooldown. Requesting withdrawal immediately disables
-            active-stake eligibility; cancelling restores eligibility when the
-            configured threshold is met.
+            Only after the public record qualifies for the next plan. Pro, Max
+            and Ultra are proposed at 10, 20 and 30 USDC a month on Monad.
+            Billing is not live, so this page does not submit a transfer.
           </p>
         </details>
         <details>
-          <summary>Is the refundable stake the same as a bonded call?</summary>
+          <summary>Does a correct call prove users made money?</summary>
           <p>
-            No. Creator participation stake and bonded-call settlement are
-            separate mechanisms. Review the contract and terms shown in the
-            studio for the specific action you choose.
+            No. A correct price prediction is separate from an actual user's
+            returns. Profit requires a confirmed closed trade after trading fees
+            and gas.
           </p>
         </details>
         <details>
-          <summary>Will a binding or deposit verify my results?</summary>
+          <summary>Do I need to deposit funds to become a creator?</summary>
           <p>
-            No. Identity binding proves the account/wallet connection. Stake
-            shows participation. Call performance requires evaluation; wallet
-            returns require confirmed trading evidence.
+            No. Link your X account and wallet, then register calls. Existing
+            deposits can still be recovered through the{" "}
+            <Link href="/creator/stake">previous-deposit recovery page</Link>.
           </p>
         </details>
       </section>
-    </div>
+    </LandingMotion>
   );
 }

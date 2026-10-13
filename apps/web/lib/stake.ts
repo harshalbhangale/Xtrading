@@ -1,26 +1,17 @@
 import "server-only";
 import { IdentityError } from "@call-my-bluff/database/identity";
 import { preparedStakeSchema, stakeStateSchema } from "@call-my-bluff/domain";
-import {
-  depositStep,
-  stakeAbi,
-  stakeUnits,
-  testnetStake,
-} from "@call-my-bluff/integrations/stake";
+import { stakeAbi, testnetStake } from "@call-my-bluff/integrations/stake";
 import {
   type Address,
   createPublicClient,
-  encodeDeployData,
   encodeFunctionData,
   erc20Abi,
   getAddress,
-  type Hex,
   http,
   parseAbi,
 } from "viem";
 import { monadTestnet } from "viem/chains";
-import deployment from "../../../packages/integrations/abi/CreatorStake-deployment.json";
-import mockDeployment from "../../../packages/integrations/abi/MockUSDC-deployment.json";
 import { identityContext } from "./identity-http";
 
 const mockUsdcAbi = parseAbi([
@@ -185,89 +176,32 @@ export async function stakeContext(request: Request) {
   });
   return { client, state, wallet };
 }
-export async function prepareStake(
-  request: Request,
-  action: string,
-  amount?: string,
-) {
+export async function prepareStake(request: Request, action: string) {
+  if (!["requestWithdrawal", "cancelWithdrawal", "withdraw"].includes(action))
+    throw new IdentityError("staking_retired", 409);
   const { client, state, wallet } = await stakeContext(request);
-  let to: Address | null = state.contract as Address | null,
-    data: Hex,
-    actualAction = action;
-  if (action === "deployMockUSDC") {
-    if (state.symbol === "mUSDC")
-      throw new IdentityError("mock_already_configured", 409);
-    to = null;
-    data = encodeDeployData({
-      abi: parseAbi(["constructor(address recipient)"]),
-      bytecode: mockDeployment.bytecode as Hex,
-      args: [wallet],
-    });
-  } else if (action === "faucet") {
-    if (state.symbol !== "mUSDC")
-      throw new IdentityError("faucet_unavailable", 409);
-    if (state.faucetClaimed !== false)
-      throw new IdentityError("faucet_already_claimed", 409);
-    to = state.token as Address;
-    data = encodeFunctionData({ abi: mockUsdcAbi, functionName: "faucet" });
-  } else if (action === "deploy") {
-    if (to) throw new IdentityError("stake_already_configured", 409);
-    data = encodeDeployData({
-      abi: parseAbi([
-        "constructor(address token_, uint256 minimumStake_, uint256 withdrawalDelay_)",
-      ]),
-      bytecode: deployment.bytecode as Hex,
-      args: [
-        state.token as Address,
-        testnetStake.minimum,
-        testnetStake.cooldown,
-      ],
-    });
-  } else {
-    if (!to) throw new IdentityError("stake_not_deployed", 409);
-    if (action === "deposit") {
-      let units: bigint;
-      try {
-        units = stakeUnits(amount ?? "", 6);
-      } catch {
-        throw new IdentityError("invalid_amount");
-      }
-      if (BigInt(state.withdrawableAt) > 0n)
-        throw new IdentityError("withdrawal_pending", 409);
-      if (units > BigInt(state.tokenBalance))
-        throw new IdentityError("insufficient_test_usdc", 409);
-      const step = depositStep(
-        state.token as Address,
-        to,
-        units,
-        BigInt(state.allowance),
-      );
-      to = step.to;
-      data = step.data;
-      actualAction = step.action;
-    } else {
-      if (
-        action === "requestWithdrawal" &&
-        (BigInt(state.balance) === 0n || BigInt(state.withdrawableAt) > 0n)
-      )
-        throw new IdentityError("no_requestable_stake", 409);
-      if (action === "cancelWithdrawal" && BigInt(state.withdrawableAt) === 0n)
-        throw new IdentityError("no_withdrawal", 409);
-      if (
-        action === "withdraw" &&
-        (BigInt(state.withdrawableAt) === 0n ||
-          BigInt(state.blockTimestamp) < BigInt(state.withdrawableAt))
-      )
-        throw new IdentityError("cooldown_active", 409);
-      data = encodeFunctionData({
-        abi: stakeAbi,
-        functionName: action as
-          | "requestWithdrawal"
-          | "cancelWithdrawal"
-          | "withdraw",
-      });
-    }
-  }
+  const to = state.contract as Address | null;
+  if (!to) throw new IdentityError("stake_not_deployed", 409);
+  if (
+    action === "requestWithdrawal" &&
+    (BigInt(state.balance) === 0n || BigInt(state.withdrawableAt) > 0n)
+  )
+    throw new IdentityError("no_requestable_stake", 409);
+  if (action === "cancelWithdrawal" && BigInt(state.withdrawableAt) === 0n)
+    throw new IdentityError("no_withdrawal", 409);
+  if (
+    action === "withdraw" &&
+    (BigInt(state.withdrawableAt) === 0n ||
+      BigInt(state.blockTimestamp) < BigInt(state.withdrawableAt))
+  )
+    throw new IdentityError("cooldown_active", 409);
+  const data = encodeFunctionData({
+    abi: stakeAbi,
+    functionName: action as
+      | "requestWithdrawal"
+      | "cancelWithdrawal"
+      | "withdraw",
+  });
   if (BigInt(state.nativeBalance) === 0n)
     throw new IdentityError("test_mon_required", 409);
   // eth_estimateGas executes the unsigned request against current state; no server signing.
@@ -278,7 +212,7 @@ export async function prepareStake(
     value: 0n,
   });
   return preparedStakeSchema.parse({
-    action: actualAction,
+    action,
     chainId: 10143,
     wallet,
     to,

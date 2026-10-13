@@ -62,7 +62,7 @@ export function xtradingMcp(request: Request) {
     { name: "xtrading", version: "0.1.0" },
     {
       instructions:
-        "Xtrading evidence and trade preparation on Monad testnet (chain 10143). Identity, refundable stake, call outcomes and wallet returns are separate signals; never merge them into one judgement. Test tokens have no monetary value. prepare_trade returns an unsigned transaction for the user to approve in their own wallet; nothing here signs or submits.",
+        "Xtrading evidence and trade preparation on Monad testnet (chain 10143). Identity, call outcomes and wallet returns are separate signals; never merge them into one judgement. Test tokens have no monetary value. prepare_trade returns an unsigned transaction for the user to approve in their own wallet; nothing here signs or submits.",
     },
   );
 
@@ -71,7 +71,7 @@ export function xtradingMcp(request: Request) {
     {
       title: "Creator evidence",
       description:
-        "Identity binding (stable X ID to wallet) and refundable stake status for an X handle, with indexer freshness. A binding is not an endorsement and stake is not accuracy.",
+        "Identity binding (stable X ID to wallet) for an X handle. A binding proves account ownership, not accuracy.",
       inputSchema: { handle },
       annotations: { readOnlyHint: true },
     },
@@ -80,35 +80,6 @@ export function xtradingMcp(request: Request) {
         const evidence = await publicCreatorEvidence(value.replace(/^@/, ""));
         if (!evidence) throw new IdentityError("invalid_handle");
         return evidence;
-      }),
-  );
-
-  server.registerTool(
-    "get_stake_status",
-    {
-      title: "Stake status",
-      description:
-        "Refundable stake for a handle's bound wallet: balance, withdrawal state and whether Envio and the chain agree.",
-      inputSchema: { handle },
-      annotations: { readOnlyHint: true },
-    },
-    ({ handle: value }) =>
-      run(async () => {
-        const evidence = await publicCreatorEvidence(value.replace(/^@/, ""));
-        if (!evidence) throw new IdentityError("invalid_handle");
-        const stake = evidence.stake;
-        return {
-          handle: evidence.handle,
-          status: stake.status,
-          balance:
-            stake.balance && stake.symbol
-              ? `${formatUnits(BigInt(stake.balance), 6)} ${stake.symbol}`
-              : null,
-          withdrawableAt: stake.withdrawableAt ?? null,
-          indexer: stake.indexing?.status ?? "unavailable",
-          observedAt: evidence.observedAt,
-          note: "Demo tokens on Monad testnet; no monetary value.",
-        };
       }),
   );
 
@@ -287,7 +258,6 @@ export function xtradingMcp(request: Request) {
 
 export const mcpTools = [
   "get_creator",
-  "get_stake_status",
   "list_calls",
   "get_markets",
   "quote_trade",

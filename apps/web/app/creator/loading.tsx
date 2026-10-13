@@ -6,7 +6,7 @@ export default function Loading() {
       </span>
       <h3>Opening the creator studio…</h3>
       <p>
-        Preparing the page. Identity and stake status require verified data.
+        Preparing the page. Identity and trading records require verified data.
       </p>
     </div>
   );

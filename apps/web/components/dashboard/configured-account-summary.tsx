@@ -27,7 +27,7 @@ export default function ConfiguredAccountSummary({
         <strong>{account.name}</strong>
         <span>
           {audience === "creator"
-            ? "Signed in. Your public record depends on the binding, stake and calls below."
+            ? "Signed in. Your public record depends on the binding and calls below."
             : "Signed in. Every trade is shown in full before your wallet opens."}
         </span>
       </div>

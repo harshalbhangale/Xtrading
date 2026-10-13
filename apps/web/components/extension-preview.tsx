@@ -6,23 +6,22 @@ const states = {
   unknown: {
     title: "No public record yet",
     identity: "Identity not linked",
-    stake: "Stake unavailable",
+    performance: "Results unavailable",
     description:
       "An unknown account gets an evidence link, without a verification claim.",
   },
   linked: {
     title: "Identity linked · preview",
     identity: "Ownership proof present",
-    stake: "Active stake · preview",
-    description:
-      "These are illustrative labels, not a live creator record or a real stake.",
+    performance: "Call record · preview",
+    description: "These are illustrative labels, not a live creator record.",
   },
   stale: {
     title: "Evidence needs a refresh",
     identity: "Identity proof · preview",
-    stake: "Stake state stale",
+    performance: "Trading evidence stale",
     description:
-      "A stale indexer must not continue displaying current stake eligibility.",
+      "A stale indexer must not continue displaying current trading evidence.",
   },
 } as const;
 
@@ -77,7 +76,7 @@ export function ExtensionPreview() {
           <h3>{active.title}</h3>
           <div className="preview-signals">
             <span>{active.identity}</span>
-            <span>{active.stake}</span>
+            <span>{active.performance}</span>
           </div>
           <p>{active.description}</p>
           <div className="preview-trade">

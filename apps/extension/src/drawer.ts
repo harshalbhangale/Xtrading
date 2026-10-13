@@ -168,16 +168,6 @@ function reputationSection(reputation: Reputation, insights: Insights) {
         ? `Verified · ${shortAddress(evidence.identity.wallet ?? "")}`
         : "No verified binding",
     ),
-    row(
-      "Refundable stake",
-      evidence?.stake.status === "active"
-        ? `Active (${evidence.stake.symbol})`
-        : evidence?.stake.status === "withdrawal-pending"
-          ? "Withdrawal pending"
-          : evidence?.stake.status === "inactive"
-            ? "Inactive"
-            : "Unavailable",
-    ),
     row("Tracked calls", String(reputation.trackedCalls)),
     row(
       "Bullish / bearish / perp",
@@ -192,7 +182,7 @@ function reputationSection(reputation: Reputation, insights: Insights) {
     el(
       "p",
       { class: "note" },
-      "Identity, stake and call record are separate signals. A stake is not proof of good advice.",
+      "Identity, call results and actual wallet returns are separate signals. Account ownership does not establish trading skill.",
     ),
   );
 }

@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AnimatedFlow } from "../components/animated-flow";
+import { CreatorProgram } from "../components/creator-program";
 import { KineticHero } from "../components/kinetic-hero";
 import { LandingMotion } from "../components/landing-motion";
 import { LiveXDemo } from "../components/live-x-demo";
 import { SignalArt } from "../components/signal-art";
 
 export const metadata: Metadata = {
-  title: "Xtrading — conviction on the record",
+  title: "Xtrading — spot and perps, right from X",
 };
 export default function LandingPage() {
   return (
@@ -16,24 +18,25 @@ export default function LandingPage() {
         <div>
           {["first", "second"].map((key) => (
             <span key={key}>
-              READ THE CALL <i>↗</i> CHECK THE RECORD <i>↗</i> REVIEW THE TRADE{" "}
-              <i>↗</i> KEEP YOUR CONVICTION <i>↗</i>
+              DISCOVER YOUR KOL <i>↗</i> TRADE FROM X <i>↗</i> SPOT OR PERPS{" "}
+              <i>↗</i> YOUR WALLET. YOUR MOVE. <i>↗</i>
             </span>
           ))}
         </div>
       </div>
+      <AnimatedFlow />
       <section className="x-demo-section" id="try-it">
         <div className="x-section-heading">
           <p className="xp-eyebrow">01 / TRY IT ON A REAL POST</p>
           <h2>
-            The source.
+            Find the post.
             <br />
-            Then the context.
+            Find your next trade.
           </h2>
           <p>
-            Paste a public X post. Read what it actually says,
+            Paste a public X post from your favourite KOL.
             <br />
-            check the creator’s record, and see what you can trade.
+            See the call, check the context, and explore supported trades.
           </p>
         </div>
         <LiveXDemo />
@@ -55,9 +58,9 @@ export default function LandingPage() {
               "Explore creator records",
             ],
             [
-              "02 / STAKE",
-              "What backs participation?",
-              "A refundable deposit. Commitment you can inspect; no promise of profitable advice.",
+              "02 / CALL RESULTS",
+              "How did the calls perform?",
+              "A complete call history with outcomes and sample size. Actual user profits require separate trade evidence.",
               "/for-creators",
               "Build your record",
             ],
@@ -74,7 +77,7 @@ export default function LandingPage() {
                 kind={
                   n?.includes("IDENTITY")
                     ? "identity"
-                    : n?.includes("STAKE")
+                    : n?.includes("CALL RESULTS")
                       ? "stake"
                       : "execution"
                 }
@@ -89,6 +92,7 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+      <CreatorProgram />
       <section className="x-paths" aria-labelledby="paths-title">
         <p className="xp-eyebrow">03 / TWO WAYS IN</p>
         <h2 id="paths-title">
@@ -101,8 +105,8 @@ export default function LandingPage() {
             <span className="xp-eyebrow">USER LOGIN</span>
             <h3>Follow calls and trade</h3>
             <p>
-              Check any creator’s identity, stake and call history, then review
-              Kuru spot or Perpl perp trades before your wallet opens.
+              Check any creator’s identity and call history, then review Kuru
+              spot or Perpl perp trades before your wallet opens.
             </p>
             <b>Open the dashboard →</b>
           </Link>
@@ -110,8 +114,8 @@ export default function LandingPage() {
             <span className="xp-eyebrow">CREATOR LOGIN</span>
             <h3>Build a public record</h3>
             <p>
-              Bind your X account to a wallet, lock a refundable stake and
-              register calls that are scored at expiry.
+              Bind your X account to a wallet and register calls that are scored
+              at expiry.
             </p>
             <b>Open the creator studio →</b>
           </Link>
@@ -120,8 +124,8 @@ export default function LandingPage() {
       <Link className="x-install-banner" href="/extension">
         <span>𝕏</span>
         <div>
-          <strong>The record. In your feed.</strong>
-          <p>Install the Chrome extension and take the context with you.</p>
+          <strong>Your next trade. In your feed.</strong>
+          <p>Install the Chrome extension. Discover a post. Start a trade.</p>
         </div>
         <b>Get the extension ↗</b>
       </Link>

@@ -205,7 +205,7 @@ export function LiveXDemo() {
                   ? "Reading the post and checking its creator…"
                   : "The record, beside the post."}
               </p>
-              <span>Identity · Stake · Call · Trade review</span>
+              <span>Identity · Call results · Trade review</span>
             </div>
           ) : (
             <>
@@ -278,7 +278,7 @@ export function LiveXDemo() {
       </div>
       <p className="x-demo-footnote">
         Monad testnet · You review and sign in the trading workspace. Identity,
-        stake and performance remain separate.
+        call results and wallet returns remain separate.
       </p>
     </div>
   );

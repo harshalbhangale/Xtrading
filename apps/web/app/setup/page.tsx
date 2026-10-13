@@ -17,10 +17,6 @@ export default function SetupPage() {
       <div className="setup-banner">
         <span className="signal-dot" />
         {status.chain.name} · chain {status.chain.id}
-        <span>
-          Stake contract:{" "}
-          {status.stakeDeployed ? "address configured" : "not deployed"}
-        </span>
       </div>
       <div className="integration-grid">
         {status.integrations.map((item) => (

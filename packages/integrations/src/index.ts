@@ -50,14 +50,14 @@ export function integrationStatus(
       configured: Boolean(env.NEXT_PUBLIC_PRIVY_APP_ID),
       implementation: "foundation",
       detail:
-        "X login, embedded wallet and server-verified X/wallet binding. Stake approve/deposit/withdraw signed and confirmed on testnet.",
+        "X login, embedded wallet and server-verified X/wallet binding. Wallet ownership is verified with a nonce-protected signed message.",
     },
     {
       name: "Envio",
       configured: Boolean(env.ENVIO_GRAPHQL_URL),
       implementation: "foundation",
       detail:
-        "Stake, Kuru SpotSwap and CallSettlement events are indexed with reorg rollback. History is shown on stake, creator and ledger pages. An indexed swap is a projection, not a new confirmed fill.",
+        "Kuru swap, creator payment and historical settlement events have Envio handlers with reorg rollback. Creator payment history requires the updated hosted indexer. An indexed swap is a projection, not a new confirmed fill.",
     },
     {
       name: "Nansen",
@@ -80,7 +80,7 @@ export function integrationStatus(
       configured: false,
       implementation: "foundation",
       detail:
-        "CallSettlement and the hourly workflow exist. Fork simulation covers success and slash. The testnet receiver still trusts the simulation forwarder; the DON deploy is not live.",
+        "The hourly settlement workflow exists and was fork-tested. New creator bonds are retired; adapting CRE to call evaluation without collateral remains pending.",
     },
   ];
 }

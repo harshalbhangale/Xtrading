@@ -1,14 +1,11 @@
 "use client";
 import {
   identityStatusSchema,
-  type PublicCreatorEvidence,
   publicCallLedgerSchema,
-  publicCreatorEvidenceSchema,
 } from "@call-my-bluff/domain";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { stakeLabel } from "../lib/stake-label";
 
 type Identity = ReturnType<typeof identityStatusSchema.parse>;
 type State =
@@ -17,7 +14,6 @@ type State =
   | {
       kind: "ready";
       identity: Identity;
-      evidence: PublicCreatorEvidence | null;
       calls: number | null;
     };
 
@@ -38,26 +34,18 @@ export default function ConfiguredCreatorStatus() {
       });
       if (!response.ok) throw new Error("identity unavailable");
       const identity = identityStatusSchema.parse(await response.json());
-      let evidence: PublicCreatorEvidence | null = null;
       let calls: number | null = null;
       if (identity.bindingCurrent && identity.binding) {
         const handle = identity.binding.handle;
-        const [public_, ledger] = await Promise.all([
-          fetch(`/api/creators/${handle}`, { cache: "no-store" }),
-          fetch(`/api/creators/${handle}/calls`, { cache: "no-store" }),
-        ]);
-        if (public_.ok) {
-          const parsed = publicCreatorEvidenceSchema.safeParse(
-            await public_.json(),
-          );
-          if (parsed.success) evidence = parsed.data;
-        }
+        const ledger = await fetch(`/api/creators/${handle}/calls`, {
+          cache: "no-store",
+        });
         if (ledger.ok) {
           const parsed = publicCallLedgerSchema.safeParse(await ledger.json());
           if (parsed.success) calls = parsed.data.calls.length;
         }
       }
-      if (!cancelled) setState({ kind: "ready", identity, evidence, calls });
+      if (!cancelled) setState({ kind: "ready", identity, calls });
     })().catch(() => {
       if (!cancelled) setState({ kind: "error" });
     });
@@ -79,13 +67,6 @@ export default function ConfiguredCreatorStatus() {
             action: "Sign in with X",
           },
           {
-            title: "Optional refundable stake",
-            done: false,
-            detail: "Optional; not required for trading or creator payouts.",
-            href: "/creator/stake",
-            action: "Stake",
-          },
-          {
             title: "Register calls",
             done: false,
             detail: "Available after binding.",
@@ -105,11 +86,8 @@ export default function ConfiguredCreatorStatus() {
       </p>
     );
 
-  const { identity, evidence, calls } = state;
+  const { identity, calls } = state;
   const bound = identity.bindingCurrent && identity.binding;
-  const stake = evidence?.stake;
-  const staked =
-    stake?.status === "active" || stake?.status === "withdrawal-pending";
   const steps: Step[] = [
     {
       title: "Bind X to a wallet",
@@ -121,17 +99,6 @@ export default function ConfiguredCreatorStatus() {
           : "Link your X account, then sign a wallet proof.",
       href: "/creator/profile",
       action: bound ? "View identity" : "Bind account",
-    },
-    {
-      title: "Optional refundable stake",
-      done: stake?.status === "active",
-      detail: !bound
-        ? "Available after binding."
-        : stake
-          ? stakeLabel(stake)
-          : "Stake status unavailable.",
-      href: "/creator/stake",
-      action: staked ? "Manage stake" : "Stake",
     },
     {
       title: "Register calls",
