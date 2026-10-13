@@ -9,15 +9,18 @@ Primary track: **Onchain Finance & Trading**.
 | Privy | X login, embedded wallet and signing | Verified X/wallet binding, creator payout registration and reviewed Kuru transaction through Privy |
 | Envio | HyperIndex Kuru activity plus HyperSync creator payments and bond-free call outcomes | `/dashboard/onchain`: real decoded events, receipt checks, block progress and transaction links; creator earnings consume the same payment source |
 | Nansen | Wallet/token context | Actual sourced insight with timestamp, network and coverage |
-| Chainlink CRE | Hourly settlement of expired, bonded calls | Simulated workflow, authenticated settlement report, reward/slash event and Envio projection |
+| Chainlink CRE | Hourly bond-free call scorecard | Real testnet broadcast settlement and Envio outcome; autonomous DON deployment remains pending |
 
-Current status, kept as separate records:
+Current evidence, verified 13 October 2026:
 
-- Implemented: Privy identity binding, both stake contracts and mUSDC, extension indicators, Kuru spot review, Perpl order review, MCP at `/api/mcp`, the CallSettlement contract, the CRE workflow source, and Envio handlers for stake, Kuru SpotSwap and CallSettlement.
-- Verified: a wallet-approved 500 mUSDC deposit, plus the later withdrawal request and cancellation, indexed by Envio, with that stake active again. CRE success and slash paths ran on a local Monad fork. MCP lists its public tools.
-- Pending: a confirmed Kuru fill, a live Perpl order, a keyed Nansen finding for a wallet with Monad mainnet history, real-X validation of this extension build, and DON deployment of the workflow. The testnet receiver still trusts the simulation forwarder.
+- Kuru: real scripted mainnet buy/sell and creator payment; complete X-interface execution remains to be demonstrated.
+- Privy: identity and wallet-binding flows implemented. Rehearse the exact demo account and wallet approval.
+- Envio: mainnet creator payments and testnet bond-free call outcomes are live through HyperSync and checked against receipts. HyperIndex supplies historical testnet activity. Repairing the hosted deployment connection is separate from this working feature.
+- Nansen: integration implemented; a useful sourced mainnet wallet finding still needs demonstration.
+- Perpl: testnet operator account/order routes implemented; a live fill and resulting position still need demonstration.
+- Chainlink CRE: real testnet broadcast settlement exists. DON deployment and production forwarder setup remain pending.
 
-The 13 October update adds inline X spot trading, optional creator payout registration and a Kuru-only mainnet Flow fee adapter. Three Foundry tests against a mainnet fork verified atomic buyer/creator payments and failure behavior; this is not a real wallet trade. Mainnet fee/fill Envio handlers and earnings pages are implemented. Hosted indexing, creator opt-in, an extension reload and an approved real swap remain necessary demo steps. New stake deposits and new call bonds are closed. Previous deposits remain withdrawable on testnet. Creator tiers (Xtrading Pro, Max, Ultra) are earned from scored calls and set the creator's cut of each buy from their post (0.1/0.5/1/2%); red flags demote. Historical stakes stay separate from creator fees.
+Staking is removed. The approved creator fee rule requires five distinct correct calls with verified profitable user trades; current tier/base-fee logic does not enforce it yet. Creator payments, hypothetical call performance and realized user profit are separate evidence.
 
 Perpl API is in scope; its separate analytics/risk dashboard bounty is excluded. Kimi is optional; Aurora and other sponsor branches come after the core demo.
 

@@ -4,8 +4,8 @@ Trade the calls you see on X, and see whether the people making them are worth f
 
 - **Chrome extension:** a Buy button inside X's own ticker cards (or an inline card when there is none) with live prices, creator tiers and red flags on posts and profiles, and a call-check drawer.
 - **App** ([xtradingnow.xyz](https://xtradingnow.xyz)): a live Terminal of calls from creators you follow, Kuru spot trading on Monad **mainnet and testnet**, Perpl perps (testnet), creator studio, earnings and post analytics, and an MCP server for agents.
-- **Creators** link X to a wallet (no stake, no subscription), register calls, and climb **Xtrading Pro / Max / Ultra** from scored calls. The tier sets their cut of every buy made from their post: 0.1% verified, 0.5% Pro, 1% Max, 2% Ultra, paid to their wallet inside the buyer's transaction through Kuru Flow. Evidence-backed red flags (call posts no longer public, trading against their own call, a mostly-wrong record) cost tiers.
-- **Chainlink CRE** settles registered calls onchain as a bond-free, tamper-proof scorecard.
+- **Creators** link X to a wallet, register calls and inspect performance and post-availability evidence. Staking and subscriptions are removed. Current code implements Pro / Max / Ultra and 0.1/0.5/1/2% creator fees, but the approved **five correct calls with verified profitable user trades** eligibility rule is not implemented yet. Account linking and hypothetical call returns do not establish user profit.
+- **Chainlink CRE** has broadcast a real bond-free testnet call settlement. The hourly workflow is implemented; autonomous DON deployment is still pending.
 
 Sponsors: Kuru, Privy, Envio, Nansen, Perpl, Chainlink CRE.
 
@@ -62,15 +62,35 @@ External testnet contracts used: Kuru Spot V2 AccountCore [`0xdbaaDe7B42c95399bb
 |---|---|---|
 | Web app and API | [xtradingnow.xyz](https://xtradingnow.xyz) (Vercel) | Live |
 | MCP server | `https://xtradingnow.xyz/api/mcp` | Live |
-| Chrome extension 0.9.0 | [xtradingnow.xyz/extension](https://xtradingnow.xyz/extension) | Live download |
+| Chrome extension 0.11.1 | [xtradingnow.xyz/extension](https://xtradingnow.xyz/extension) | Live download |
 | Envio | HyperIndex supplies historical Kuru testnet activity. HyperSync supplies current mainnet creator payments and bond-free testnet call settlements | `/dashboard/onchain` shows canonical receipt-checked events, progress and freshness; authenticated earnings use HyperSync if the hosted entity is unavailable |
 | Chainlink CRE workflow | `tradepost-settlement-staging`, Monad testnet selector `2183018362218727504` | Simulated with broadcast; DON deployment needs Chainlink access |
 
-### Not done yet
+### Current delivery checklist — verified 13 October 2026
 
-- Repair the Envio GitHub deployment connection and redeploy the latest HyperIndex handlers. Old deployment `a2e3a1d` does not include the mainnet fee contract or current bond-free scorecard; promoting it alone will not add them. HyperSync already powers these app features independently.
-- CRE workflow deployment to the Chainlink DON, then `setForwarder` to the production KeystoneForwarder.
-- An in-app (not scripted) mainnet trade, a live Perpl order and a keyed Nansen finding on a wallet with mainnet history.
+“Verified” means there is a checked live response or receipt. “Implemented” means the code exists; it is not proof that the complete user flow has been demonstrated.
+
+| Area | What is done | What remains |
+|---|---|---|
+| App and identity | Live frontend/API and database readiness; Privy X login, embedded wallets and nonce-protected wallet binding implemented | Rehearse onboarding with the exact demo account; linking proves account control, not unique humanity |
+| X extension | Version 0.11.1: inline ticker Buy/Sell, explicit networks, wallet handoff, profile records, image/address capture and observed-follow sync | Verify the installed build on real X through signing, confirmed fill and dashboard attribution; mobile uses a web handoff, not a native-X extension |
+| Kuru | Real scripted mainnet buy, sell and same-transaction creator payment; recorded testnet fill; live prices and book-history charts | Complete one trade from the actual X interface and confirm output, fee and history together |
+| Envio | Live HyperSync payment and bond-free settlement evidence; creator earnings fallback; HyperIndex testnet activity | Repair the hosted GitHub deployment connection for the newest HyperIndex handlers; this does not block the HyperSync demo |
+| Creator analytics | Call records, outcomes, sample sizes, tier calculation and repeated post-availability flags implemented | Implement verified realized-profit accounting and the five-call fee gate; missing posts must remain “not publicly available,” not assumed deleted |
+| Perpl | Testnet market/account reads, capped operator order review/submission and status routes implemented | Demonstrate an actual filled order and resulting position; general-user account onboarding and reduce-only exits remain |
+| Nansen | Server-side wallet/token context integration and sourced coverage states implemented | Record a useful live insight for a supported mainnet wallet with real history |
+| Chainlink CRE | Hourly workflow source, tests and real testnet broadcast settlement | DON deployment and production forwarder configuration; broadcast simulation is not autonomous scheduling |
+| MCP | Live endpoint and public tool listing; authenticated unsigned trade preparation implemented | Demonstrate an authenticated agent flow; tools do not sign or submit trades |
+
+### Work order
+
+1. **Fix creator fee eligibility.** No fees before five distinct correct calls with verified positive realized user profit after trading costs. Build entry/exit fill matching and call attribution, exclude self-trades, and invalidate orphaned evidence. The existing base fee and tier thresholds do not enforce this rule.
+2. **Finish the X → Kuru demo.** Confirm the installed extension, network, quote, explicit wallet approval, actual output, creator payment and dashboard record. Resolve the current default mismatch: dashboard starts on testnet, inline cards currently start on mainnet.
+3. **Complete sponsor demonstrations.** One real Perpl fill/position and one sourced Nansen mainnet finding. Keep unavailable evidence labelled.
+4. **Activate autonomous CRE if deployment access permits.** Deploy the DON workflow and configure the approved forwarder. Keep the existing testnet broadcast clearly described if deployment remains unavailable.
+5. **Finish delivery.** Record the product and sponsor demos; document Kuru target users, actual usage, acquisition and roadmap. Repair the hosted HyperIndex connection separately. Document access to historical testnet deposits: the old staking UI was removed, but deployed contracts and any existing funds remain.
+
+Live Envio demo: [onchain evidence](https://xtradingnow.xyz/dashboard/onchain). See [demo steps](docs/envio-demo.md). Both mainnet creator payment and testnet call settlement returned `current` during verification.
 
 ## Run locally
 
@@ -86,7 +106,7 @@ pnpm dev
 
 Open http://localhost:3000. Public pages work without credentials. Login and persisted identity need Privy and the database configured.
 
-Monad testnet **10143** is the default. Mainnet requires explicit configuration; stake actions currently support testnet only. Token amounts use bigint or decimal integer strings.
+The dashboard defaults to Monad testnet **10143**. Inline extension cards currently default to mainnet **143**; changing them to match the testnet-first policy remains pending. Every trade displays its network and requires approval. Staking is removed from the app. Token amounts use bigint or decimal integer strings.
 
 ## Workspace
 
@@ -97,12 +117,12 @@ Monad testnet **10143** is the default. Mainnet requires explicit configuration;
 | `packages/domain` | Runtime schemas and shared types |
 | `packages/integrations` | Chain, market, stake and provider adapters |
 | `packages/database` | Postgres schema, identity service and migrations |
-| `contracts` | Refundable stake, mock USDC and Foundry tests |
-| `services/indexer` | Envio stake event handlers and generated bindings |
+| `contracts` | Bond-free scorecard, Kuru fork tests and legacy stake/mock-token contracts |
+| `services/indexer` | Envio HyperIndex Kuru, scorecard and creator-fee handlers |
 
 ## Configuration
 
-Use `apps/web/.env.local` for `NEXT_PUBLIC_PRIVY_APP_ID`, `PRIVY_APP_SECRET`, `NEXT_PUBLIC_APP_URL`, `MONAD_RPC_URL` and `DATABASE_URL`. Optional: `GROQ_API_KEY`, `NANSEN_API_KEY` and the `PERPL_*` keys (see `.env.example`); each runs in labelled demo mode when empty. Keep provider secrets server-only. Enable Twitter login, EVM embedded wallets and the app origin in Privy.
+Use `apps/web/.env.local` for `NEXT_PUBLIC_PRIVY_APP_ID`, `PRIVY_APP_SECRET`, `NEXT_PUBLIC_APP_URL`, `MONAD_RPC_URL` and `DATABASE_URL`. Optional: `GROQ_API_KEY`, `NANSEN_API_KEY` and the `PERPL_*` keys (see `.env.example`); missing provider credentials must show demo or unavailable states, never fabricated live evidence. Keep provider secrets server-only. Enable Twitter login, EVM embedded wallets and the app origin in Privy.
 
 Remote database connections require `sslmode=verify-full` and the trusted RDS CA bundle through `DATABASE_CA_FILE`. `/api/health` reports configuration presence; `/api/ready` checks the six required database tables.
 
@@ -135,7 +155,7 @@ pnpm contracts:abi
 pnpm indexer:codegen
 ```
 
-Envio indexes stake history, Kuru V2 swaps, deposits, withdrawals and account registrations on testnet, CallSettlement registrations and settlements, and Kuru Flow creator-fee payments on mainnet. Event IDs are chain:block:logIndex with reorg rollback, a ten-block lag and freshness checks against the chain head. Set `ENVIO_MONAD_RPC_URL` in `services/indexer/.env` for a keyed RPC; adding contracts requires `envio start -r`.
+The latest HyperIndex handlers cover historical stake events, Kuru V2 swaps, deposits, withdrawals and account registrations, call registrations/settlements and mainnet Kuru Flow creator payments. The older hosted build does not expose all those entities. The web app also directly queries HyperSync for current creator payments and bond-free scorecard settlements. Event IDs are chain:block:logIndex with reorg rollback, a ten-block lag and freshness checks against the chain head. Set `ENVIO_MONAD_RPC_URL` in `services/indexer/.env` for a keyed RPC; adding contracts requires `envio start -r`.
 
 To run locally, copy `services/indexer/.env.example` to `.env`, run `docker compose -p cmb-stake-indexer -f services/indexer/docker-compose.yml up -d`, then `pnpm --filter @call-my-bluff/indexer start`. Hasura is bound to localhost port 8081; its local development admin secret is `testing`. These settings are for local development only. Indexed history remains empty until stake events occur; a block lag is not a claim of chain finality.
 
@@ -143,27 +163,27 @@ Set server-only `ENVIO_GRAPHQL_URL=http://localhost:8081/v1/graphql` and `ENVIO_
 
 ## Mainnet spot (Kuru)
 
-The dashboard sidebar has a Testnet / Mainnet switch, which is remembered per browser; a `?chainId=` link overrides it. Testnet is the default. Mainnet uses Kuru's mainnet order books (MON, WETH and cbBTC against USDC, verified onchain at every quote). A market order spends straight from the wallet: one exact approval to the order book for USDC buys, then one immediate-or-cancel order with a minimum output derived from an `eth_call` of the same order. There is no Kuru account, deposit or deadline on mainnet, and limit-order minimum sizes do not apply. Mainnet is off unless the server sets `KURU_MAINNET_ENABLED=true`. Perpl and staking remain testnet-only in the app. Run `KURU_MAINNET_FORK_RPC=http://127.0.0.1:8549 pnpm test` against `anvil --fork-url https://rpc.monad.xyz --port 8549` to execute both order types on a fork.
+The dashboard sidebar has a Testnet / Mainnet switch, which is remembered per browser; a `?chainId=` link overrides it. Testnet is the default. Mainnet uses Kuru's mainnet order books (MON, WETH and cbBTC against USDC, verified onchain at every quote). A market order spends straight from the wallet: one exact approval to the order book for USDC buys, then one immediate-or-cancel order with a minimum output derived from an `eth_call` of the same order. There is no Kuru account, deposit or deadline on mainnet, and limit-order minimum sizes do not apply. Mainnet is off unless the server sets `KURU_MAINNET_ENABLED=true`. Perpl execution remains testnet-only; staking is removed. Run `KURU_MAINNET_FORK_RPC=http://127.0.0.1:8549 pnpm test` against `anvil --fork-url https://rpc.monad.xyz --port 8549` to execute both order types on a fork.
 
 Embedded Privy wallets confirm in Privy's dialog; external wallets (MetaMask, Rabby) receive the reviewed transaction through their own provider. The server never signs.
 
 ## Inline trading and creator payments
 
-Extension 0.7.0 adds compact ticker cards, Buy/Sell expansion, explicit network selection, expiring book indications and a separate creator-record disclosure. `/trade/inline` is a compact wallet window without the dashboard sidebar. Quotes carry no authentication; balances, gas, allowance and minimum output are checked in authenticated review.
+Extension 0.11.1 implements compact ticker cards, Buy/Sell expansion, explicit network selection, book-history charts and a separate creator-record disclosure. `/trade/inline` is a compact wallet window without the dashboard sidebar. Quotes carry no authentication; balances, gas, allowance and minimum output are checked in authenticated review.
 
-Creators register the wallet already proved through their X binding at `/creator/earnings`. Eligible mainnet buys can include an explicitly selected 0.5% creator fee, deducted from bought-token output. The adapter builds one configured Kuru order-book route through the fixed Kuru Flow entrypoint, approves the exact USDC budget and enforces the buyer's net minimum. No fee is charged for unregistered creators, testnet trades or fee-disabled trades. Self-referral from the bound buyer wallet is rejected. Account linking proves control, not unique humanity. Source-post attribution remains browser-supplied and unverified.
+Creators register the wallet already proved through their X binding at `/creator/earnings`. Registered-creator mainnet buys can currently include a disclosed tier-based creator fee, deducted from bought-token output. This current behavior must be gated by the five-profitable-call rule before it is presented as the approved eligibility model. The adapter builds one configured Kuru order-book route through the fixed Kuru Flow entrypoint, approves the exact USDC budget and enforces the buyer's net minimum. No fee is charged for unregistered creators, testnet trades or fee-disabled trades. Self-referral from the bound buyer wallet is rejected. Account linking proves control, not unique humanity. Source-post attribution remains browser-supplied and unverified.
 
-Fee execution requires both `KURU_MAINNET_ENABLED=true` and `CREATOR_FEES_ENABLED=true`. Mainnet fork tests verified buyer receipt, same-transaction creator payment, exact allowance consumption, and atomic failure with no payout. No real fee-paying wallet transaction has been completed yet. To rerun the three fork tests:
+Fee execution requires both `KURU_MAINNET_ENABLED=true` and `CREATOR_FEES_ENABLED=true`. Mainnet fork tests verified buyer receipt, same-transaction creator payment, exact allowance consumption, and atomic failure with no payout. A real scripted fee-paying mainnet transaction is linked above and visible through Envio; the full X UI flow remains pending. To rerun the fork tests:
 
 ```sh
-KURU_FEE_FORK_RPC=https://rpc.monad.xyz forge test --root contracts --match-contract KuruCreatorFeeForkTest --evm-version cancun -vv
+KURU_FEE_FORK_RPC=https://rpc.monad.xyz forge test --root contracts --match-contract KuruCreatorFeeForkTest --evm-version prague -vv
 ```
 
 Envio's new mainnet projection records actual `FeeCollected` and `KuruFlowSwap` events from block 112914000. The earnings API checks recipient scope, canonical block hashes and indexer freshness. Live earnings fall back to server-side HyperSync when the hosted fee entity is absent; the public `/dashboard/onchain` page shows actual fee payments and current bond-free scorecard settlements. Set server-only `ENVIO_API_TOKEN` in the web environment. Registration and quotes never count as earnings. Testnet V2 builder-fee support is still pending.
 
 ## Chainlink CRE call scorecard
 
-`contracts/src/CallSettlement.sol` is deployed bond-free on testnet (`minBond = maxBond = 0`, `contracts/deployments/call-scorecard-monad-testnet.json`): a creator records an open call with one gas-only transaction (Calls → "Record on Chainlink"); no tokens move. Every hour, the workflow in `services/cre/settlement` reads due calls at a finalized block, fetches the opens of the Binance 1-minute candles at the window start and expiry (each node independently, median agreed), and writes one signed report through the Chainlink forwarder. The contract records Success, Failure or Tie onchain; a missing price never resolves a call. With a positive bond range the same contract can also lock optional bonds (Foundry-tested), but the app no longer offers bonds.
+`contracts/src/CallSettlement.sol` is deployed bond-free on testnet (`minBond = maxBond = 0`, `contracts/deployments/call-scorecard-monad-testnet.json`): a creator records an open call with one gas-only transaction (Calls → "Record on Chainlink"); no tokens move. The hourly-trigger workflow source in `services/cre/settlement` reads due calls when simulated or deployed at a finalized block, fetches the opens of the Binance 1-minute candles at the window start and expiry (each node independently, median agreed), and writes one signed report through the Chainlink forwarder. The contract records Success, Failure or Tie onchain; a missing price never resolves a call. With a positive bond range the same contract can also lock optional bonds (Foundry-tested), but the app no longer offers bonds.
 
 ```sh
 cd services/cre/settlement && bun install && bun test
@@ -186,11 +206,12 @@ The script forks Monad testnet about three hours back (anvil dev account, port 8
 IDENTITY_TEST_DATABASE_URL=postgresql://cmb:cmb_local@localhost:5433/call_my_bluff pnpm check
 ```
 
-Checks include formatting, TypeScript, application tests, local identity integration tests, Foundry and web/extension builds. Six database integration tests are skipped without a test database URL; CI provisions its own Postgres service. Mainnet fork suites require their explicit RPC variables and do not run as ordinary offline checks.
+Latest `pnpm check` passed formatting, TypeScript, 171 application tests, 30 Foundry tests and web/extension builds. Six database tests and four optional fork tests were skipped without their explicit configuration; they are not counted as passes. Six database integration tests are skipped without a test database URL; CI provisions its own Postgres service. Mainnet fork suites require their explicit RPC variables and do not run as ordinary offline checks.
 
 ## Developer documents
 
-- [Delivery checklist](docs/implementation-plan.md)
+- Current delivery checklist: see above. [Original implementation plan](docs/implementation-plan.md) is historical and includes retired staking phases.
+- [Envio demo](docs/envio-demo.md)
 - [Frontend and API handoff](docs/frontend-handoff.md)
 - [Architecture](docs/architecture.md)
 - [Required sponsors](SPONSORS.md)
@@ -198,6 +219,6 @@ Checks include formatting, TypeScript, application tests, local identity integra
 - [Component references](docs/references.md)
 - [Kollateral review and accountability roadmap](docs/kollateral-reference-review.md)
 - [Identity binding](docs/identity-binding.md)
-- [Stake transactions](docs/stake-transactions.md)
+- [Historical stake transactions](docs/stake-transactions.md)
 - [Mock USDC](docs/mock-usdc.md)
 - [AWS database setup](infrastructure/aws/README.md)
