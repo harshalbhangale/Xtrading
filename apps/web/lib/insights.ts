@@ -12,6 +12,10 @@ import {
   postTimestampMs,
 } from "@call-my-bluff/integrations/calls";
 import { offRegistryContract } from "@call-my-bluff/integrations/nansen-evidence";
+import {
+  DEFAULT_CALL_HORIZON_SECONDS,
+  statedTimeframe,
+} from "@call-my-bluff/integrations/signals";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { getDatabase } from "./database";
 import { nansenCheck } from "./nansen";
@@ -26,8 +30,6 @@ const toDecimal = (units: bigint) => {
   return `${text.slice(0, -8)}.${text.slice(-8)}`.replace(/\.?0+$/, "");
 };
 
-/** Detected calls are scored once, at this fixed time after the post. */
-export const DETECTED_HORIZON_SECONDS = 3600;
 // The exit candle must have closed before it is read.
 const SETTLE_DELAY_SECONDS = 180;
 
@@ -36,19 +38,30 @@ const storedPrice = (value: unknown): StoredPrice =>
   typeof value === "string" && /^[0-9]+$/.test(value) && value !== "0"
     ? value
     : null;
+/** A stored exit is only valid for the horizon it was taken at. */
+const storedExit = (value: unknown, horizonSeconds: number): StoredPrice =>
+  value &&
+  typeof value === "object" &&
+  "horizonSeconds" in value &&
+  value.horizonSeconds === horizonSeconds &&
+  "price" in value
+    ? storedPrice(value.price)
+    : null;
 
 /**
- * Scores each detected call from the minute it was posted to a fixed horizon
- * after it, signed by its direction. Both prices are historical candles, so
- * they are fetched once, stored on the signal row and never change: a settled
- * call keeps its result. Calls younger than the horizon stay pending, and
- * assets without a price source are counted as unpriced, never dropped silently.
+ * Scores each detected call over the timeframe its post states ("this week" →
+ * 7 days), or DEFAULT_CALL_HORIZON_SECONDS when none is stated, signed by its
+ * direction. Both prices are historical candles, fetched once and stored on
+ * the signal row, so a settled call never changes. Calls whose timeframe has
+ * not ended stay pending; assets without a price source are counted as
+ * unpriced, never dropped silently.
  */
 async function measureDetected(
   rows: {
     postId: string;
     asset: string | null;
     direction: "bullish" | "bearish" | null;
+    text: string | null;
     entry: unknown;
     exit: unknown;
   }[],
@@ -61,7 +74,7 @@ async function measureDetected(
     asset: keyof typeof CALL_ASSETS,
     at: number,
     postId: string,
-    key: "entryPrice" | "exitPrice",
+    store: (price: string) => { key: string; value: unknown },
   ) => {
     const paid = asset === "MON";
     if (
@@ -75,10 +88,11 @@ async function measureDetected(
       nansenApiKey: process.env.NANSEN_API_KEY,
     }).catch(() => null);
     if (!observed) return null;
+    const { key, value } = store(observed.price);
     await database.db
       .update(postSignals)
       .set({
-        signal: sql`jsonb_set(${postSignals.signal}, ${`{${key}}`}, ${JSON.stringify(observed.price)}::jsonb)`,
+        signal: sql`jsonb_set(${postSignals.signal}, ${`{${key}}`}, ${JSON.stringify(value)}::jsonb)`,
       })
       .where(eq(postSignals.postId, postId))
       .catch(() => undefined);
@@ -87,6 +101,7 @@ async function measureDetected(
   const nowSec = Math.floor(Date.now() / 1000);
   const items = [];
   let pending = 0;
+  let nextSettlesSec: number | null = null;
   const unpricedAssets = new Set<string>();
   let unpriced = 0;
   for (const row of rows) {
@@ -98,17 +113,26 @@ async function measureDetected(
     }
     const asset = row.asset as keyof typeof CALL_ASSETS;
     const postedSec = Math.floor(Number(postTimestampMs(row.postId)) / 1000);
-    const exitAt = postedSec + DETECTED_HORIZON_SECONDS;
+    const stated = row.text ? statedTimeframe(row.text) : null;
+    const horizonSeconds = stated ?? DEFAULT_CALL_HORIZON_SECONDS;
+    const exitAt = postedSec + horizonSeconds;
     const entry =
       storedPrice(row.entry) ??
-      (await lookup(asset, postedSec, row.postId, "entryPrice"));
+      (await lookup(asset, postedSec, row.postId, (price) => ({
+        key: "entryPrice",
+        value: price,
+      })));
     if (nowSec < exitAt + SETTLE_DELAY_SECONDS) {
       pending++;
+      nextSettlesSec = Math.min(nextSettlesSec ?? exitAt, exitAt);
       continue;
     }
     const exit = entry
-      ? (storedPrice(row.exit) ??
-        (await lookup(asset, exitAt, row.postId, "exitPrice")))
+      ? (storedExit(row.exit, horizonSeconds) ??
+        (await lookup(asset, exitAt, row.postId, (price) => ({
+          key: "exit",
+          value: { horizonSeconds, price },
+        }))))
       : null;
     if (!entry || !exit) {
       // Lookup failed or the per-request budget ran out; retried next request.
@@ -122,6 +146,8 @@ async function measureDetected(
       postId: row.postId,
       asset,
       direction: row.direction,
+      horizonSeconds,
+      timeframeStated: stated !== null,
       entryPrice: toDecimal(entryUnits),
       exitPrice: toDecimal(BigInt(exit)),
       moveBps: row.direction === "bullish" ? raw : -raw,
@@ -131,7 +157,6 @@ async function measureDetected(
   const moves = items.map((i) => i.moveBps).sort((a, b) => a - b);
   const mid = Math.floor(moves.length / 2);
   return {
-    horizonSeconds: DETECTED_HORIZON_SECONDS,
     count: items.length,
     inFavour: items.filter((i) => i.moveBps > 0).length,
     medianBps: moves.length
@@ -140,6 +165,12 @@ async function measureDetected(
         : Math.trunc(((moves[mid - 1] as number) + (moves[mid] as number)) / 2)
       : null,
     pending,
+    nextSettlesAt:
+      nextSettlesSec === null
+        ? null
+        : new Date(
+            (nextSettlesSec + SETTLE_DELAY_SECONDS) * 1000,
+          ).toISOString(),
     unpriced,
     unpricedAssets: [...unpricedAssets].sort(),
     items: items.slice(0, 20),
@@ -147,7 +178,7 @@ async function measureDetected(
 }
 
 const methodology =
-  "Counts calls extracted from posts seen by extension users (signal-v1). Each is priced at post time and 1h later from historical candles, stored once; younger calls are pending. Hypothetical outcomes stay separate from wallet returns.";
+  "Counts calls extracted from posts seen by extension users (signal-v1). Each is priced at post time and at the end of the timeframe the post states (24h if none), from historical candles stored once; open calls are pending. Hypothetical outcomes stay separate from wallet returns.";
 
 export async function creatorReputation(handle: string): Promise<Reputation> {
   const empty: Reputation = {
@@ -172,7 +203,8 @@ export async function creatorReputation(handle: string): Promise<Reputation> {
         instrument: postSignals.instrument,
         classifiedAt: postSignals.classifiedAt,
         entry: sql<unknown>`${postSignals.signal}->>'entryPrice'`,
-        exit: sql<unknown>`${postSignals.signal}->>'exitPrice'`,
+        text: sql<string | null>`${postSignals.signal}->>'capturedText'`,
+        exit: sql<unknown>`${postSignals.signal}->'exit'`,
       })
       .from(postSignals)
       .where(and(eq(postSignals.handle, handle), eq(postSignals.isCall, true)))

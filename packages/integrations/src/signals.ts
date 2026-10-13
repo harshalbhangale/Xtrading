@@ -181,6 +181,69 @@ export function mentionsPerp(text: string) {
   return perpCue.test(text);
 }
 
+const HOUR = 3600;
+const DAY = 86400;
+/** Used when a detected call states no timeframe. */
+export const DEFAULT_CALL_HORIZON_SECONDS = DAY;
+const WEEKDAY = "monday|tuesday|wednesday|thursday|friday|saturday|sunday";
+const TIMEFRAMES: [RegExp, (n: number) => number | null][] = [
+  [
+    /\b(?:in|within|next)\s+(\d{1,2})\s*(?:h|hrs?|hours?)\b/i,
+    (n) => (n >= 1 && n <= 72 ? n * HOUR : null),
+  ],
+  [
+    /\b(?:in|within)\s+(?:the\s+|an?\s+)?(?:next\s+)?hour\b|\bnext hour\b/i,
+    () => HOUR,
+  ],
+  [
+    /\b(?:in|within|next)\s+(\d{1,2})\s*(?:d|days?)\b/i,
+    (n) => (n >= 1 && n <= 90 ? n * DAY : null),
+  ],
+  [
+    /\b(?:in|within|next)\s+(\d{1,2})\s*(?:w|wks?|weeks?)\b/i,
+    (n) => (n >= 1 && n <= 12 ? n * 7 * DAY : null),
+  ],
+  [
+    /\b(?:today|tonight|tomorrow|eod|end of (?:the )?day|24\s*(?:h|hrs?|hours))\b/i,
+    () => DAY,
+  ],
+  [
+    new RegExp(
+      `\\b(?:this|next) week(?:end)?\\b|\\b(?:in|within) (?:a|one) week\\b|\\bby (?:the )?(?:weekend|${WEEKDAY})\\b|\\b7\\s*(?:d|days)\\b`,
+      "i",
+    ),
+    () => 7 * DAY,
+  ],
+  [
+    /\b(?:this|next) month\b|\b(?:in|within) (?:a|one) month\b|\bend of (?:the )?month\b|\beom\b|\b30\s*(?:d|days)\b/i,
+    () => 30 * DAY,
+  ],
+  [
+    /\b(?:this|next) quarter\b|\b(?:in|within) (?:3|three) months\b/i,
+    () => 90 * DAY,
+  ],
+  [
+    /\b(?:this|next) year\b|\bby (?:the )?end of (?:the )?year\b|\beoy\b|\b(?:in|within) (?:a|one) year\b/i,
+    () => 365 * DAY,
+  ],
+];
+
+/**
+ * The timeframe a post states for its call ("this week" → 7 days), from the
+ * earliest matching phrase. Null when none is stated; callers then use
+ * DEFAULT_CALL_HORIZON_SECONDS and must say the timeframe was not stated.
+ */
+export function statedTimeframe(text: string): number | null {
+  let best: { index: number; seconds: number } | null = null;
+  for (const [pattern, toSeconds] of TIMEFRAMES) {
+    const match = pattern.exec(text);
+    if (!match || (best && match.index >= best.index)) continue;
+    const seconds = toSeconds(Number(match[1] ?? 0));
+    if (seconds) best = { index: match.index, seconds };
+  }
+  return best?.seconds ?? null;
+}
+
 /** Cheap pre-check before calling a model: any cashtag or known asset name. */
 export function mentionsAsset(text: string) {
   return findAsset(text) !== null;

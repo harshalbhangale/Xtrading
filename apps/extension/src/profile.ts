@@ -248,7 +248,8 @@ export async function scanProfile() {
     panel.set(`detected${index}`, {
       ...tile,
       kind: "stat",
-      group: "Detected on X · scored 1h after post, unregistered",
+      group:
+        "Detected on X · scored at the post's stated timeframe, unregistered",
     });
   });
   const coverage = detectedCoverage(insights.reputation);
@@ -257,7 +258,8 @@ export async function scanProfile() {
       label: "Scoring",
       value: coverage,
       kind: "row",
-      group: "Detected on X · scored 1h after post, unregistered",
+      group:
+        "Detected on X · scored at the post's stated timeframe, unregistered",
     });
   panel.set("saiddid", checked);
 }
@@ -333,13 +335,13 @@ function detectedTiles(reputation: Reputation) {
   ];
   if (measured?.count) {
     tiles.push({
-      label: "Moved their way in 1h",
+      label: "Moved their way",
       value: `${measured.inFavour}/${measured.count}`,
       tone: measured.inFavour * 2 >= measured.count ? "good" : "bad",
     });
     if (measured.medianBps !== null)
       tiles.push({
-        label: "Median 1h move",
+        label: "Median move",
         value: formatBps(measured.medianBps),
         tone: measured.medianBps >= 0 ? "good" : "bad",
       });
@@ -351,12 +353,18 @@ function detectedTiles(reputation: Reputation) {
   return tiles;
 }
 
-/** Which detected calls are in the 1h score, which are waiting, and which cannot be priced. */
+/** Which detected calls are settled, which are still inside their timeframe, and which cannot be priced. */
 function detectedCoverage(reputation: Reputation) {
   const m = reputation.status === "ready" ? reputation.measured : undefined;
   if (!m) return null;
-  const parts = [`${m.count} settled`];
-  if (m.pending) parts.push(`${m.pending} pending (under 1h old)`);
+  const defaulted = m.items.filter((i) => !i.timeframeStated).length;
+  const parts = [
+    `${m.count} settled${defaulted ? ` (${defaulted} stated no timeframe, scored at 24h)` : ""}`,
+  ];
+  if (m.pending)
+    parts.push(
+      `${m.pending} pending${m.nextSettlesAt ? ` (next settles ${new Date(m.nextSettlesAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })})` : ""}`,
+    );
   if (m.unpriced)
     parts.push(
       `${m.unpriced} not priced${m.unpricedAssets.length ? ` (${m.unpricedAssets.join(", ")})` : ""}`,

@@ -311,15 +311,15 @@ export const reputationSchema = z.object({
     )
     .max(10),
   status: z.enum(["ready", "unavailable"]),
-  // Detected calls priced at post time and a fixed horizon later (unregistered).
-  // Settled results never change; younger calls are pending.
+  // Detected calls priced at post time and at the end of the timeframe the post
+  // states (24h if none). Settled results never change; open calls are pending.
   measured: z
     .object({
-      horizonSeconds: z.number().int().positive().default(3600),
       count: z.number().int().nonnegative(),
       inFavour: z.number().int().nonnegative(),
       medianBps: z.number().int().nullable(),
       pending: z.number().int().nonnegative().default(0),
+      nextSettlesAt: z.iso.datetime().nullable().default(null),
       unpriced: z.number().int().nonnegative().default(0),
       unpricedAssets: z.array(symbolSchema).max(50).default([]),
       items: z
@@ -328,6 +328,9 @@ export const reputationSchema = z.object({
             postId: postIdSchema,
             asset: symbolSchema,
             direction: z.enum(["bullish", "bearish"]),
+            horizonSeconds: z.number().int().positive(),
+            // False when the post stated no timeframe and the default was used.
+            timeframeStated: z.boolean(),
             entryPrice: z.string(),
             exitPrice: z.string(),
             moveBps: z.number().int(),
@@ -339,3 +342,11 @@ export const reputationSchema = z.object({
     .optional(),
 });
 export type Reputation = z.infer<typeof reputationSchema>;
+
+/** "7d", "24h", "1y": a call timeframe for display. */
+export function horizonLabel(seconds: number) {
+  if (seconds >= 365 * 86400 && seconds % (365 * 86400) === 0)
+    return `${seconds / (365 * 86400)}y`;
+  if (seconds > 86400 && seconds % 86400 === 0) return `${seconds / 86400}d`;
+  return `${Math.round(seconds / 3600)}h`;
+}

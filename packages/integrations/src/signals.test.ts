@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { deriveTradeRoute, heuristicSignal, mentionsPerp } from "./signals";
+import {
+  deriveTradeRoute,
+  heuristicSignal,
+  mentionsPerp,
+  statedTimeframe,
+} from "./signals";
 
 const base = { postId: "123", handle: "Alice" };
 const perpl = [
@@ -123,5 +128,28 @@ describe("rules-mode phrasing", () => {
       direction: "bearish",
       instrument: "spot",
     });
+  });
+});
+
+describe("statedTimeframe", () => {
+  const day = 86400;
+  it.each([
+    ["go short on ETH this week at 2400", 7 * day],
+    ["long BTC today", day],
+    ["MON to 0.05 by friday", 7 * day],
+    ["ETH 3k in 3 days", 3 * day],
+    ["sol pumps within 4 hours", 4 * 3600],
+    ["btc this month 120k", 30 * day],
+    ["next 2 weeks eth up", 14 * day],
+    ["ETH 5k by end of year", 365 * day],
+    // The earliest stated timeframe wins.
+    ["BTC 100k tomorrow, eth this month", day],
+  ])("%s", (text, seconds) => {
+    expect(statedTimeframe(text)).toBe(seconds);
+  });
+
+  it("returns null when no timeframe is stated", () => {
+    expect(statedTimeframe("buy eth")).toBeNull();
+    expect(statedTimeframe("weekly chart looks good")).toBeNull();
   });
 });

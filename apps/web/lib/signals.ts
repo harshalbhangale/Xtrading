@@ -69,7 +69,7 @@ async function stored(postId: string, textHash: string) {
 const SERVER_KEYS = [
   "availability",
   "entryPrice",
-  "exitPrice",
+  "exit",
   "tokenRisk",
 ] as const;
 const keepServerKeys = sql.raw(
