@@ -1,8 +1,12 @@
 "use client";
-import { identityStatusSchema, type PostSignal } from "@call-my-bluff/domain";
+import {
+  identityStatusSchema,
+  normalizeHandle,
+  type PostSignal,
+} from "@call-my-bluff/domain";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { bridge as readFollowing } from "./browser-following";
 import {
   extensionWatchlist,
@@ -25,6 +29,8 @@ type Item = {
   } | null;
   removed: boolean;
   ageMs: number;
+  /** From a creator the viewer does not follow yet, shown under the followed feed. */
+  extra?: boolean;
 };
 type Attestations = {
   items: {
@@ -148,6 +154,11 @@ function Resolution({ item }: { item: Item }) {
 export default function ConfiguredTerminal() {
   const { ready, authenticated, getAccessToken } = usePrivy();
   const [followed, setFollowed] = useState<string[] | null>(null);
+  const [observed, setObserved] = useState<string[]>([]);
+  const [suggested, setSuggested] = useState<
+    { handle: string; calls: number }[] | null
+  >(null);
+  const [newHandle, setNewHandle] = useState("");
   const [fades, setFades] = useState<string[]>([]);
   const [source, setSource] = useState<"following" | "everyone">("following");
   const [filter, setFilter] = useState<Filter>("calls");
@@ -207,9 +218,14 @@ export default function ConfiguredTerminal() {
             ).json(),
           );
           const viewer = identity.xAccount?.handle;
-          if (viewer)
-            for (const f of (await readFollowing(viewer)).follows)
+          if (viewer) {
+            const seen: string[] = [];
+            for (const f of (await readFollowing(viewer)).follows) {
               handles.add(f.handle);
+              seen.push(f.handle);
+            }
+            if (!cancelled) setObserved(seen);
+          }
         } catch {
           // Observed follows need the extension; saved handles still work.
         }
@@ -228,13 +244,26 @@ export default function ConfiguredTerminal() {
     const params = new URLSearchParams({ filter });
     if (q.trim()) params.set("q", q.trim());
     if (source === "following") params.set("handles", followed.join(","));
-    try {
-      const response = await fetch(`/api/terminal/feed?${params}`, {
+    const fetchFeed = async (query: URLSearchParams) => {
+      const response = await fetch(`/api/terminal/feed?${query}`, {
         cache: "no-store",
       });
       if (!response.ok) throw new Error();
-      const body = (await response.json()) as { items: Item[] };
-      setItems(body.items);
+      return ((await response.json()) as { items: Item[] }).items;
+    };
+    try {
+      const mine = await fetchFeed(params);
+      // Real calls from creators not followed yet, so a short following list still has a feed.
+      let extra: Item[] = [];
+      if (source === "following") {
+        const everyone = new URLSearchParams({ filter });
+        if (q.trim()) everyone.set("q", q.trim());
+        extra = (await fetchFeed(everyone).catch(() => []))
+          .filter((item) => !followed.includes(item.signal.handle))
+          .slice(0, 20)
+          .map((item) => ({ ...item, extra: true }));
+      }
+      setItems([...mine, ...extra]);
       setStatus("live");
     } catch {
       setStatus("error");
@@ -276,6 +305,48 @@ export default function ConfiguredTerminal() {
       clearInterval(timer);
     };
   }, [railHandles]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCreators = () =>
+      fetch("/api/terminal/creators", { cache: "no-store" })
+        .then((r) =>
+          r.ok
+            ? (r.json() as Promise<{
+                creators: { handle: string; calls: number }[];
+              }>)
+            : null,
+        )
+        .then((value) => {
+          if (!cancelled && value) setSuggested(value.creators);
+        })
+        .catch(() => undefined);
+    void fetchCreators();
+    const timer = setInterval(fetchCreators, 300_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  async function unfollow(handle: string) {
+    try {
+      await extensionWatchlist({ action: "remove", handle });
+    } catch {
+      try {
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify(readLocalHandles().filter((h) => h !== handle)),
+        );
+      } catch {}
+    }
+    setFollowed((current) => (current ?? []).filter((h) => h !== handle));
+    setNotice(
+      observed.includes(handle)
+        ? `Removed @${handle} here. You follow them on X, so they come back on the next sync.`
+        : `Unfollowed @${handle}.`,
+    );
+  }
 
   async function follow(handle: string) {
     if (followed?.includes(handle)) return;
@@ -397,6 +468,72 @@ export default function ConfiguredTerminal() {
               .
             </p>
           )}
+          <p className="term-label">Following</p>
+          <form
+            className="term-follow-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const handle = normalizeHandle(
+                newHandle.trim().replace(/^@/, ""),
+              );
+              if (!handle) {
+                setNotice("Enter a valid X handle.");
+                return;
+              }
+              void follow(handle);
+              setNewHandle("");
+            }}
+          >
+            <input
+              className="term-input"
+              placeholder="@handle"
+              maxLength={16}
+              value={newHandle}
+              onChange={(event) => setNewHandle(event.target.value)}
+              aria-label="Follow an X handle"
+            />
+            <button type="submit">Follow</button>
+          </form>
+          {followed && followed.length > 0 && (
+            <ul className="term-following">
+              {followed.map((handle) => (
+                <li key={handle}>
+                  <Link href={`/creators/${handle}`}>@{handle}</Link>
+                  {observed.includes(handle) && <small>from X</small>}
+                  <button
+                    type="button"
+                    aria-label={`Unfollow @${handle}`}
+                    onClick={() => void unfollow(handle)}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {suggested?.some((c) => !followed?.includes(c.handle)) && (
+            <>
+              <p className="term-label">Most active callers · 7d</p>
+              <ul className="term-following">
+                {suggested
+                  .filter((c) => !followed?.includes(c.handle))
+                  .slice(0, 8)
+                  .map((c) => (
+                    <li key={c.handle}>
+                      <Link href={`/creators/${c.handle}`}>@{c.handle}</Link>
+                      <small>{c.calls} calls</small>
+                      <button
+                        type="button"
+                        className="term-follow-add"
+                        onClick={() => void follow(c.handle)}
+                      >
+                        Follow
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            </>
+          )}
         </aside>
 
         <section className="term-feed" aria-live="polite">
@@ -409,7 +546,11 @@ export default function ConfiguredTerminal() {
                   ? "high conviction"
                   : "calls"}
             </strong>
-            <span>{items ? `${items.length} posts` : "Loading…"}</span>
+            <span>
+              {items
+                ? `${items.filter((item) => !item.extra).length} posts`
+                : "Loading…"}
+            </span>
           </div>
           {notice && <p className="small-note">{notice}</p>}
           {items?.length === 0 && (
@@ -421,107 +562,110 @@ export default function ConfiguredTerminal() {
               </p>
             </div>
           )}
-          {items?.map((item) => {
+          {items?.map((item, index) => {
             const s = item.signal;
             const faded = fades.includes(s.handle);
             const isFollowed = followed?.includes(s.handle);
             return (
-              <article
-                key={s.postId}
-                className="term-card"
-                data-faded={faded || undefined}
-              >
-                <header>
-                  <span className="term-avatar" aria-hidden="true">
-                    {s.handle.slice(0, 2).toUpperCase()}
-                  </span>
-                  <div>
-                    <Link href={`/creators/${s.handle}`}>@{s.handle}</Link>
-                    <span> · {age(item.ageMs)}</span>
-                    {faded && <span className="term-fading"> · fading</span>}
-                  </div>
-                  <nav>
-                    <button
-                      type="button"
-                      className="text-link"
-                      onClick={() => void reportDeleted(s.postId)}
-                    >
-                      ⚑ Report deleted
-                    </button>
-                    <a
-                      className="text-link"
-                      href={`https://x.com/${s.handle}/status/${s.postId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Original ↗
-                    </a>
-                  </nav>
-                </header>
-                {item.removed && (
-                  <p className="term-removed">
-                    This registered call is no longer public on X.
-                  </p>
+              <Fragment key={s.postId}>
+                {item.extra && !items[index - 1]?.extra && (
+                  <h3 className="term-more">
+                    More calls · creators you don't follow yet
+                  </h3>
                 )}
-                <p className="term-text">
-                  {s.capturedText || s.summary || "(no text)"}
-                </p>
-                <div className="term-chips">
-                  {s.instrument && <span>{s.instrument.toUpperCase()}</span>}
-                  {s.asset && (
-                    <span
-                      className={
-                        s.direction === "bullish"
-                          ? "up"
-                          : s.direction === "bearish"
-                            ? "down"
-                            : ""
-                      }
-                    >
-                      ${s.asset}{" "}
-                      {s.direction === "bullish"
-                        ? "▲ long"
-                        : s.direction === "bearish"
-                          ? "▼ short"
-                          : ""}
-                      {s.leverage ? ` · ${s.leverage}x` : ""}
+                <article className="term-card" data-faded={faded || undefined}>
+                  <header>
+                    <span className="term-avatar" aria-hidden="true">
+                      {s.handle.slice(0, 2).toUpperCase()}
                     </span>
+                    <div>
+                      <Link href={`/creators/${s.handle}`}>@{s.handle}</Link>
+                      <span> · {age(item.ageMs)}</span>
+                      {faded && <span className="term-fading"> · fading</span>}
+                    </div>
+                    <nav>
+                      <button
+                        type="button"
+                        className="text-link"
+                        onClick={() => void reportDeleted(s.postId)}
+                      >
+                        ⚑ Report deleted
+                      </button>
+                      <a
+                        className="text-link"
+                        href={`https://x.com/${s.handle}/status/${s.postId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Original ↗
+                      </a>
+                    </nav>
+                  </header>
+                  {item.removed && (
+                    <p className="term-removed">
+                      This registered call is no longer public on X.
+                    </p>
                   )}
-                  <span>{s.confidence} confidence</span>
-                  {!s.isCall && <span>not a call</span>}
-                </div>
-                <Resolution item={item} />
-                {checks[s.postId] && (
-                  <p className="small-note">{checks[s.postId]}</p>
-                )}
-                <footer>
-                  <div className="term-vote">
-                    <button
-                      type="button"
-                      aria-pressed={Boolean(isFollowed)}
-                      onClick={() => void follow(s.handle)}
-                    >
-                      ▲ {isFollowed ? "Following" : "Follow"}
-                    </button>
-                    <button
-                      type="button"
-                      aria-pressed={faded}
-                      onClick={() => fade(s.handle)}
-                    >
-                      ▼ {faded ? "Fading" : "Fade"}
-                    </button>
+                  <p className="term-text">
+                    {s.capturedText || s.summary || "(no text)"}
+                  </p>
+                  <div className="term-chips">
+                    {s.instrument && <span>{s.instrument.toUpperCase()}</span>}
+                    {s.asset && (
+                      <span
+                        className={
+                          s.direction === "bullish"
+                            ? "up"
+                            : s.direction === "bearish"
+                              ? "down"
+                              : ""
+                        }
+                      >
+                        ${s.asset}{" "}
+                        {s.direction === "bullish"
+                          ? "▲ long"
+                          : s.direction === "bearish"
+                            ? "▼ short"
+                            : ""}
+                        {s.leverage ? ` · ${s.leverage}x` : ""}
+                      </span>
+                    )}
+                    <span>{s.confidence} confidence</span>
+                    {!s.isCall && <span>not a call</span>}
                   </div>
-                  {item.trade.buy && (
-                    <button
-                      type="button"
-                      className="button"
-                      onClick={() => setTrade(item.trade.buy)}
-                    >
-                      Trade ${s.asset}
-                    </button>
+                  <Resolution item={item} />
+                  {checks[s.postId] && (
+                    <p className="small-note">{checks[s.postId]}</p>
                   )}
-                </footer>
-              </article>
+                  <footer>
+                    <div className="term-vote">
+                      <button
+                        type="button"
+                        aria-pressed={Boolean(isFollowed)}
+                        onClick={() => void follow(s.handle)}
+                      >
+                        ▲ {isFollowed ? "Following" : "Follow"}
+                      </button>
+                      <button
+                        type="button"
+                        aria-pressed={faded}
+                        onClick={() => fade(s.handle)}
+                      >
+                        ▼ {faded ? "Fading" : "Fade"}
+                      </button>
+                    </div>
+                    {item.trade.buy && (
+                      <button
+                        type="button"
+                        className="button"
+                        onClick={() => setTrade(item.trade.buy)}
+                      >
+                        Trade ${s.asset}
+                      </button>
+                    )}
+                  </footer>
+                </article>
+              </Fragment>
             );
           })}
         </section>

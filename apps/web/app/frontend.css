@@ -1187,3 +1187,64 @@ p.term-resolution {
     grid-template-columns: 1fr;
   }
 }
+
+/* Terminal: following list, suggestions and the "more calls" divider */
+.term-follow-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.term-follow-form .term-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.term-follow-form button,
+.term-following .term-follow-add {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font: 600 13px var(--mono);
+  cursor: pointer;
+}
+.term-following {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+.term-following li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.term-following li a {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.term-following small {
+  color: var(--muted);
+  font: 11px var(--mono);
+}
+.term-following li > button:not(.term-follow-add) {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+.term-more {
+  margin: 20px 0 8px;
+  color: var(--muted);
+  font: 600 12px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

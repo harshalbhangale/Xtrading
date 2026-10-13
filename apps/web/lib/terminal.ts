@@ -145,6 +145,37 @@ export async function terminalFeed(input: z.infer<typeof terminalQuerySchema>) {
   };
 }
 
+/** Creators with the most detected calls in the last 7 days, for discovery. Counts only, no outcome. */
+export async function activeCreators() {
+  const database = getDatabase();
+  if (!database) return null;
+  const since = new Date(Date.now() - 7 * 86_400_000);
+  const rows = await database.db
+    .select({
+      handle: postSignals.handle,
+      calls: sql<number>`count(*)::int`,
+      latest: sql<string>`max(${postSignals.classifiedAt})`,
+    })
+    .from(postSignals)
+    .where(
+      and(
+        sql`${postSignals.isCall} = true`,
+        gt(postSignals.classifiedAt, since),
+      ),
+    )
+    .groupBy(postSignals.handle)
+    .orderBy(desc(sql`count(*)`))
+    .limit(12);
+  return {
+    creators: rows.map((row) => ({
+      handle: row.handle,
+      calls: Number(row.calls),
+      latestAt: new Date(row.latest).toISOString(),
+    })),
+    observedAt: new Date().toISOString(),
+  };
+}
+
 /** Tickers called most in the last 7 days, with net direction. */
 export async function trendingTickers() {
   const database = getDatabase();
