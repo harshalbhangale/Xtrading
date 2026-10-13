@@ -1025,6 +1025,178 @@ body:has(.xp-page) footer {
   letter-spacing: 0.12em;
   color: #789068;
 }
+/* Discover step: an illustrative post with an embedded trade ticket. Not a live post, quote or trade. */
+.x-flow-visual .x-flow-object.x-flow-object-trade {
+  width: min(292px, 84vw);
+  min-height: 0;
+  margin-bottom: 18px;
+  padding: 10px;
+  transform: rotate(-2deg);
+  background: linear-gradient(160deg, #18200f, #0b100b);
+}
+.x-trade-post {
+  display: grid;
+  gap: 5px;
+  font-family: var(--sans);
+  line-height: 1.3;
+  color: #dfe8d4;
+  text-align: left;
+}
+.x-trade-post-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.x-trade-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #2b3a24;
+  color: var(--lime);
+  font: 700 9px var(--mono);
+}
+.x-trade-author {
+  display: grid;
+  font-size: 11px;
+  font-weight: 700;
+  color: #eef4e6;
+}
+.x-trade-author small {
+  font: 400 9px var(--mono);
+  color: #7f8f73;
+}
+.x-trade-text {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #c9d5bd;
+}
+/* The walkthrough's generic `.x-flow-object b` block style must not reach the inline ticker. */
+.x-flow-object-trade .x-trade-text b {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--lime);
+}
+.x-trade-ticket {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid #34452a;
+  border-radius: 10px;
+  background: #0a0e0a;
+}
+.x-trade-token {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.x-trade-token-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--lime);
+  color: #17210c;
+  font: 700 10px var(--mono);
+}
+.x-trade-token-name {
+  display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 700;
+}
+.x-trade-token-name small {
+  font: 400 8px var(--mono);
+  color: #8d9c80;
+}
+.x-trade-spark {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 20px;
+}
+.x-trade-spark path {
+  fill: none;
+  stroke: var(--lime);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+.x-trade-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 96px;
+  padding: 2px;
+  border: 1px solid #34452a;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 600;
+  color: #8d9c80;
+}
+.x-trade-toggle > span {
+  padding: 3px 0;
+  border-radius: 999px;
+  text-align: center;
+}
+.x-trade-toggle > [data-on="true"] {
+  background: #e6ebe3;
+  color: #0b100c;
+}
+.x-trade-box {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 1px 8px;
+  padding: 6px 9px;
+  border: 1px solid #2c3a25;
+  border-radius: 9px;
+  background: #111812;
+}
+.x-trade-box > small {
+  grid-column: 1 / -1;
+  font-size: 9px;
+  color: #8d9c80;
+}
+.x-trade-box > strong {
+  font-size: 15px;
+  line-height: 1.2;
+  color: #eef4e6;
+}
+.x-trade-box > span {
+  font-size: 10px;
+  font-weight: 700;
+  color: #eef4e6;
+}
+.x-trade-cta {
+  display: block;
+  padding: 7px 0;
+  border-radius: 999px;
+  background: #f1f4ee;
+  color: #0b100c;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+.x-trade-note {
+  margin: 0;
+  font-size: 9px;
+  color: #8d9c80;
+}
+.x-trade-illustration {
+  margin: 0;
+  font: 8px var(--mono);
+  letter-spacing: 0.04em;
+  color: #6f7f63;
+}
+
 .x-flow-detail {
   padding: 35px 40px;
   align-self: center;
@@ -1227,6 +1399,9 @@ body:has(.xp-page) footer {
   }
   .x-flow-visual-caption {
     bottom: 12px;
+  }
+  .x-flow-visual .x-flow-object.x-flow-object-trade {
+    margin-bottom: 34px;
   }
   .x-flow-detail {
     min-height: 360px;
