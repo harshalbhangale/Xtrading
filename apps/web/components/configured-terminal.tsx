@@ -26,6 +26,33 @@ type Item = {
   removed: boolean;
   ageMs: number;
 };
+type Attestations = {
+  items: {
+    id: string;
+    kind: "settlement" | "payment";
+    network: string;
+    transactionHash: string;
+    timestamp: number;
+    url: string;
+    detail: { outcome?: string; amount?: string };
+  }[];
+  sources: { chainId: number; status: string }[];
+};
+type Deletions = {
+  since: string;
+  totals: {
+    indexed: number;
+    checked: number;
+    removed: number;
+    suspected: number;
+  };
+  creators: {
+    handle: string;
+    indexed: number;
+    removed: number;
+    suspected: number;
+  }[];
+};
 type Sidebar = {
   trending: { asset: string; calls: number; bias: string }[] | null;
   integrity: {
@@ -128,6 +155,27 @@ export default function ConfiguredTerminal() {
   const [items, setItems] = useState<Item[] | null>(null);
   const [status, setStatus] = useState<"live" | "error">("live");
   const [sidebar, setSidebar] = useState<Sidebar | null>(null);
+  const [attestations, setAttestations] = useState<Attestations | null>(null);
+  const [deletions, setDeletions] = useState<Deletions | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      fetch("/api/terminal/attestations", { cache: "no-store" })
+        .then((r) => (r.ok ? (r.json() as Promise<Attestations>) : null))
+        .then((v) => !cancelled && v && setAttestations(v))
+        .catch(() => undefined);
+      fetch("/api/analytics/deletions", { cache: "no-store" })
+        .then((r) => (r.ok ? (r.json() as Promise<Deletions>) : null))
+        .then((v) => !cancelled && v && setDeletions(v))
+        .catch(() => undefined);
+    };
+    load();
+    const timer = setInterval(load, 120_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
   const [notice, setNotice] = useState("");
   const [trade, setTrade] = useState<string | null>(null);
   const [checks, setChecks] = useState<Record<string, string>>({});
@@ -524,6 +572,79 @@ export default function ConfiguredTerminal() {
                   </li>
                 ))}
               </ol>
+            )}
+          </section>
+          <section>
+            <p className="term-label">On-chain attestations</p>
+            {!attestations?.items.length ? (
+              <p className="small-note">
+                {attestations
+                  ? "No receipt-checked attestations yet."
+                  : "Loading from Envio HyperSync…"}
+              </p>
+            ) : (
+              <ul className="term-rail">
+                {attestations.items.slice(0, 5).map((a) => (
+                  <li key={a.id}>
+                    <a
+                      className="text-link"
+                      href={a.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {a.kind === "settlement"
+                        ? `CRE settled · ${a.detail.outcome}`
+                        : "Creator fee paid"}
+                    </a>
+                    <small>
+                      {a.network} · {a.transactionHash.slice(0, 10)}… ·{" "}
+                      {new Date(a.timestamp).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </small>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="small-note">
+              Envio HyperSync events checked against chain receipts.
+            </p>
+          </section>
+          <section>
+            <p className="term-label">
+              Deleted posts · since day before yesterday
+            </p>
+            {!deletions ? (
+              <p className="small-note">Checking indexed posts…</p>
+            ) : (
+              <>
+                <p className="small-note">
+                  {deletions.totals.removed} removed ·{" "}
+                  {deletions.totals.suspected} suspected of{" "}
+                  {deletions.totals.checked} checked ({deletions.totals.indexed}{" "}
+                  indexed).
+                </p>
+                <ul className="term-rail">
+                  {deletions.creators
+                    .filter((c) => c.removed + c.suspected > 0)
+                    .slice(0, 5)
+                    .map((c) => (
+                      <li key={c.handle}>
+                        <Link
+                          className="text-link"
+                          href={`/creators/${c.handle}`}
+                        >
+                          @{c.handle}
+                        </Link>
+                        <small>
+                          {c.removed} removed
+                          {c.suspected ? ` · ${c.suspected} suspected` : ""}
+                        </small>
+                      </li>
+                    ))}
+                </ul>
+              </>
             )}
           </section>
           <p className="small-note">

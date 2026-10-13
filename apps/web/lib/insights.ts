@@ -17,7 +17,10 @@ import { nansenCheck } from "./nansen";
 import { spotPrices } from "./prices";
 import { publicCreatorEvidence } from "./public-creator";
 
-const ENTRY_LOOKUPS_PER_REQUEST = 6;
+// Binance-priced assets are free to look up; MON entries cost Nansen credits.
+const ENTRY_LOOKUPS_PER_REQUEST = 30;
+const PAID_ENTRY_LOOKUPS_PER_REQUEST = 6;
+const MEASURED_CALLS_PER_REQUEST = 60;
 const toDecimal = (units: bigint) => {
   const text = units.toString().padStart(9, "0");
   return `${text.slice(0, -8)}.${text.slice(-8)}`.replace(/\.?0+$/, "");
@@ -54,6 +57,7 @@ async function measureDetected(
   if (!database) return undefined;
   const priced: Record<string, bigint | null> = {};
   let lookups = 0;
+  let paidLookups = 0;
   const items = [];
   for (const row of rows) {
     const asset = row.asset as keyof typeof CALL_ASSETS | null;
@@ -63,8 +67,14 @@ async function measureDetected(
       typeof row.entry === "string" && /^[0-9]+$/.test(row.entry)
         ? BigInt(row.entry)
         : null;
-    if (entry === null && lookups < ENTRY_LOOKUPS_PER_REQUEST) {
+    const paid = asset === "MON";
+    if (
+      entry === null &&
+      lookups < ENTRY_LOOKUPS_PER_REQUEST &&
+      (!paid || paidLookups < PAID_ENTRY_LOOKUPS_PER_REQUEST)
+    ) {
       lookups++;
+      if (paid) paidLookups++;
       const observed = await observePrice(asset, postedSec, {
         nansenApiKey: process.env.NANSEN_API_KEY,
       }).catch(() => null);
@@ -140,9 +150,9 @@ export async function creatorReputation(handle: string): Promise<Reputation> {
       .where(and(eq(postSignals.handle, handle), eq(postSignals.isCall, true)))
       .orderBy(desc(postSignals.classifiedAt))
       .limit(500);
-    const measured = await measureDetected(rows.slice(0, 20)).catch(
-      () => undefined,
-    );
+    const measured = await measureDetected(
+      rows.slice(0, MEASURED_CALLS_PER_REQUEST),
+    ).catch(() => undefined);
     return {
       ...empty,
       measured,
