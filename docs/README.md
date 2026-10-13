@@ -11,4 +11,4 @@
 | [Envio demo](envio-demo.md) | Live onchain activity indexed by Envio |
 | [Perpl exits](perpl-exits.md) | Closing Perpl testnet positions and withdrawing collateral |
 
-Architecture diagrams are in the [main README](../README.md#architecture). Images live in [assets](assets/).
+Architecture diagrams are in the [main README](../README.md#under-the-hood). Images live in [assets](assets/).
