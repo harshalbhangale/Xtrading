@@ -111,7 +111,7 @@ it("shows one honest creator card on profile pages without adding feed panels", 
   expect(
     document.querySelector(".cmb-profile-host")?.shadowRoot?.textContent,
   ).toContain("service unavailable");
-  // Only the header badge's identity lookup and the saved-handle read for Follow KOL; an unverified creator gets no badge.
+  // Only the header badge's identity lookup and the watchlist read; an unlinked creator gets no badge.
   expect(sendMessage.mock.calls.map(([message]) => message.type)).toEqual([
     "creator-evidence",
     "watchlist",
@@ -155,7 +155,7 @@ it("puts an explained badge beside a verified creator's profile name", async () 
   const hosts = document.querySelectorAll(".cmb-profile-badge-host");
   expect(hosts).toHaveLength(1);
   expect(hosts[0]?.previousElementSibling?.textContent).toBe("Alice");
-  expect(hosts[0]?.shadowRoot?.textContent).toContain("XTrading Verified");
+  expect(hosts[0]?.shadowRoot?.textContent).toContain("Linked on Xtrading");
 });
 
 it.each([null, { signal: { isCall: true } }])(
@@ -338,6 +338,9 @@ it("places the creator card above the profile tabs", async () => {
   expect(actions?.querySelector(".cta")?.textContent).toBe("Open record ↗");
   expect(actions?.querySelector(".card-toggle")?.textContent).toBe(
     "Show details",
+  );
+  expect(actions?.querySelector(".card-follow")?.textContent).toBe(
+    "Unavailable",
   );
 });
 

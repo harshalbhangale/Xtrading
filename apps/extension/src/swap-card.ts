@@ -7,7 +7,7 @@ import {
 import { getAddress } from "viem";
 import { appOrigin } from "./config";
 import { directTrade } from "./direct-trade";
-import { assetUrl, el, poweredBy, safeLink, send } from "./dom";
+import { assetUrl, el, safeLink, send } from "./dom";
 import {
   formatPrice,
   kuruPrice,
@@ -69,7 +69,13 @@ function tokenIcon(asset: Asset | "USDC", size = 40) {
 function logo() {
   try {
     const url = assetUrl("brand/xtrading-wordmark.png");
-    return el("img", { class: "swap-logo", src: url, alt: "" });
+    return el("img", {
+      class: "swap-wordmark",
+      src: url,
+      alt: "Xtrading",
+      width: "52",
+      height: "17",
+    });
   } catch {
     return el("span", { class: "swap-logo" });
   }
@@ -473,14 +479,18 @@ export function swapCard(input: {
         "span",
         { class: "swap-row-end" },
         walletChip,
-        el("img", {
-          class: "swap-chain",
-          src: assetUrl("brand/monad.png"),
-          alt: "Monad",
-          width: "18",
-          height: "18",
-        }),
-        network,
+        el(
+          "span",
+          { class: "swap-chain-pill" },
+          el("img", {
+            class: "swap-chain",
+            src: assetUrl("brand/monad.png"),
+            alt: "Monad",
+            width: "22",
+            height: "22",
+          }),
+          network,
+        ),
       ),
     ),
     el(
@@ -505,7 +515,20 @@ export function swapCard(input: {
     el(
       "footer",
       { class: "swap-footer" },
-      el("span", {}, "Powered by ", logo(), el("b", {}, "Xtrading")),
+      el(
+        "span",
+        { class: "swap-powered" },
+        "Powered by",
+        logo(),
+        el("i", { class: "swap-powered-sep", "aria-hidden": "true" }),
+        el("img", {
+          class: "swap-kuru",
+          src: assetUrl("brand/kuru.png"),
+          alt: "Kuru",
+          width: "52",
+          height: "13",
+        }),
+      ),
       safeLink(
         new URL(`/creators/${input.handle}`, appOrigin).href,
         `@${input.handle} record ↗`,
@@ -548,7 +571,6 @@ export function swapCard(input: {
     );
   } else card.append(header, panel);
   renderTokens();
-  card.append(poweredBy());
   return { card, buy };
 }
 

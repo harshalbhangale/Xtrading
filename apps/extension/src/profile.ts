@@ -241,7 +241,7 @@ function followButton(handle: string) {
       class: "card-follow",
       "aria-pressed": "false",
     },
-    "Follow KOL",
+    "Watch",
   ) as HTMLButtonElement;
   let saved = false;
   const paint = (state: "saved" | "unsaved" | "unavailable") => {
@@ -249,15 +249,15 @@ function followButton(handle: string) {
     button.disabled = state === "unavailable";
     button.setAttribute("aria-pressed", String(saved));
     button.textContent = saved
-      ? "Following KOL"
+      ? "Watching"
       : state === "unavailable"
-        ? "Watchlist unavailable"
-        : "Follow KOL";
+        ? "Unavailable"
+        : "Watch";
     button.title =
       state === "saved"
-        ? "Saved to your Xtrading watchlist. Click to remove."
+        ? "On your Xtrading watchlist. Click to remove. This does not follow them on X."
         : state === "unsaved"
-          ? "Save this creator to your Xtrading watchlist."
+          ? "Save this handle to your Xtrading watchlist. This does not follow them on X."
           : "Reload the Xtrading extension to use the watchlist.";
   };
   const isSaved = (value: unknown) => {
@@ -352,7 +352,7 @@ function recentCalls(handle: string, reputation: Reputation) {
 
 /** Said versus did for the creator's latest classified call, from the Nansen wallet check. */
 async function sayDid(handle: string, insights: Insights): Promise<Metric> {
-  const label = "Said / did";
+  const label = "Wallet vs call";
   const none = (reason: string): Metric => ({ label, value: null, reason });
   const latest = insights.reputation.recent[0];
   if (!latest?.asset || !latest.direction) return none("no directional call");

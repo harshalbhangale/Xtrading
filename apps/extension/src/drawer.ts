@@ -404,11 +404,7 @@ export async function openDrawer(
         )
       : section(
           "Creator",
-          el(
-            "p",
-            { class: "note" },
-            "Creator record unavailable. Is the app running?",
-          ),
+          el("p", { class: "note" }, "Couldn't load this creator record."),
         ),
   );
   body.append(

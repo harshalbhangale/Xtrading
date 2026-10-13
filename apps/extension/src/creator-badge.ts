@@ -126,7 +126,7 @@ export async function addPostBadge(article: HTMLElement, handle: string) {
     chips.push(
       verifiedBadge({
         size: 20,
-        title: "XTrading Verified",
+        title: "Linked on Xtrading",
         subtitle: "X identity linked · Wallet ownership verified",
         tooltip: false,
       }),
@@ -164,7 +164,7 @@ export async function addProfileBadge(handle: string | null) {
   host.dataset.handle = handle;
   const badge = verifiedBadge({
     size: 24,
-    title: "XTrading Verified",
+    title: "Linked on Xtrading",
     subtitle: "X identity linked · Wallet ownership verified",
   });
   badge.setAttribute("role", "link");
