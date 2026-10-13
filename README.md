@@ -61,8 +61,8 @@ The extension, trader dashboard, creator studio and agent access in screenshots:
 | **[Kuru](https://kuru.io)**     | Spot execution on Monad. Market orders go straight from the wallet to Kuru's order books, and **Kuru Flow** pays creator fees atomically with the buy.                                            |
 | **[Privy](https://privy.io)**   | Sign in with X, embedded wallets and transaction signing. Sessions are verified server-side and bound to the stable X user ID.                                                                    |
 | **[Envio](https://envio.dev)**  | HyperIndex indexes Kuru swaps, deposits and creator payments. HyperSync powers the live, receipt-checked [onchain activity page](https://xtradingnow.xyz/dashboard/onchain) and creator earnings. |
-| **[Nansen](https://nansen.ai)** | Wallet and token intelligence on creator profiles and in the extension, plus MON price history for scoring calls.                                                                                 |
-| **[Perpl](https://perpl.xyz)**  | Perpetuals for explicit long and short calls, traded from the user's own wallet and Perpl account.                                                                                                |
+| **[Nansen](https://nansen.ai)** | Wallet and token intelligence on creator profiles and in the extension, plus price history for scoring calls.                                                                                 |
+| **[Perpl](https://perpl.xyz)**  | Perpetuals for long and short calls, traded from the user's own wallet and Perpl account.                                                                                                |
 | **[Monad](https://monad.xyz)**  | Fast enough that trading from a post feels like clicking a button.                                                                                                                                |
 
 How each integration works, with links to the code: [SPONSORS.md](SPONSORS.md).
