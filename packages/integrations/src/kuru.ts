@@ -1,7 +1,9 @@
 import {
   type Address,
+  decodeFunctionData,
   encodeFunctionData,
   erc20Abi,
+  type Hex,
   parseAbi,
   zeroAddress,
 } from "viem";
@@ -428,5 +430,62 @@ export function mainnetTradeStep(input: {
       args: [size, input.minimumOutput, false, false],
     }),
     value: native ? spend : 0n,
+  };
+}
+
+/**
+ * Reads a mainnet spot market order from a transaction: an immediate-or-cancel
+ * buy or sell on a configured order book, with margin off. The input amount is
+ * recovered exactly as mainnetOrderSize rounds it, so it matches what was sent.
+ */
+export function decodeMainnetMarketOrder(input: {
+  to: Address | null;
+  data: Hex;
+}): {
+  key: KuruMarketKey;
+  marketAddress: Address;
+  side: "buy" | "sell";
+  inputAmount: bigint;
+  minAmountOut: bigint;
+} | null {
+  if (!input.to) return null;
+  const to = input.to.toLowerCase();
+  const key = (Object.keys(kuruMainnet.markets) as KuruMarketKey[]).find(
+    (candidate) => kuruMainnet.markets[candidate].market.toLowerCase() === to,
+  );
+  if (!key) return null;
+  let call: { functionName: string; args?: readonly unknown[] };
+  try {
+    call = decodeFunctionData({ abi: kuruV1OrderBookAbi, data: input.data });
+  } catch {
+    return null;
+  }
+  if (
+    call.functionName !== "placeAndExecuteMarketBuy" &&
+    call.functionName !== "placeAndExecuteMarketSell"
+  )
+    return null;
+  const [size, minAmountOut, isMargin, isFillOrKill] = (call.args ?? []) as [
+    bigint,
+    bigint,
+    boolean,
+    boolean,
+  ];
+  if (isMargin || isFillOrKill) return null;
+  const side: "buy" | "sell" =
+    call.functionName === "placeAndExecuteMarketBuy" ? "buy" : "sell";
+  const market = kuruMainnet.markets[key];
+  const precision =
+    side === "buy" ? market.pricePrecision : market.sizePrecision;
+  const decimals =
+    side === "buy" ? kuruMainnetUsdc.decimals : market.base.decimals;
+  const inputAmount = (size * 10n ** BigInt(decimals)) / precision;
+  if (inputAmount <= 0n) return null;
+  return {
+    key,
+    marketAddress: market.market.toLowerCase() as Address,
+    side,
+    inputAmount,
+    minAmountOut,
   };
 }

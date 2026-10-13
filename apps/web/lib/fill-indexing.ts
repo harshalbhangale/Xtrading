@@ -4,20 +4,29 @@ import { IdentityError } from "@call-my-bluff/database/identity";
 import {
   type KuruActivity,
   kuruActivitySchema,
+  mainnetTradesSchema,
   recordTradeSchema,
 } from "@call-my-bluff/domain";
 import {
+  decodeMainnetMarketOrder,
   type KuruMarketKey,
   kuruUsdc,
   kuruV2,
   orderBookAbi,
 } from "@call-my-bluff/integrations/kuru";
-import { and, eq, inArray } from "drizzle-orm";
-import { type Address, decodeEventLog, getAddress, type Hex } from "viem";
+import { and, desc, eq, inArray } from "drizzle-orm";
+import {
+  type Address,
+  decodeEventLog,
+  getAddress,
+  type Hex,
+  type Transaction,
+  type TransactionReceipt,
+} from "viem";
 import { getDatabase } from "./database";
 import { envioQuery } from "./envio";
 import { identityContext } from "./identity-http";
-import { testnetClient } from "./markets";
+import { mainnetClient, mainnetEnabled, testnetClient } from "./markets";
 
 const marketKeys = new Map<string, KuruMarketKey>(
   (Object.keys(kuruV2.markets) as KuruMarketKey[]).map((key) => [
@@ -168,38 +177,25 @@ export async function myActivity(request: Request) {
   return walletActivity(wallet);
 }
 
-/**
- * Links a confirmed swap to the post that prompted it. The receipt must show a
- * successful call from the bound wallet to a configured market with a SpotSwap
- * log; the post ID itself remains user-supplied.
- */
-export async function recordTrade(request: Request, body: unknown) {
-  const parsed = recordTradeSchema.safeParse(body);
-  if (!parsed.success) throw new IdentityError("invalid_trade_record");
-  const { wallet, privyUserId } = await boundWallet(request);
-  const hash = parsed.data.transactionHash.toLowerCase() as Hex;
-  const client = testnetClient();
-  const [transaction, receipt] = await Promise.all([
-    client.getTransaction({ hash }),
-    client.getTransactionReceipt({ hash }),
-  ]).catch(() => {
-    throw new IdentityError("transaction_unavailable", 409);
-  });
+type SwapFacts = {
+  marketAddress: string;
+  side: "buy" | "sell";
+  inputAmount: bigint;
+};
+
+/** Testnet fills emit a SpotSwap summary from the order book the transaction called. */
+function testnetSwap(
+  transaction: Transaction,
+  receipt: TransactionReceipt,
+): SwapFacts | null {
   const market = transaction.to
     ? marketKeys.get(transaction.to.toLowerCase())
     : undefined;
-  if (
-    receipt.status !== "success" ||
-    transaction.from.toLowerCase() !== wallet.toLowerCase() ||
-    !market
-  )
-    throw new IdentityError("not_a_confirmed_swap", 409);
+  if (!market) return null;
+  const marketAddress = kuruV2.markets[market].market.toLowerCase();
   let swap: { isBuy: boolean; amountInUsed: bigint } | null = null;
   for (const log of receipt.logs) {
-    if (
-      log.address.toLowerCase() !== kuruV2.markets[market].market.toLowerCase()
-    )
-      continue;
+    if (log.address.toLowerCase() !== marketAddress) continue;
     try {
       swap = decodeEventLog({
         abi: orderBookAbi,
@@ -211,6 +207,57 @@ export async function recordTrade(request: Request, body: unknown) {
       // Other market logs (trade tape, book updates) are not swap summaries.
     }
   }
+  return swap
+    ? {
+        marketAddress,
+        side: swap.isBuy ? "buy" : "sell",
+        inputAmount: swap.amountInUsed,
+      }
+    : null;
+}
+
+/** Mainnet has no SpotSwap summary here; the order is read from the calldata that was sent. */
+function mainnetSwap(transaction: Transaction): SwapFacts | null {
+  const order = decodeMainnetMarketOrder({
+    to: transaction.to,
+    data: transaction.input,
+  });
+  return order
+    ? {
+        marketAddress: order.marketAddress,
+        side: order.side,
+        inputAmount: order.inputAmount,
+      }
+    : null;
+}
+
+/**
+ * Links a confirmed trade to the post that prompted it. The receipt must show a
+ * successful transaction from the bound wallet to a configured market on the same
+ * chain. The post ID itself remains user-supplied.
+ */
+export async function recordTrade(request: Request, body: unknown) {
+  const parsed = recordTradeSchema.safeParse(body);
+  if (!parsed.success) throw new IdentityError("invalid_trade_record");
+  const { wallet, privyUserId } = await boundWallet(request);
+  const { chainId, sourcePostId } = parsed.data;
+  const hash = parsed.data.transactionHash.toLowerCase() as Hex;
+  const client = chainId === 143 ? mainnetClient() : testnetClient();
+  const [transaction, receipt] = await Promise.all([
+    client.getTransaction({ hash }),
+    client.getTransactionReceipt({ hash }),
+  ]).catch(() => {
+    throw new IdentityError("transaction_unavailable", 409);
+  });
+  if (
+    receipt.status !== "success" ||
+    transaction.from.toLowerCase() !== wallet.toLowerCase()
+  )
+    throw new IdentityError("not_a_confirmed_swap", 409);
+  const swap =
+    chainId === 143
+      ? mainnetSwap(transaction)
+      : testnetSwap(transaction, receipt);
   if (!swap) throw new IdentityError("not_a_confirmed_swap", 409);
   const database = getDatabase();
   if (!database) throw new IdentityError("database_unavailable", 503);
@@ -222,12 +269,97 @@ export async function recordTrade(request: Request, body: unknown) {
   if (existing) return { recorded: false, reason: "already_recorded" };
   await database.db.insert(tradeIntents).values({
     privyUserId,
-    chainId: 10143,
-    market: kuruV2.markets[market].market.toLowerCase(),
-    side: swap.isBuy ? "buy" : "sell",
-    amount: swap.amountInUsed.toString(),
-    sourcePostId: parsed.data.sourcePostId,
+    chainId,
+    market: swap.marketAddress,
+    side: swap.side,
+    amount: swap.inputAmount.toString(),
+    sourcePostId,
     transactionHash: hash,
   });
-  return { recorded: true };
+  return { recorded: true, chainId };
+}
+
+/**
+ * Mainnet trades this wallet recorded, each checked again against its receipt.
+ * There is no mainnet indexer, so a trade that no longer verifies shows as unverified.
+ */
+export async function mainnetTrades(request: Request) {
+  const { wallet, privyUserId } = await boundWallet(request);
+  const observedAt = new Date().toISOString();
+  const unavailable = (reason: string) =>
+    mainnetTradesSchema.parse({
+      status: "unavailable",
+      observedAt,
+      reason,
+      trades: [],
+    });
+  if (!mainnetEnabled()) return unavailable("mainnet_trading_disabled");
+  const database = getDatabase();
+  if (!database) return unavailable("database_unavailable");
+  const intents = await database.db
+    .select({
+      hash: tradeIntents.transactionHash,
+      post: tradeIntents.sourcePostId,
+      recordedAt: tradeIntents.createdAt,
+    })
+    .from(tradeIntents)
+    .where(
+      and(
+        eq(tradeIntents.privyUserId, privyUserId),
+        eq(tradeIntents.chainId, 143),
+      ),
+    )
+    .orderBy(desc(tradeIntents.createdAt))
+    .limit(10);
+  const client = mainnetClient();
+  const trades = await Promise.all(
+    intents.map(async (intent) => {
+      const base = {
+        transactionHash: intent.hash ?? "",
+        sourcePostId: intent.post,
+        recordedAt: intent.recordedAt.toISOString(),
+      };
+      const unverified = {
+        ...base,
+        verified: false,
+        market: null,
+        side: null,
+        inputAmount: null,
+        minAmountOut: null,
+        blockNumber: null,
+      };
+      if (!intent.hash) return unverified;
+      const hash = intent.hash.toLowerCase() as Hex;
+      const [transaction, receipt] = await Promise.all([
+        client.getTransaction({ hash }),
+        client.getTransactionReceipt({ hash }),
+      ]).catch(() => [null, null] as const);
+      if (
+        !transaction ||
+        !receipt ||
+        receipt.status !== "success" ||
+        transaction.from.toLowerCase() !== wallet.toLowerCase()
+      )
+        return unverified;
+      const order = decodeMainnetMarketOrder({
+        to: transaction.to,
+        data: transaction.input,
+      });
+      if (!order) return unverified;
+      return {
+        ...base,
+        verified: true,
+        market: order.key,
+        side: order.side,
+        inputAmount: order.inputAmount.toString(),
+        minAmountOut: order.minAmountOut.toString(),
+        blockNumber: receipt.blockNumber.toString(),
+      };
+    }),
+  );
+  return mainnetTradesSchema.parse({
+    status: "ready",
+    observedAt,
+    trades,
+  });
 }

@@ -1,7 +1,7 @@
 import "server-only";
 import { tradeIntents } from "@call-my-bluff/database";
 import { creatorOverviewSchema, normalizeHandle } from "@call-my-bluff/domain";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, inArray } from "drizzle-orm";
 import { getAddress } from "viem";
 import { publicCallLedger } from "./calls";
 import { getDatabase } from "./database";
@@ -55,7 +55,7 @@ export async function creatorOverview(input: string) {
   });
 }
 
-/** Count trades users recorded against these posts on testnet. Counts only; no PnL. */
+/** Count trades users recorded against these posts on testnet and mainnet. Counts only; no PnL. */
 async function tradesFromPosts(postIds: string[]) {
   const database = getDatabase();
   if (!database) return null;
@@ -69,7 +69,7 @@ async function tradesFromPosts(postIds: string[]) {
     .from(tradeIntents)
     .where(
       and(
-        eq(tradeIntents.chainId, 10143),
+        inArray(tradeIntents.chainId, [10143, 143]),
         inArray(tradeIntents.sourcePostId, postIds),
       ),
     );

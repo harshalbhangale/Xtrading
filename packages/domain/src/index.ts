@@ -366,8 +366,36 @@ export const recordTradeSchema = z
   .object({
     transactionHash: txHashSchema,
     sourcePostId: z.string().regex(/^[0-9]{1,30}$/),
+    chainId: chainIdSchema,
   })
   .strict();
+
+// Mainnet trades are verified from the transaction and receipt, not from the Envio indexer.
+const decimalAmount = z.string().regex(/^[0-9]{1,78}$/);
+export const mainnetTradeSchema = z.object({
+  transactionHash: txHashSchema,
+  sourcePostId: z.string().regex(/^[0-9]{1,30}$/),
+  recordedAt: z.iso.datetime(),
+  verified: z.boolean(),
+  market: z
+    .string()
+    .regex(/^[A-Z]{1,8}$/)
+    .nullable(),
+  side: z.enum(["buy", "sell"]).nullable(),
+  inputAmount: decimalAmount.nullable(),
+  minAmountOut: decimalAmount.nullable(),
+  blockNumber: decimalAmount.nullable(),
+});
+export const mainnetTradesSchema = z.object({
+  status: z.enum(["ready", "unavailable"]),
+  observedAt: z.iso.datetime(),
+  reason: z
+    .string()
+    .regex(/^[a-z_]{1,40}$/)
+    .optional(),
+  trades: z.array(mainnetTradeSchema).max(10),
+});
+export type MainnetTrades = z.infer<typeof mainnetTradesSchema>;
 
 // Public reachability is not a deletion verdict or a settlement signal.
 export const postAvailabilitySchema = z.object({
