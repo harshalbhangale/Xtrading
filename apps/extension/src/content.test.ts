@@ -22,6 +22,30 @@ const response = (text: string) => ({
   route: { status: "unavailable", reason: "No market" },
   llm: "unavailable",
 });
+
+it("adds published token evidence even without classification and clears it when X recycles the post", async () => {
+  const article = document.querySelector("article");
+  if (!article) throw new Error("Missing fixture");
+  article.innerHTML =
+    '<a href="https://x.com/PeckShieldAlert/status/1622436301055336450"><time>2023</time></a><div data-testid="tweetText">Damus honeypot selling tax report</div>';
+  sendMessage.mockResolvedValue(null);
+  await import("./content");
+  await flush();
+  expect(
+    article.querySelector(".cmb-token-risk-host")?.shadowRoot?.textContent,
+  ).toContain("PeckShield reported this contract as a honeypot");
+  article
+    .querySelector("a")
+    ?.setAttribute("href", "https://x.com/alice/status/124");
+  const textNode = article.querySelector<HTMLElement>(
+    '[data-testid="tweetText"]',
+  );
+  if (!textNode) throw new Error("Missing tweet text");
+  textNode.innerText = "buy $PEPE";
+  mutation();
+  await flush();
+  expect(article.querySelector(".cmb-token-risk-host")).toBeNull();
+});
 let sendMessage = vi.fn<(message: { type: string }) => Promise<unknown>>();
 let mutation: () => void = () => {};
 const flush = async () => {
@@ -470,4 +494,34 @@ it("refreshes feed evidence and discards an expired badge", async () => {
   await vi.advanceTimersByTimeAsync(60001);
   await addPostBadge(article, "alice");
   expect(article.querySelector(".cmb-badge-host")).toBeNull();
+});
+
+it("shows a blocked swap card when Nansen flags a shilled token contract", async () => {
+  const text = "$PEPE 0x3e89e9e63fbe6e44fd030f392196ae1b136e0665 ape now";
+  const textNode = document.querySelector('[data-testid="tweetText"]');
+  if (textNode) textNode.textContent = text;
+  sendMessage.mockResolvedValue(response(text));
+  vi.mocked(loadInsights).mockResolvedValue({
+    nansen: {
+      mode: "live",
+      findings: [],
+      flags: [
+        {
+          kind: "impostor-token",
+          severity: "caution",
+          summary: "The post says PEPE, but this isn't PEPE's contract.",
+        },
+      ],
+    },
+  } as never);
+  await import("./content");
+  await flush();
+  const shadow = document.querySelector(".cmb-signal-host")?.shadowRoot;
+  expect(shadow?.querySelector(".flagged-card")).not.toBeNull();
+  expect(shadow?.querySelector(".flagged-status")?.textContent).toContain(
+    "Nansen flagged PEPE: The post says PEPE, but this isn't PEPE's contract",
+  );
+  const submit = shadow?.querySelector<HTMLButtonElement>(".swap-submit");
+  expect(submit?.disabled).toBe(true);
+  expect(submit?.textContent).toBe("PEPE flagged as unsafe");
 });

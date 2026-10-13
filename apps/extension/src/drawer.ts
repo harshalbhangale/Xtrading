@@ -21,7 +21,7 @@ import {
 } from "./dom";
 import { nansenPanel } from "./nansen-panel";
 import { perpTicket } from "./perp-ticket";
-import { reputation, tierLabel } from "./reputation";
+import { deletedTweetsLabel, reputation, tierLabel } from "./reputation";
 import { spotTicket } from "./spot-ticket";
 
 const insightsSchema = z.object({
@@ -185,14 +185,12 @@ export function reputationSection(
   return section(
     "Creator",
     tier ? row("Tier", tierLabel(tier)) : null,
-    tier
-      ? row(
-          "Red flags",
-          tier.assessment.flags.length
-            ? tier.assessment.flags.map((f) => f.title).join(" · ")
-            : "None found",
-        )
-      : null,
+    row("Deleted / unavailable tweets", deletedTweetsLabel(tier)),
+    el(
+      "p",
+      { class: "note" },
+      "Counts captured posts missing in two consecutive checks. Protected or suspended posts can look deleted; not a complete X timeline.",
+    ),
     row(
       "Identity",
       evidence?.identity.status === "bound"

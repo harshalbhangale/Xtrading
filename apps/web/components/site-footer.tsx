@@ -17,7 +17,7 @@ export function SiteFooter(_props: { testnet: boolean }) {
         <Link href="/how-it-works">How it works</Link>
         <Link href="/methodology">Methodology</Link>
         <Link href="/extension">Extension</Link>
-        <Link href="/setup">System status</Link>
+        <Link href="/dashboard/onchain">Onchain records</Link>
       </nav>
     </footer>
   );

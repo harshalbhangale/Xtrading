@@ -558,3 +558,24 @@ code {
     max-height: 94vh;
   }
 }
+.wallet-balances {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.wallet-balances > div {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--raised);
+}
+.wallet-balances strong,
+.wallet-balances span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.wallet-balances span {
+  color: var(--muted);
+  margin-top: 6px;
+}

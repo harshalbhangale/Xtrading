@@ -1792,3 +1792,185 @@ p.term-resolution {
 .term-spark.down polyline {
   stroke: #f0715c;
 }
+
+/* Demo red-flag creator (fictional sample data) */
+.demo-banner {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: 1px dashed color-mix(in srgb, var(--warning) 50%, transparent);
+  border-radius: var(--radius-small);
+  color: var(--warning);
+  font: 12px var(--mono);
+}
+.demo-tag {
+  justify-self: start;
+  padding: 3px 8px;
+  border: 1px dashed color-mix(in srgb, var(--warning) 50%, transparent);
+  border-radius: 999px;
+  color: var(--warning);
+  font: 11px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.demo-bad {
+  color: var(--negative);
+}
+.demo-kol-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.demo-kol-stats > div {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.demo-kol-stats span {
+  color: var(--muted);
+  font: 11px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.demo-kol-stats strong {
+  font: 600 22px var(--mono);
+}
+.demo-tokens,
+.demo-deleted {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.demo-tokens > li,
+.demo-deleted > li {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+.demo-tokens header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.demo-tokens header div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.demo-tokens header strong {
+  font: 600 16px var(--mono);
+}
+.demo-tokens header div span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.demo-verdict {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font: 600 11px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.demo-blocked {
+  border: 1px solid var(--negative);
+  background: color-mix(in srgb, var(--negative) 12%, transparent);
+  color: var(--negative);
+}
+.demo-warning {
+  border: 1px solid var(--warning);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  color: var(--warning);
+}
+.demo-tokens code {
+  overflow-wrap: anywhere;
+  color: var(--ink-soft);
+  font: 12px var(--mono);
+}
+.demo-tokens blockquote {
+  margin: 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--line-strong);
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.demo-tokens ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.demo-tokens footer,
+.demo-deleted footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font: 12px var(--mono);
+}
+.demo-deleted > li {
+  border-left: 3px solid var(--negative);
+}
+.demo-deleted p {
+  margin: 0;
+  color: var(--ink-soft);
+  font: 14px / 1.55 var(--mono);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--negative) 60%, transparent);
+}
+.demo-kol-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--negative) 35%, var(--line));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--negative) 5%, var(--surface));
+  color: var(--ink);
+  text-decoration: none;
+}
+.demo-kol-card:hover {
+  border-color: var(--negative);
+}
+.demo-kol-card strong {
+  font: 600 15px var(--mono);
+}
+.demo-kol-card p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.demo-kol-card ul {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--negative);
+  font: 12px var(--mono);
+}
+.demo-kol-card i {
+  color: var(--muted);
+  font-style: normal;
+}
+@media (max-width: 760px) {
+  .demo-kol-card {
+    grid-template-columns: 1fr;
+  }
+  .demo-kol-card ul {
+    flex-wrap: wrap;
+  }
+}

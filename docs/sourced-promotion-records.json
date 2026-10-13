@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "records": [
+    {
+      "id": "sec-33-11171-jake-paul-trx",
+      "subject": "Jake Joseph Paul",
+      "recordType": "external-regulatory-record",
+      "sourcePublisher": "U.S. Securities and Exchange Commission",
+      "sourceUrl": "https://www.sec.gov/files/litigation/admin/2023/33-11171.pdf",
+      "sourceDate": "2023-03-22",
+      "promotionDate": "2021-02-12",
+      "asset": "TRX",
+      "summary": "The SEC's settled order finds that Paul promoted TRX without disclosing compensation valued at approximately $25,019. Paul settled without admitting or denying the findings, subject to the exceptions stated in the order.",
+      "compensationUsd": "25019",
+      "civilPenaltyUsd": "75057",
+      "displayLabel": "SEC public record · 22 March 2023",
+      "postId": null,
+      "originalPostText": null,
+      "xtradingCapturedPost": false,
+      "xtradingAvailabilityChecks": [],
+      "postOutcome": null,
+      "deletionReason": null,
+      "counterfeitTokenAddress": null,
+      "nansenRiskFinding": null,
+      "nansenBlocked": false,
+      "usage": "External source context only. Do not insert as an Xtrading-captured call, verified losing-call deletion, creator wallet binding, counterfeit-token finding, or Nansen response. No direct ingestion into postSignals or call-performance tables."
+    }
+  ]
+}

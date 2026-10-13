@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CreatorSearch } from "../../components/creator-search";
 import { PageHeading, Panel } from "../../components/dashboard/ui";
 import { TierBadge } from "../../components/kol-reputation";
+import { DEMO_KOL_HANDLE, demoKol } from "../../lib/demo-kol";
 import { kolRecord } from "../../lib/kol-record";
 import {
   publicCreatorEvidence,
@@ -42,6 +43,24 @@ export default async function CreatorsPage({
       <Panel title="Look up a handle">
         <CreatorSearch />
       </Panel>
+      <Link className="demo-kol-card" href={`/creators/${DEMO_KOL_HANDLE}`}>
+        <span className="demo-tag">Demo data</span>
+        <div>
+          <strong>@{demoKol.handle}</strong>
+          <p>{demoKol.summary}</p>
+        </div>
+        <ul>
+          <li>
+            ⛔ {demoKol.tokens.filter((t) => t.nansen === "blocked").length}{" "}
+            Nansen-blocked tokens
+          </li>
+          <li>🗑 {demoKol.deleted.length} deleted calls</li>
+          <li>
+            {demoKol.record.right}/{demoKol.record.scored} calls right
+          </li>
+        </ul>
+        <i aria-hidden="true">→</i>
+      </Link>
       <Panel
         title="Bound accounts"
         description="Most recent bindings first. Tiers come from scored calls; red flags come from evidence and demote tiers."

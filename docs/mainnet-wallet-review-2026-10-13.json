@@ -1,0 +1,346 @@
+{
+  "observedAt": "2026-10-13T11:55:56.433Z",
+  "head": 113034437,
+  "scanNext": 113034438,
+  "wallet": "0x02cefd0e0547bb176f508380399a982fab676a92",
+  "transactions": [
+    {
+      "hash": "0x4efa028238ebbfc029cd4f00571c7396f43f45093867a397f89be799fe1cd4c3",
+      "from": "0x8143b20b4ce408a76c1346335e097d10465ef356",
+      "to": "0x02cefd0e0547bb176f508380399a982fab676a92",
+      "nonce": "0x01",
+      "block": "112841510",
+      "timestamp": "2026-10-12T19:44:45.000Z",
+      "MON": "0.997535136697651",
+      "status": "reverted",
+      "gasMON": "0.002142",
+      "action": "native-transfer",
+      "args": []
+    },
+    {
+      "hash": "0x17c3d573f457086ce0be8570cedf5bcfbb35fe1a15733a6e652656c4cf59b2f3",
+      "from": "0x8143b20b4ce408a76c1346335e097d10465ef356",
+      "to": "0x02cefd0e0547bb176f508380399a982fab676a92",
+      "nonce": "0x02",
+      "block": "112841655",
+      "timestamp": "2026-10-12T19:45:28.000Z",
+      "MON": "0.98",
+      "status": "success",
+      "gasMON": "0.002142",
+      "action": "native-transfer",
+      "args": []
+    },
+    {
+      "hash": "0xd472b15b806ce336c122f1a6d0a722a62643de9143312ee93f64b435c4d16118",
+      "from": "0x02cefd0e0547bb176f508380399a982fab676a92",
+      "to": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "nonce": "0x00",
+      "block": "112958027",
+      "timestamp": "2026-10-13T05:31:23.000Z",
+      "MON": "0",
+      "status": "success",
+      "gasMON": "0.01024660104",
+      "action": "transfer",
+      "args": ["0x8143B20B4CE408a76c1346335e097D10465eF356", "5000000"]
+    },
+    {
+      "hash": "0xc2de59ecede3de1db96ae875b103de57d53457fee1a7f8764d3f75a6f84a3514",
+      "from": "0x02cefd0e0547bb176f508380399a982fab676a92",
+      "to": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "nonce": "0x01",
+      "block": "112958242",
+      "timestamp": "2026-10-13T05:32:28.000Z",
+      "MON": "0",
+      "status": "success",
+      "gasMON": "0.008939586",
+      "action": "approve",
+      "args": ["0x065C9d28E428A0db40191a54d33d5b7c71a9C394", "1000000"]
+    },
+    {
+      "hash": "0x54a19b582bc439194c7eb6d1494b6336e0c5b96d18abdb9d672b8dfa0d6013fc",
+      "from": "0x02cefd0e0547bb176f508380399a982fab676a92",
+      "to": "0x065c9d28e428a0db40191a54d33d5b7c71a9c394",
+      "nonce": "0x02",
+      "block": "112958254",
+      "timestamp": "2026-10-13T05:32:31.000Z",
+      "MON": "0",
+      "status": "success",
+      "gasMON": "0.029872842",
+      "action": "placeAndExecuteMarketBuy",
+      "args": ["100000000", "39426523297425000000", false, false]
+    },
+    {
+      "hash": "0x496c1559e65f0086727ab1ca04b92f9ddb80d812b9b1d2421c57981e9ee6db1d",
+      "from": "0x02cefd0e0547bb176f508380399a982fab676a92",
+      "to": "0x065c9d28e428a0db40191a54d33d5b7c71a9c394",
+      "nonce": "0x03",
+      "block": "112958261",
+      "timestamp": "2026-10-13T05:32:33.000Z",
+      "MON": "39.8247710075",
+      "status": "success",
+      "gasMON": "0.028551636",
+      "action": "placeAndExecuteMarketSell",
+      "args": ["398247710075", "989013", false, false]
+    },
+    {
+      "hash": "0x419458b051d9c744ddb7648d17ccc56c7bf519225ebb8b862f1827395b2deee8",
+      "from": "0x02cefd0e0547bb176f508380399a982fab676a92",
+      "to": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "nonce": "0x04",
+      "block": "112958267",
+      "timestamp": "2026-10-13T05:32:35.000Z",
+      "MON": "0",
+      "status": "success",
+      "gasMON": "0.008938362",
+      "action": "approve",
+      "args": ["0xb3e6778480b2E488385E8205eA05E20060B813cb", "1000000"]
+    },
+    {
+      "hash": "0x450e00b927f5b1dc9703b7bbb9fc7ffa52835dfe88ac596632633eb6c1b9d64c",
+      "from": "0x02cefd0e0547bb176f508380399a982fab676a92",
+      "to": "0xb3e6778480b2e488385e8205ea05e20060b813cb",
+      "nonce": "0x05",
+      "block": "112958280",
+      "timestamp": "2026-10-13T05:32:39.000Z",
+      "MON": "0",
+      "status": "success",
+      "gasMON": "0.05224797",
+      "action": "selector 0xce1e7030",
+      "args": []
+    },
+    {
+      "hash": "0x9671cbe9dbc10cc8880e34d2c9617d64b15fc000404cd246cf304ccb46fc1a71",
+      "from": "0x02cefd0e0547bb176f508380399a982fab676a92",
+      "to": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "nonce": "0x06",
+      "block": "112987118",
+      "timestamp": "2026-10-13T07:57:44.000Z",
+      "MON": "0",
+      "status": "success",
+      "gasMON": "0.021658884",
+      "action": "approve",
+      "args": ["0x065C9d28E428A0db40191a54d33d5b7c71a9C394", "1000000"]
+    },
+    {
+      "hash": "0x7b3a5f41719f6c0d7611d0d64da497dd50fb3c2f6c7079c103e33fa6a26392ff",
+      "from": "0x02cefd0e0547bb176f508380399a982fab676a92",
+      "to": "0x065c9d28e428a0db40191a54d33d5b7c71a9c394",
+      "nonce": "0x07",
+      "block": "112987123",
+      "timestamp": "2026-10-13T07:57:46.000Z",
+      "MON": "0",
+      "status": "success",
+      "gasMON": "0.07186614",
+      "action": "placeAndExecuteMarketBuy",
+      "args": ["100000000", "39424953207717000000", false, false]
+    },
+    {
+      "hash": "0x45db923a8a1ee310fd6890df3ad03dd6fcb43cbfcbccf9d3bce5206636c3b289",
+      "from": "0x02cefd0e0547bb176f508380399a982fab676a92",
+      "to": "0x065c9d28e428a0db40191a54d33d5b7c71a9c394",
+      "nonce": "0x08",
+      "block": "112987128",
+      "timestamp": "2026-10-13T07:57:47.000Z",
+      "MON": "39.8231850583",
+      "status": "success",
+      "gasMON": "0.068712912",
+      "action": "placeAndExecuteMarketSell",
+      "args": ["398231850583", "988856", false, false]
+    },
+    {
+      "hash": "0x61fd62ee0d4256bde00669894ffffa484784243b6e464f467523c4a43ffd2a02",
+      "from": "0x02cefd0e0547bb176f508380399a982fab676a92",
+      "to": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "nonce": "0x09",
+      "block": "112997631",
+      "timestamp": "2026-10-13T08:50:38.000Z",
+      "MON": "0",
+      "status": "success",
+      "gasMON": "0.00893432742",
+      "action": "approve",
+      "args": ["0xa6aFD386135B7D41A6C40C525abC4A1019b0D132", "1000000"]
+    },
+    {
+      "hash": "0x6e00ac2af0fd5c635d8f58a9c25e157965dfc998659d82c57198657ea93ea57c",
+      "from": "0x8143b20b4ce408a76c1346335e097d10465ef356",
+      "to": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "nonce": "0x00",
+      "block": "112841424",
+      "MON": "0",
+      "status": "success",
+      "gasMON": "0.011277936",
+      "action": "transfer",
+      "args": ["0x02cefD0E0547bb176f508380399A982fAb676A92", "9897169"]
+    },
+    {
+      "hash": "0xd6bbdff95a5f4577cb6465fd83b87f487d712bf3f998c149bb8122dd88c9004f",
+      "from": "0xb01caea8c6c47bbf4f4b4c5080ca642043359c2e",
+      "to": "0xdb9b1e94b5b69df7e401ddbede43491141047db3",
+      "nonce": "0x070816",
+      "block": "112997669",
+      "MON": "0",
+      "status": "success",
+      "gasMON": "0.060829315800607079",
+      "action": "selector 0xcef6d209",
+      "args": [],
+      "authorizationList": [
+        {
+          "address": "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
+          "nonce": 10,
+          "chainId": 143
+        }
+      ]
+    },
+    {
+      "hash": "0x0b3a5af70e6d0aced43cf311c048e7088703dcdcc58dc01e7982b4f1f97c924f",
+      "from": "0xb42f812a44c22cc6b861478900401ee759ebead6",
+      "to": "0xdb9b1e94b5b69df7e401ddbede43491141047db3",
+      "nonce": "0x070829",
+      "block": "112997785",
+      "MON": "0",
+      "status": "success",
+      "gasMON": "0.079387758600792293",
+      "action": "selector 0xcef6d209",
+      "args": []
+    }
+  ],
+  "usdcWalletEvents": [
+    {
+      "log_index": 56,
+      "transaction_index": 13,
+      "block_number": 112841424,
+      "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "data": "0x00000000000000000000000000000000000000000000000000000000009704d1",
+      "topic0": "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      "topic1": "0x0000000000000000000000008143b20b4ce408a76c1346335e097d10465ef356",
+      "topic2": "0x00000000000000000000000002cefd0e0547bb176f508380399a982fab676a92"
+    },
+    {
+      "log_index": 162,
+      "transaction_index": 17,
+      "block_number": 112958027,
+      "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "data": "0x00000000000000000000000000000000000000000000000000000000004c4b40",
+      "topic0": "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      "topic1": "0x00000000000000000000000002cefd0e0547bb176f508380399a982fab676a92",
+      "topic2": "0x0000000000000000000000008143b20b4ce408a76c1346335e097d10465ef356"
+    },
+    {
+      "log_index": 221,
+      "transaction_index": 21,
+      "block_number": 112958242,
+      "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "data": "0x00000000000000000000000000000000000000000000000000000000000f4240",
+      "topic0": "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925",
+      "topic1": "0x00000000000000000000000002cefd0e0547bb176f508380399a982fab676a92",
+      "topic2": "0x000000000000000000000000065c9d28e428a0db40191a54d33d5b7c71a9c394"
+    },
+    {
+      "log_index": 147,
+      "transaction_index": 18,
+      "block_number": 112958254,
+      "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "data": "0x00000000000000000000000000000000000000000000000000000000000f4240",
+      "topic0": "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      "topic1": "0x00000000000000000000000002cefd0e0547bb176f508380399a982fab676a92",
+      "topic2": "0x0000000000000000000000002a68ba1833cdf93fa9da1eebd7f46242ad8e90c5"
+    },
+    {
+      "log_index": 214,
+      "transaction_index": 18,
+      "block_number": 112958261,
+      "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "data": "0x00000000000000000000000000000000000000000000000000000000000f3c07",
+      "topic0": "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      "topic1": "0x0000000000000000000000002a68ba1833cdf93fa9da1eebd7f46242ad8e90c5",
+      "topic2": "0x00000000000000000000000002cefd0e0547bb176f508380399a982fab676a92"
+    },
+    {
+      "log_index": 41,
+      "transaction_index": 11,
+      "block_number": 112958267,
+      "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "data": "0x00000000000000000000000000000000000000000000000000000000000f4240",
+      "topic0": "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925",
+      "topic1": "0x00000000000000000000000002cefd0e0547bb176f508380399a982fab676a92",
+      "topic2": "0x000000000000000000000000b3e6778480b2e488385e8205ea05e20060b813cb"
+    },
+    {
+      "log_index": 111,
+      "transaction_index": 15,
+      "block_number": 112958280,
+      "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "data": "0x00000000000000000000000000000000000000000000000000000000000f4240",
+      "topic0": "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      "topic1": "0x00000000000000000000000002cefd0e0547bb176f508380399a982fab676a92",
+      "topic2": "0x000000000000000000000000b3e6778480b2e488385e8205ea05e20060b813cb"
+    },
+    {
+      "log_index": 139,
+      "transaction_index": 9,
+      "block_number": 112987118,
+      "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "data": "0x00000000000000000000000000000000000000000000000000000000000f4240",
+      "topic0": "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925",
+      "topic1": "0x00000000000000000000000002cefd0e0547bb176f508380399a982fab676a92",
+      "topic2": "0x000000000000000000000000065c9d28e428a0db40191a54d33d5b7c71a9c394"
+    },
+    {
+      "log_index": 13,
+      "transaction_index": 2,
+      "block_number": 112987123,
+      "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "data": "0x00000000000000000000000000000000000000000000000000000000000f4240",
+      "topic0": "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      "topic1": "0x00000000000000000000000002cefd0e0547bb176f508380399a982fab676a92",
+      "topic2": "0x0000000000000000000000002a68ba1833cdf93fa9da1eebd7f46242ad8e90c5"
+    },
+    {
+      "log_index": 42,
+      "transaction_index": 4,
+      "block_number": 112987128,
+      "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "data": "0x00000000000000000000000000000000000000000000000000000000000f3dbd",
+      "topic0": "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      "topic1": "0x0000000000000000000000002a68ba1833cdf93fa9da1eebd7f46242ad8e90c5",
+      "topic2": "0x00000000000000000000000002cefd0e0547bb176f508380399a982fab676a92"
+    },
+    {
+      "log_index": 77,
+      "transaction_index": 17,
+      "block_number": 112997631,
+      "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "data": "0x00000000000000000000000000000000000000000000000000000000000f4240",
+      "topic0": "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925",
+      "topic1": "0x00000000000000000000000002cefd0e0547bb176f508380399a982fab676a92",
+      "topic2": "0x000000000000000000000000a6afd386135b7d41a6c40c525abc4a1019b0d132"
+    },
+    {
+      "log_index": 66,
+      "transaction_index": 10,
+      "block_number": 112997669,
+      "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "data": "0x00000000000000000000000000000000000000000000000000000000000f4240",
+      "topic0": "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      "topic1": "0x00000000000000000000000002cefd0e0547bb176f508380399a982fab676a92",
+      "topic2": "0x0000000000000000000000002a68ba1833cdf93fa9da1eebd7f46242ad8e90c5"
+    },
+    {
+      "log_index": 166,
+      "transaction_index": 16,
+      "block_number": 112997785,
+      "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "data": "0x00000000000000000000000000000000000000000000000000000000000f1da2",
+      "topic0": "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      "topic1": "0x00000000000000000000000044ed9b74f4fe2b0975c2b5121b0e906da6ce4a48",
+      "topic2": "0x00000000000000000000000002cefd0e0547bb176f508380399a982fab676a92"
+    }
+  ],
+  "balanceSnapshot": {
+    "observedAt": "2026-10-13T11:58:53.396Z",
+    "block": "113035028",
+    "MON": "40.4518039968569",
+    "USDC": "3.885047"
+  },
+  "scope": "Direct transactions involving demo buyer and USDC wallet events across archived Monad mainnet history; each discovered transaction independently receipt-checked. Does not enumerate all native internal transfers, all tokens, or unrelated/unidentified wallets."
+}

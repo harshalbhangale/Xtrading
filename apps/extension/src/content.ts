@@ -7,6 +7,7 @@ import { appOrigin } from "./config";
 import { addPostBadge } from "./creator-badge";
 import { el, safeLink, send, shadowHost } from "./dom";
 import { openDrawer } from "./drawer";
+import { flaggedTokenCard } from "./flagged-token-card";
 import { observeFollowing } from "./follow-observer";
 import { inlineTrade, kuruMarket } from "./inline-trade";
 import { perpCard } from "./perp-card";
@@ -14,6 +15,7 @@ import { postImages } from "./post-media";
 import { scanProfile } from "./profile";
 import { riskLine } from "./risk-line";
 import { cashtagMarket, swapCard, tradeControl } from "./swap-card";
+import { addTokenRiskWarning } from "./token-risk-warning";
 import { attachToXTicker } from "./x-ticker";
 
 function postIdentity(article: HTMLElement) {
@@ -86,7 +88,10 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
       : perpRoute
         ? // Perp-only asset (no Kuru spot market).
           perpCard({ postId, signal, route: perpRoute })
-        : null;
+        : signal.asset && signal.tokenReferences.some((r) => r.kind === "evm")
+          ? // A named token's contract we cannot route: Nansen's verdict on it.
+            flaggedTokenCard({ postId, handle, signal })
+          : null;
   if (card) {
     host.dataset.inline = "true";
     root.append(card);
@@ -219,6 +224,7 @@ function scanPosts() {
           ".cmb-signal-host, .cmb-xticker-host, .cmb-swap-host",
         ))
     ) {
+      addTokenRiskWarning(article, { ...id, text });
       tradeFromXTicker(article, id);
       continue;
     }
@@ -227,9 +233,10 @@ function scanPosts() {
     seenText.set(article, text);
     rendered.delete(article);
     for (const stale of article.querySelectorAll(
-      ".cmb-signal-host, .cmb-badge-host, .cmb-xticker-host, .cmb-xbuy-host, .cmb-swap-host",
+      ".cmb-signal-host, .cmb-badge-host, .cmb-xticker-host, .cmb-xbuy-host, .cmb-swap-host, .cmb-token-risk-host",
     ))
       stale.remove();
+    addTokenRiskWarning(article, { ...id, text });
     tradeFromXTicker(article, id);
     visible.observe(article);
   }

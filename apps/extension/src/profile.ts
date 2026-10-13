@@ -20,7 +20,12 @@ import {
 import { type Insights, loadInsights } from "./drawer";
 import { EXPLORERS } from "./nansen-panel";
 import { renderOverview } from "./overview";
-import { reputation, seriousFlags, tierLabel } from "./reputation";
+import {
+  deletedTweetCount,
+  deletedTweetsLabel,
+  reputation,
+  tierLabel,
+} from "./reputation";
 
 const reserved = new Set([
   "home",
@@ -195,15 +200,19 @@ export async function scanProfile() {
       ? { label: "Tier", value: tierLabel(rep), kind: "row" }
       : { label: "Tier", value: null, reason: "unavailable" },
   );
-  if (rep)
-    panel.set("flags", {
-      label: "Red flags",
-      value: rep.assessment.flags.length
-        ? rep.assessment.flags.map((f) => f.title).join(" · ")
-        : "None found",
-      kind: "row",
-      ...(seriousFlags(rep).length ? { tone: "bad" as const } : {}),
-    });
+  panel.set("deleted-tweets", {
+    label: "Deleted / unavailable tweets",
+    value: el(
+      "span",
+      {
+        title:
+          "Captured posts missing in two consecutive public checks. Protection or suspension can look like deletion; this does not cover all of X.",
+      },
+      deletedTweetsLabel(rep),
+    ),
+    kind: "row",
+    ...((deletedTweetCount(rep) ?? 0) > 0 ? { tone: "bad" as const } : {}),
+  });
   const ledger = publicCallLedgerSchema.safeParse(ledgerRaw);
   const tiles = statTiles(callStats(ledger.success ? ledger.data.calls : []));
   tiles.forEach((tile, index) => {
