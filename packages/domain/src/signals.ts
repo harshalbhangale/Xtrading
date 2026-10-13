@@ -311,12 +311,17 @@ export const reputationSchema = z.object({
     )
     .max(10),
   status: z.enum(["ready", "unavailable"]),
-  // Detected calls priced from the post's timestamp to now (unregistered, unscored).
+  // Detected calls priced at post time and a fixed horizon later (unregistered).
+  // Settled results never change; younger calls are pending.
   measured: z
     .object({
+      horizonSeconds: z.number().int().positive().default(3600),
       count: z.number().int().nonnegative(),
       inFavour: z.number().int().nonnegative(),
       medianBps: z.number().int().nullable(),
+      pending: z.number().int().nonnegative().default(0),
+      unpriced: z.number().int().nonnegative().default(0),
+      unpricedAssets: z.array(symbolSchema).max(50).default([]),
       items: z
         .array(
           z.object({
@@ -324,7 +329,7 @@ export const reputationSchema = z.object({
             asset: symbolSchema,
             direction: z.enum(["bullish", "bearish"]),
             entryPrice: z.string(),
-            nowPrice: z.string(),
+            exitPrice: z.string(),
             moveBps: z.number().int(),
             postedAt: z.iso.datetime(),
           }),

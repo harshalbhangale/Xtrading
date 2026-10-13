@@ -152,7 +152,7 @@ export default async function CreatorPage({
       {detected?.status === "ready" && detected.recent.length > 0 && (
         <Panel
           title="Calls detected in posts"
-          description={`Extracted automatically from posts seen by extension users and priced from the minute they were posted to now, in the call's direction. Not registered by the creator.${detected.measured?.count ? ` ${detected.measured.inFavour} of ${detected.measured.count} moved their way.` : ""}`}
+          description={`Extracted automatically from posts seen by extension users and priced from the minute they were posted to one hour later, in the call's direction. Settled results never change. Not registered by the creator.${detected.measured?.count ? ` ${detected.measured.inFavour} of ${detected.measured.count} moved their way within 1h.` : ""}${detected.measured?.pending ? ` ${detected.measured.pending} pending.` : ""}${detected.measured?.unpriced ? ` ${detected.measured.unpriced} not priced (${detected.measured.unpricedAssets.join(", ")}).` : ""}`}
         >
           <div className="table-scroll">
             <table className="record-table">
@@ -162,7 +162,7 @@ export default async function CreatorPage({
                   <th scope="col">Asset / direction</th>
                   <th scope="col">Instrument</th>
                   <th scope="col">Detected</th>
-                  <th scope="col">Since post</th>
+                  <th scope="col">1h after post</th>
                 </tr>
               </thead>
               <tbody>
@@ -195,7 +195,7 @@ export default async function CreatorPage({
                           >
                             {m.moveBps >= 0 ? "+" : "−"}
                             {Math.abs(m.moveBps / 100).toFixed(2)}% · $
-                            {m.entryPrice} → ${m.nowPrice}
+                            {m.entryPrice} → ${m.exitPrice}
                           </span>
                         ) : (
                           "—"

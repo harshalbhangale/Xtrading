@@ -21,9 +21,16 @@ export function identityOrigin() {
     throw new IdentityError("app_origin_invalid", 503);
   return url.origin;
 }
+// localhost and 127.0.0.1 are the same local dev server; `pnpm dev` prints the latter.
+const LOOPBACK = /^http:\/\/(?:localhost|127\.0\.0\.1)(:\d+)?$/;
 export function requireOrigin(request: Request) {
   const origin = identityOrigin();
-  if (request.headers.get("origin") !== origin)
+  const sent = request.headers.get("origin");
+  const loopbackAlias =
+    sent !== null &&
+    LOOPBACK.test(origin) &&
+    LOOPBACK.exec(sent)?.[1] === LOOPBACK.exec(origin)?.[1];
+  if (sent !== origin && !loopbackAlias)
     throw new IdentityError("origin_not_allowed", 403);
   return origin;
 }

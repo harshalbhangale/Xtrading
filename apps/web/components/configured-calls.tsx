@@ -91,7 +91,7 @@ export default function ConfiguredCalls() {
           asset: form.asset,
           direction: form.direction,
           horizon: form.horizon,
-          targetBps: Math.max(1, Number(form.target) * 100),
+          targetBps: Math.max(1, Math.round(Number(form.target) * 100) || 1),
         }),
       });
       const result: unknown = await response.json();

@@ -238,9 +238,17 @@ export async function scanProfile() {
     panel.set(`detected${index}`, {
       ...tile,
       kind: "stat",
-      group: "Detected on X · priced from post time, unregistered",
+      group: "Detected on X · scored 1h after post, unregistered",
     });
   });
+  const coverage = detectedCoverage(insights.reputation);
+  if (coverage)
+    panel.set("detected-coverage", {
+      label: "Scoring",
+      value: coverage,
+      kind: "row",
+      group: "Detected on X · scored 1h after post, unregistered",
+    });
   panel.set("saiddid", checked);
 }
 
@@ -315,13 +323,13 @@ function detectedTiles(reputation: Reputation) {
   ];
   if (measured?.count) {
     tiles.push({
-      label: "Moved their way",
+      label: "Moved their way in 1h",
       value: `${measured.inFavour}/${measured.count}`,
       tone: measured.inFavour * 2 >= measured.count ? "good" : "bad",
     });
     if (measured.medianBps !== null)
       tiles.push({
-        label: "Median since post",
+        label: "Median 1h move",
         value: formatBps(measured.medianBps),
         tone: measured.medianBps >= 0 ? "good" : "bad",
       });
@@ -331,6 +339,19 @@ function detectedTiles(reputation: Reputation) {
     { label: "Bearish", value: String(reputation.bearish) },
   );
   return tiles;
+}
+
+/** Which detected calls are in the 1h score, which are waiting, and which cannot be priced. */
+function detectedCoverage(reputation: Reputation) {
+  const m = reputation.status === "ready" ? reputation.measured : undefined;
+  if (!m) return null;
+  const parts = [`${m.count} settled`];
+  if (m.pending) parts.push(`${m.pending} pending (under 1h old)`);
+  if (m.unpriced)
+    parts.push(
+      `${m.unpriced} not priced${m.unpricedAssets.length ? ` (${m.unpricedAssets.join(", ")})` : ""}`,
+    );
+  return parts.join(" · ");
 }
 
 /** The latest detected calls, shown as observations. Unclassified fields say so. */

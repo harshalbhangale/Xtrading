@@ -6,6 +6,7 @@ import {
   type PostSignalRequest,
   postSignalSchema,
 } from "@call-my-bluff/domain";
+import { fetchPublicPost } from "@call-my-bluff/integrations/calls";
 import {
   deriveTradeRoute,
   heuristicSignal,
@@ -17,7 +18,7 @@ import {
   hasTokenMention,
   tokenReferences,
 } from "@call-my-bluff/integrations/token-references";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getDatabase } from "./database";
 import { classifyWithLlm, llmMode } from "./llm";
 import { perplSnapshot } from "./markets";
@@ -63,10 +64,37 @@ async function stored(postId: string, textHash: string) {
   }
 }
 
+// Keys the server adds to a stored signal later (availability checks, prices).
+// A re-classification must keep them, or every view would erase the history.
+const SERVER_KEYS = ["availability", "entryPrice", "exitPrice"] as const;
+const keepServerKeys = sql.raw(
+  `jsonb_strip_nulls(jsonb_build_object(${SERVER_KEYS.map((k) => `'${k}', "post_signals"."signal"->'${k}'`).join(", ")}))`,
+);
+
+/**
+ * The extension reports post ID, handle and text; none of it is trusted. A new
+ * post is stored only after X's public embed confirms it exists and that the
+ * handle wrote it, so a caller cannot plant calls on someone's record.
+ */
+async function confirmedOnX(signal: PostSignal) {
+  const post = await fetchPublicPost(signal.postId).catch(() => null);
+  return post?.authorHandle === signal.handle.toLowerCase();
+}
+
 async function persist(signal: PostSignal, textHash: string) {
   const database = getDatabase();
   if (!database || (!signal.isCall && !signal.tokenMention)) return;
   try {
+    const [existing] = await database.db
+      .select({ postId: postSignals.postId })
+      .from(postSignals)
+      .where(eq(postSignals.postId, signal.postId))
+      .limit(1);
+    if (
+      !existing &&
+      (!allow("signal-confirm:global", 120) || !(await confirmedOnX(signal)))
+    )
+      return;
     await database.db
       .insert(postSignals)
       .values({
@@ -88,7 +116,9 @@ async function persist(signal: PostSignal, textHash: string) {
     if (signal.images.length || signal.capturedText)
       await database.db
         .update(postSignals)
-        .set({ signal })
+        .set({
+          signal: sql`${JSON.stringify(signal)}::jsonb || ${keepServerKeys}`,
+        })
         .where(
           and(
             eq(postSignals.postId, signal.postId),

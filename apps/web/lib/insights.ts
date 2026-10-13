@@ -14,10 +14,9 @@ import {
 import { and, desc, eq, sql } from "drizzle-orm";
 import { getDatabase } from "./database";
 import { nansenCheck } from "./nansen";
-import { spotPrices } from "./prices";
 import { publicCreatorEvidence } from "./public-creator";
 
-// Binance-priced assets are free to look up; MON entries cost Nansen credits.
+// Binance-priced assets are free to look up; MON prices cost Nansen credits.
 const ENTRY_LOOKUPS_PER_REQUEST = 30;
 const PAID_ENTRY_LOOKUPS_PER_REQUEST = 6;
 const MEASURED_CALLS_PER_REQUEST = 60;
@@ -26,24 +25,23 @@ const toDecimal = (units: bigint) => {
   return `${text.slice(0, -8)}.${text.slice(-8)}`.replace(/\.?0+$/, "");
 };
 
-/** Current price in 8-decimal units: Binance for BTC/ETH/SOL, Kuru mainnet for MON. */
-async function priceNow(asset: keyof typeof CALL_ASSETS) {
-  if (asset === "MON") {
-    const mon = (await spotPrices().catch(() => null))?.prices.find(
-      (p) => p.asset === "MON",
-    );
-    if (!mon) return null;
-    const [whole = "0", fraction = ""] = mon.price.split(".");
-    return BigInt(whole + fraction.slice(0, 8).padEnd(8, "0"));
-  }
-  const now = await observePrice(asset, Math.floor(Date.now() / 1000) - 180);
-  return now ? BigInt(now.price) : null;
-}
+/** Detected calls are scored once, at this fixed time after the post. */
+export const DETECTED_HORIZON_SECONDS = 3600;
+// The exit candle must have closed before it is read.
+const SETTLE_DELAY_SECONDS = 180;
+
+type StoredPrice = string | null;
+const storedPrice = (value: unknown): StoredPrice =>
+  typeof value === "string" && /^[0-9]+$/.test(value) && value !== "0"
+    ? value
+    : null;
 
 /**
- * Prices each detected call from the minute it was posted to now, signed by
- * its direction. Entry prices never change, so they are stored on the signal
- * row once (bounded lookups per request; MON entries cost Nansen credits).
+ * Scores each detected call from the minute it was posted to a fixed horizon
+ * after it, signed by its direction. Both prices are historical candles, so
+ * they are fetched once, stored on the signal row and never change: a settled
+ * call keeps its result. Calls younger than the horizon stay pending, and
+ * assets without a price source are counted as unpriced, never dropped silently.
  */
 async function measureDetected(
   rows: {
@@ -51,56 +49,80 @@ async function measureDetected(
     asset: string | null;
     direction: "bullish" | "bearish" | null;
     entry: unknown;
+    exit: unknown;
   }[],
 ) {
   const database = getDatabase();
   if (!database) return undefined;
-  const priced: Record<string, bigint | null> = {};
   let lookups = 0;
   let paidLookups = 0;
-  const items = [];
-  for (const row of rows) {
-    const asset = row.asset as keyof typeof CALL_ASSETS | null;
-    if (!asset || !(asset in CALL_ASSETS) || !row.direction) continue;
-    const postedSec = Math.floor(Number(postTimestampMs(row.postId)) / 1000);
-    let entry =
-      typeof row.entry === "string" && /^[0-9]+$/.test(row.entry)
-        ? BigInt(row.entry)
-        : null;
+  const lookup = async (
+    asset: keyof typeof CALL_ASSETS,
+    at: number,
+    postId: string,
+    key: "entryPrice" | "exitPrice",
+  ) => {
     const paid = asset === "MON";
     if (
-      entry === null &&
-      lookups < ENTRY_LOOKUPS_PER_REQUEST &&
-      (!paid || paidLookups < PAID_ENTRY_LOOKUPS_PER_REQUEST)
-    ) {
-      lookups++;
-      if (paid) paidLookups++;
-      const observed = await observePrice(asset, postedSec, {
-        nansenApiKey: process.env.NANSEN_API_KEY,
-      }).catch(() => null);
-      if (observed) {
-        entry = BigInt(observed.price);
-        await database.db
-          .update(postSignals)
-          .set({
-            signal: sql`jsonb_set(${postSignals.signal}, '{entryPrice}', ${JSON.stringify(observed.price)}::jsonb)`,
-          })
-          .where(eq(postSignals.postId, row.postId))
-          .catch(() => undefined);
-      }
+      lookups >= ENTRY_LOOKUPS_PER_REQUEST ||
+      (paid && paidLookups >= PAID_ENTRY_LOOKUPS_PER_REQUEST)
+    )
+      return null;
+    lookups++;
+    if (paid) paidLookups++;
+    const observed = await observePrice(asset, at, {
+      nansenApiKey: process.env.NANSEN_API_KEY,
+    }).catch(() => null);
+    if (!observed) return null;
+    await database.db
+      .update(postSignals)
+      .set({
+        signal: sql`jsonb_set(${postSignals.signal}, ${`{${key}}`}, ${JSON.stringify(observed.price)}::jsonb)`,
+      })
+      .where(eq(postSignals.postId, postId))
+      .catch(() => undefined);
+    return observed.price;
+  };
+  const nowSec = Math.floor(Date.now() / 1000);
+  const items = [];
+  let pending = 0;
+  const unpricedAssets = new Set<string>();
+  let unpriced = 0;
+  for (const row of rows) {
+    if (!row.asset || !row.direction) continue;
+    if (!(row.asset in CALL_ASSETS)) {
+      unpriced++;
+      unpricedAssets.add(row.asset);
+      continue;
     }
-    if (entry === null || entry === 0n) continue;
-    if (!(asset in priced))
-      priced[asset] = await priceNow(asset).catch(() => null);
-    const now = priced[asset];
-    if (!now) continue;
-    const raw = Number(((now - entry) * 10000n) / entry);
+    const asset = row.asset as keyof typeof CALL_ASSETS;
+    const postedSec = Math.floor(Number(postTimestampMs(row.postId)) / 1000);
+    const exitAt = postedSec + DETECTED_HORIZON_SECONDS;
+    const entry =
+      storedPrice(row.entry) ??
+      (await lookup(asset, postedSec, row.postId, "entryPrice"));
+    if (nowSec < exitAt + SETTLE_DELAY_SECONDS) {
+      pending++;
+      continue;
+    }
+    const exit = entry
+      ? (storedPrice(row.exit) ??
+        (await lookup(asset, exitAt, row.postId, "exitPrice")))
+      : null;
+    if (!entry || !exit) {
+      // Lookup failed or the per-request budget ran out; retried next request.
+      unpriced++;
+      unpricedAssets.add(asset);
+      continue;
+    }
+    const entryUnits = BigInt(entry);
+    const raw = Number(((BigInt(exit) - entryUnits) * 10000n) / entryUnits);
     items.push({
       postId: row.postId,
       asset,
       direction: row.direction,
-      entryPrice: toDecimal(entry),
-      nowPrice: toDecimal(now),
+      entryPrice: toDecimal(entryUnits),
+      exitPrice: toDecimal(BigInt(exit)),
       moveBps: row.direction === "bullish" ? raw : -raw,
       postedAt: new Date(postedSec * 1000).toISOString(),
     });
@@ -108,6 +130,7 @@ async function measureDetected(
   const moves = items.map((i) => i.moveBps).sort((a, b) => a - b);
   const mid = Math.floor(moves.length / 2);
   return {
+    horizonSeconds: DETECTED_HORIZON_SECONDS,
     count: items.length,
     inFavour: items.filter((i) => i.moveBps > 0).length,
     medianBps: moves.length
@@ -115,12 +138,15 @@ async function measureDetected(
         ? (moves[mid] as number)
         : Math.trunc(((moves[mid - 1] as number) + (moves[mid] as number)) / 2)
       : null,
+    pending,
+    unpriced,
+    unpricedAssets: [...unpricedAssets].sort(),
     items: items.slice(0, 20),
   };
 }
 
 const methodology =
-  "Counts calls extracted from posts seen by extension users (signal-v1). A score needs sourced expiry prices and is not computed yet; hypothetical call outcomes stay separate from wallet returns.";
+  "Counts calls extracted from posts seen by extension users (signal-v1). Each is priced at post time and 1h later from historical candles, stored once; younger calls are pending. Hypothetical outcomes stay separate from wallet returns.";
 
 export async function creatorReputation(handle: string): Promise<Reputation> {
   const empty: Reputation = {
@@ -145,6 +171,7 @@ export async function creatorReputation(handle: string): Promise<Reputation> {
         instrument: postSignals.instrument,
         classifiedAt: postSignals.classifiedAt,
         entry: sql<unknown>`${postSignals.signal}->>'entryPrice'`,
+        exit: sql<unknown>`${postSignals.signal}->>'exitPrice'`,
       })
       .from(postSignals)
       .where(and(eq(postSignals.handle, handle), eq(postSignals.isCall, true)))
