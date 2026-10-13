@@ -19,11 +19,6 @@ Crypto Twitter runs on calls. Someone posts "$ETH to 3k this week", thousands of
 
 ![Xtrading architecture: people, the Xtrading API, Privy wallet, off-chain data, Envio and Monad](docs/assets/diagrams/architecture.png)
 
-### Design principles
-
-- **Keys stay with users.** The server prepares exact, bounded transactions and the user signs them. There are no blanket token approvals and no hidden relayers.
-- **Identity isn't a track record.** Linking an X account proves you own it. It says nothing about whether your calls make money, so Xtrading keeps identity, call performance and wallet returns separate.
-- **Receipts over claims.** A submitted order isn't a fill until the chain says so. Indexed events are checked against receipts and reorgs are rolled back. When a data source is down, the app says so instead of guessing.
 
 ## What you can do
 
