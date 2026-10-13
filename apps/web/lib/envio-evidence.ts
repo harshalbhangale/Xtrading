@@ -7,11 +7,9 @@ import {
   type EnvioEvent,
   hyperSyncResponse,
   projectEnvioEvents,
-  scorecardAddress,
-  scorecardEvents,
 } from "@call-my-bluff/integrations/envio-events";
 import { createPublicClient, encodeEventTopics, http } from "viem";
-import { monad, monadTestnet } from "viem/chains";
+import { monad } from "viem/chains";
 
 const configs = {
   143: {
@@ -19,15 +17,6 @@ const configs = {
     from: 112914000,
     contract: flowEntrypoint,
     topic: encodeEventTopics({ abi: flowAbi, eventName: "FeeCollected" })[0],
-  },
-  10143: {
-    url: "https://monad-testnet.hypersync.xyz/query",
-    from: 70580728,
-    contract: scorecardAddress,
-    topic: encodeEventTopics({
-      abi: scorecardEvents,
-      eventName: "CallSettled",
-    })[0],
   },
 } as const;
 const cached = new Map<
@@ -39,7 +28,7 @@ export function clearHyperSyncCache() {
   cached.clear();
 }
 
-async function scan(chainId: 143 | 10143, head: bigint) {
+async function scan(chainId: 143, head: bigint) {
   const hit = cached.get(chainId);
   if (hit && Date.now() - hit.at < TTL) return hit.value;
   const value = (async () => {
@@ -119,7 +108,7 @@ async function scan(chainId: 143 | 10143, head: bigint) {
 }
 
 /** Envio discovers events; independent receipt/block checks reject orphaned or altered evidence. */
-export async function envioEvidence(chainId: 143 | 10143, wallet?: string) {
+export async function envioEvidence(chainId: 143, wallet?: string) {
   const unavailable = {
     status: "unavailable" as const,
     source: "Envio HyperSync" as const,
@@ -132,11 +121,9 @@ export async function envioEvidence(chainId: 143 | 10143, wallet?: string) {
   };
   try {
     const client = createPublicClient({
-      chain: chainId === 143 ? monad : monadTestnet,
+      chain: monad,
       transport: http(
-        chainId === 143
-          ? process.env.MONAD_MAINNET_RPC_URL || "https://rpc.monad.xyz"
-          : process.env.MONAD_RPC_URL || "https://testnet-rpc.monad.xyz",
+        process.env.MONAD_MAINNET_RPC_URL || "https://rpc.monad.xyz",
         { timeout: 10000, retryCount: 0 },
       ),
     });

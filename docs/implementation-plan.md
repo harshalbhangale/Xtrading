@@ -1,7 +1,7 @@
 # Delivery checklist
 
 > Historical implementation plan: staking phases below are retired. The current checklist is in [README](../README.md). The approved scripted mainnet Kuru round trip is complete: 1 USDC spent, 0.998845 USDC returned, 0.162237936 MON gas below a 0.2-MON cap, no exchange deposit, and zero remaining book allowance. See [demo readiness](demo-readiness-2026-10-13.md) for receipts and final balances. The real X → trade → dashboard flow still needs demonstration.
-Updated 13 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added targets: Perpl API and Chainlink CRE. The Chrome extension is the priority product surface.
+Updated 13 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added target: Perpl API. Chainlink CRE settlement (Phase 4B) was later removed from the product. The Chrome extension is the priority product surface.
 
 ## Done
 
@@ -80,7 +80,7 @@ Exit: X → review → approval → Kuru fill → dashboard with actual amounts.
 
 Exit: each scored call is traceable to its source and inputs; Nansen adds a useful real insight.
 
-## Phase 4B: Hourly CRE settlement
+## Phase 4B: Hourly CRE settlement (removed)
 
 - [x] CRE supports Monad testnet (`monad-testnet`, selector 2183018362218727504); simulation forwarder `0xB9F79d86…` and production KeystoneForwarder `0xF8344CFd…`. CLI login verified; workflow deployment (DON) access not yet confirmed.
 - [x] Add integer expiry-price evaluator with missing-data and timestamp checks; the workflow fetches Binance 1m opens with per-node fetch and median consensus.

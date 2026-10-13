@@ -1,0 +1,176 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  @font-face { font-family: Virgil; src: url("Virgil.woff2") format("woff2"); }
+  html, body { margin: 0; background: #ffffff; }
+  svg text { font-family: Virgil, "Comic Sans MS", cursive; fill: #1e1e1e; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js"></script>
+</head>
+<body>
+<svg id="c" xmlns="http://www.w3.org/2000/svg"></svg>
+<script>
+const LOGO = "../../logos/";
+const C = {
+  ink: "#1e1e1e", muted: "#868e96",
+  yellow: "#ffec99", green: "#b2f2bb", blue: "#a5d8ff", violet: "#d0bfff",
+  red: "#ffc9c9", orange: "#ffd8a8", gray: "#e9ecef", teal: "#96f2d7",
+};
+const svg = document.getElementById("c");
+const rc = rough.svg(svg);
+let seed = 7;
+const opt = (o = {}) => ({ seed: seed++, roughness: 1.1, bowing: 1, stroke: C.ink, strokeWidth: 1.6, ...o });
+const add = (n) => (svg.appendChild(n), n);
+const NS = "http://www.w3.org/2000/svg";
+
+function text(x, y, str, { size = 20, anchor = "middle", color = C.ink, weight = 400 } = {}) {
+  const t = document.createElementNS(NS, "text");
+  t.setAttribute("x", x); t.setAttribute("y", y);
+  t.setAttribute("font-size", size); t.setAttribute("text-anchor", anchor);
+  t.setAttribute("dominant-baseline", "middle");
+  t.setAttribute("font-weight", weight);
+  t.style.fill = color;
+  t.textContent = str;
+  return add(t);
+}
+function image(x, y, s, file) {
+  const i = document.createElementNS(NS, "image");
+  i.setAttribute("href", LOGO + file);
+  i.setAttribute("x", x); i.setAttribute("y", y);
+  i.setAttribute("width", s); i.setAttribute("height", s);
+  const clip = `clip${seed++}`;
+  const cp = document.createElementNS(NS, "clipPath"); cp.id = clip;
+  const r = document.createElementNS(NS, "rect");
+  r.setAttribute("x", x); r.setAttribute("y", y); r.setAttribute("width", s); r.setAttribute("height", s);
+  r.setAttribute("rx", s * 0.22);
+  cp.appendChild(r); add(cp);
+  i.setAttribute("clip-path", `url(#${clip})`);
+  return add(i);
+}
+function rrect(x, y, w, h, r) {
+  return `M${x + r},${y} L${x + w - r},${y} Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} L${x + r},${y + h} Q${x},${y + h} ${x},${y + h - r} L${x},${y + r} Q${x},${y} ${x + r},${y} Z`;
+}
+// A filled, hand-drawn card with optional logo, title and subtitle.
+function box(x, y, w, h, { fill = C.yellow, title, sub, logo, size = 21, hachure = false } = {}) {
+  add(rc.path(rrect(x, y, w, h, 14), opt({ fill, fillStyle: hachure ? "hachure" : "solid", hachureGap: 7, fillWeight: 1.2 })));
+  const lines = sub ? (Array.isArray(sub) ? sub : [sub]) : [];
+  const cy = y + h / 2 - (lines.length * 11);
+  if (logo) {
+    const s = 30;
+    const tw = title.length * size * 0.5;
+    const total = s + 10 + tw;
+    const lx = x + w / 2 - total / 2;
+    image(lx, cy - s / 2, s, logo);
+    text(lx + s + 10, cy, title, { size, anchor: "start" });
+  } else text(x + w / 2, cy, title, { size });
+  lines.forEach((l, i) => text(x + w / 2, cy + 26 + i * 21, l, { size: 15, color: "#495057" }));
+}
+// A dashed group frame with a title tab.
+function frame(x, y, w, h, title, { logo, fill = "#f8f9fa" } = {}) {
+  add(rc.path(rrect(x, y, w, h, 18), opt({ fill, fillStyle: "solid", strokeLineDash: [9, 7], strokeWidth: 1.4, roughness: 0.8 })));
+  if (logo) { image(x + 16, y + 12, 26, logo); text(x + 52, y + 26, title, { size: 22, anchor: "start" }); }
+  else text(x + 18, y + 26, title, { size: 22, anchor: "start" });
+}
+// Arrow through points, with an optional label near the middle.
+function arrow(pts, label, { lx, ly, dashed = false, color = C.ink } = {}) {
+  const o = opt({ strokeWidth: 1.8, stroke: color, roughness: 0.9, ...(dashed ? { strokeLineDash: [7, 6] } : {}) });
+  add(pts.length > 2 ? rc.linearPath(pts, o) : rc.line(...pts[0], ...pts[1], o));
+  const [ax, ay] = pts[pts.length - 2], [bx, by] = pts[pts.length - 1];
+  const a = Math.atan2(by - ay, bx - ax), L = 14;
+  for (const d of [0.45, -0.45])
+    add(rc.line(bx, by, bx - L * Math.cos(a + d), by - L * Math.sin(a + d), opt({ strokeWidth: 1.8, stroke: color, roughness: 0.6 })));
+  if (label) {
+    const mx = lx ?? (pts[0][0] + bx) / 2, my = ly ?? (pts[0][1] + by) / 2 - 14;
+    const w = label.length * 8.2 + 14;
+    const bg = document.createElementNS(NS, "rect");
+    bg.setAttribute("x", mx - w / 2); bg.setAttribute("y", my - 12); bg.setAttribute("width", w); bg.setAttribute("height", 24);
+    bg.setAttribute("fill", "#ffffff"); bg.setAttribute("rx", 6);
+    add(bg);
+    text(mx, my, label, { size: 15, color: "#495057" });
+  }
+}
+function badge(x, y, n) {
+  add(rc.circle(x, y, 34, opt({ fill: C.ink, fillStyle: "solid" })));
+  text(x, y + 1, String(n), { size: 18, color: "#ffffff" });
+}
+
+function architecture() {
+  const W = 1640, H = 860;
+  svg.setAttribute("width", W); svg.setAttribute("height", H);
+  text(40, 40, "How Xtrading works", { size: 32, anchor: "start" });
+
+  // Left: where people are.
+  frame(30, 80, 320, 640, "People");
+  box(55, 135, 270, 100, { fill: C.blue, title: "Web app", sub: "Terminal · Trade · Portfolio", logo: "xtrading-icon.png" });
+  box(55, 275, 270, 100, { fill: C.blue, title: "AI agent", sub: "any MCP client", logo: "mcp.png" });
+  box(55, 415, 270, 100, { fill: C.blue, title: "Extension", sub: "trade cards on X", logo: "chrome.png" });
+  box(55, 590, 270, 100, { fill: C.gray, title: "Post on X", sub: "“$ETH up this week”", logo: "x.png" });
+  arrow([[190, 588], [190, 520]], "");
+
+  // Middle: the Xtrading server.
+  frame(410, 80, 620, 470, "Xtrading API", { logo: "vercel.png", fill: "#fffbea" });
+  box(435, 135, 280, 100, { title: "Identity", sub: "X login · wallet binding", logo: "privy.png" });
+  box(735, 135, 270, 100, { title: "Call scoring", sub: "priced at post · scored at expiry" });
+  box(435, 275, 280, 100, { title: "MCP server", sub: "read records · prepare trades" });
+  box(735, 275, 270, 100, { title: "Creator record", sub: "tiers · red flags · earnings" });
+  box(435, 415, 280, 100, { title: "Trade prep", sub: "quote · exact approval · min-out" });
+  box(735, 415, 270, 100, { fill: C.gray, title: "Postgres", sub: "AWS RDS", logo: "aws.png" });
+
+  arrow([[327, 185], [433, 185]], "sign in");
+  arrow([[327, 325], [433, 325]], "tools");
+  arrow([[327, 465], [433, 465]], "quote");
+
+  // Bottom: the user's own wallet.
+  box(435, 640, 280, 110, { fill: C.violet, title: "Privy wallet", sub: ["embedded or MetaMask / Rabby", "the user signs every tx"], logo: "privy.png" });
+  arrow([[575, 517], [575, 638]], "unsigned tx", { lx: 640, ly: 585 });
+
+  // Right: data, indexing and the chain.
+  frame(1090, 80, 520, 190, "Off-chain data");
+  box(1110, 125, 235, 60, { fill: C.green, title: "Nansen", logo: "nansen.png", size: 19 });
+  box(1360, 125, 230, 60, { fill: C.orange, title: "Groq", logo: "groq.png", size: 19 });
+  box(1110, 195, 235, 60, { fill: C.gray, title: "X oEmbed", logo: "x.png", size: 19 });
+  box(1360, 195, 230, 60, { fill: C.orange, title: "Binance prices", size: 19 });
+  arrow([[1007, 185], [1088, 185]], "");
+
+  frame(1090, 320, 520, 190, "Envio", { logo: "envio.png", fill: "#fff4e6" });
+  box(1110, 370, 235, 110, { fill: C.orange, title: "HyperIndex", sub: ["swaps · deposits", "fee payments"] });
+  box(1360, 370, 230, 110, { fill: C.orange, title: "HyperSync", sub: ["live payments,", "receipt-checked"] });
+  arrow([[1088, 345], [1007, 325]], "indexed", { lx: 1048, ly: 312 });
+
+  frame(1090, 560, 520, 270, "Monad", { logo: "monad.png", fill: "#f3f0ff" });
+  box(1110, 610, 235, 100, { fill: C.green, title: "Kuru Flow", sub: "buy + creator fee, 1 tx", logo: "kuru.png" });
+  box(1360, 610, 230, 100, { fill: C.green, title: "Kuru books", sub: "MON · WETH · cbBTC", logo: "kuru.png" });
+  box(1110, 725, 480, 85, { fill: C.gray, title: "Perpl perps", sub: "long / short, 1–5x, user's own account", logo: "perpl.png" });
+  arrow([[1347, 660], [1358, 660]], "");
+  arrow([[717, 695], [1088, 695]], "signed by the user", { lx: 900, ly: 675 });
+  arrow([[1350, 608], [1350, 512]], "events", { dashed: true, lx: 1392, ly: 560 });
+}
+
+function flow() {
+  const W = 1640, H = 330;
+  svg.setAttribute("width", W); svg.setAttribute("height", H);
+  text(40, 40, "Buying from a post", { size: 32, anchor: "start" });
+  const steps = [
+    { title: "See the call", sub: ["a post on X", "gets a trade card"], logo: "x.png", fill: C.gray },
+    { title: "Check it", sub: ["creator record,", "red flags, Nansen"], logo: "nansen.png", fill: C.green },
+    { title: "Quote", sub: ["simulated on Kuru,", "exact min output"], logo: "kuru.png", fill: C.yellow },
+    { title: "Sign", sub: ["your Privy wallet,", "exact approval"], logo: "privy.png", fill: C.violet },
+    { title: "Settle", sub: ["Kuru Flow swap +", "creator fee, 1 tx"], logo: "monad.png", fill: C.green },
+    { title: "Prove it", sub: ["Envio indexes it,", "receipt-checked"], logo: "envio.png", fill: C.orange },
+  ];
+  const bw = 225, gap = 46, x0 = 40, y = 110;
+  steps.forEach((s, i) => {
+    const x = x0 + i * (bw + gap);
+    box(x, y, bw, 150, { ...s, size: 22 });
+    badge(x + 8, y + 8, i + 1);
+    if (i < steps.length - 1) arrow([[x + bw + 4, y + 75], [x + bw + gap - 4, y + 75]], "");
+  });
+  text(W - 40, 300, "Xtrading never signs or holds keys", { size: 17, anchor: "end", color: C.muted });
+}
+
+window.render = (name) => { svg.innerHTML = ""; seed = 7; ({ architecture, flow })[name](); };
+</script>
+</body>
+</html>

@@ -4,8 +4,7 @@ import type { PublicCall } from "./index";
 /**
  * Reputation tiers and accountability flags for a creator (KOL), computed only
  * from evidence we hold: registered calls scored under directional-return-v1,
- * repeated public-availability checks of those posts, onchain settlement
- * outcomes and the creator's own indexed swaps. Tiers set the creator's cut
+ * repeated public-availability checks of those posts and the creator's own indexed swaps. Tiers set the creator's cut
  * of each buy made from their post; nothing here is a safety guarantee.
  */
 /** Cut of a buy for a verified creator with a payout wallet but no tier yet. */
@@ -53,7 +52,7 @@ export type KolSwap = {
   transactionHash: string;
 };
 export type KolFlag = {
-  kind: "removed_post" | "counter_trade" | "mostly_wrong" | "slashed_bond";
+  kind: "removed_post" | "counter_trade" | "mostly_wrong";
   severity: "serious" | "warning";
   title: string;
   detail: string;
@@ -165,22 +164,6 @@ export function kolFlags(input: {
       detail: `${Math.round(input.hitBps / 100)}% of ${input.scored} scored calls were right.`,
       callIds: [],
       transactions: [],
-    });
-  // Only bonds with money at stake; bond-free records are ordinary wrong calls.
-  const slashed = input.calls.filter(
-    (c) => c.bond?.status === "failure" && BigInt(c.bond.bond) > 0n,
-  );
-  if (slashed.length)
-    flags.push({
-      kind: "slashed_bond",
-      severity: "warning",
-      title: `${plural(slashed.length, "bonded call")} slashed`,
-      detail:
-        "Chainlink CRE settled these bonded calls as wrong and the bond went to the reward pool.",
-      callIds: slashed.map((c) => c.id),
-      transactions: slashed.flatMap((c) =>
-        c.bond?.settledTx ? [c.bond.settledTx] : [],
-      ),
     });
   return flags;
 }

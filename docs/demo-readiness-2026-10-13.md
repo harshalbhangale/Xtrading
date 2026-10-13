@@ -56,7 +56,7 @@ Useful next UI addition: a mainnet USDC context card showing top returned holder
 3. User connects the funded buyer wallet, reviews a 1-USDC spot order and approves the exact allowance and swap. Show confirmed receipt and actual received amount. Never replace this with a quote or submitted order.
 4. Show activity/Envio evidence. The existing creator payment is historical; only claim a new payment if this new receipt proves it. Creator payouts are currently unregistered for the project account, and the approved five-profitable-call fee gate is not implemented.
 5. Explicitly switch to Perpl testnet. Sign in as @xtradingnow, confirm live operator mode and account 1096, review a small low-leverage order, then let the user confirm. Show an actual fill/position; accepted forwarding alone is insufficient.
-6. End on the dashboard. Describe CRE as a tested real testnet broadcast with autonomous deployment pending.
+6. End on the dashboard.
 
 ## Perpl integration update
 

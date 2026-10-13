@@ -7,8 +7,7 @@ import { publicCreatorEvidence } from "./public-creator";
 
 /**
  * A creator's reputation tier and accountability flags from held evidence:
- * registered calls (optionally re-checking post availability), bond outcomes
- * and the bound wallet's indexed Kuru swaps.
+ * registered calls (optionally re-checking post availability) and the bound wallet's indexed Kuru swaps.
  */
 export async function kolRecord(
   input: string,

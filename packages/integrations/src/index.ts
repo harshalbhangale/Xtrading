@@ -57,7 +57,7 @@ export function integrationStatus(
       configured: Boolean(env.ENVIO_GRAPHQL_URL),
       implementation: "foundation",
       detail:
-        "Kuru swap, creator payment and historical settlement events have Envio handlers with reorg rollback. Creator payment history requires the updated hosted indexer. An indexed swap is a projection, not a new confirmed fill.",
+        "Kuru swap and creator payment events have Envio handlers with reorg rollback. Creator payment history requires the updated hosted indexer. An indexed swap is a projection, not a new confirmed fill.",
     },
     {
       name: "Nansen",
@@ -72,13 +72,6 @@ export function integrationStatus(
       implementation: "foundation",
       detail:
         "Perp calls route to open Perpl testnet markets. Reviewed IOC orders with leverage/size caps are signed by the user's own wallet and trade the wallet's own Perpl account; the server holds no Perpl key.",
-    },
-    {
-      name: "Chainlink CRE",
-      configured: false,
-      implementation: "foundation",
-      detail:
-        "The hourly settlement workflow exists and was fork-tested. New creator bonds are retired; adapting CRE to call evaluation without collateral remains pending.",
     },
   ];
 }

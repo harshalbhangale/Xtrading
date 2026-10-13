@@ -31,10 +31,6 @@ const copy = {
     lines: ["LOOK BEYOND", "THE POST.", "CHECK THE WALLET."],
     body: "Nansen adds sourced wallet context.\nInspect the network, timestamp and coverage.\nSee the observations behind the summary.",
   },
-  Chainlink: {
-    lines: ["CALLS SETTLE", "THEMSELVES.", "ON THE HOUR."],
-    body: "A Chainlink CRE workflow prices expired calls.\nNodes agree on the median, then settle onchain.\nWrong bonded calls are slashed. No admin.",
-  },
 } as const;
 type Mode = keyof typeof copy;
 
@@ -127,34 +123,27 @@ export function KineticHero({
             <span className="x-stack-hint">/ EXPLORE EACH LAYER</span>
           </span>
           <div>
-            {(
-              [
-                "Kuru",
-                "Perpl",
-                "Privy",
-                "Envio",
-                "Nansen",
-                "Chainlink",
-              ] as const
-            ).map((sponsor) => (
-              <button
-                key={sponsor}
-                type="button"
-                aria-pressed={mode === sponsor}
-                onPointerEnter={(event) => {
-                  if (event.pointerType === "mouse") select(sponsor);
-                }}
-                onClick={() => select(sponsor)}
-                onFocus={() => select(sponsor)}
-                onBlur={() => setMode("default")}
-                onPointerLeave={(event) => {
-                  if (event.pointerType === "mouse") setMode("default");
-                }}
-              >
-                {sponsor}
-                <span aria-hidden="true">↗</span>
-              </button>
-            ))}
+            {(["Kuru", "Perpl", "Privy", "Envio", "Nansen"] as const).map(
+              (sponsor) => (
+                <button
+                  key={sponsor}
+                  type="button"
+                  aria-pressed={mode === sponsor}
+                  onPointerEnter={(event) => {
+                    if (event.pointerType === "mouse") select(sponsor);
+                  }}
+                  onClick={() => select(sponsor)}
+                  onFocus={() => select(sponsor)}
+                  onBlur={() => setMode("default")}
+                  onPointerLeave={(event) => {
+                    if (event.pointerType === "mouse") setMode("default");
+                  }}
+                >
+                  {sponsor}
+                  <span aria-hidden="true">↗</span>
+                </button>
+              ),
+            )}
           </div>
         </div>
       </div>

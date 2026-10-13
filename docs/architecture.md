@@ -1,5 +1,7 @@
 # Architecture
 
+Diagrams: see [README → Architecture](../README.md#architecture).
+
 X extension → public evidence API → creator identity, stake and call evidence.
 
 Trading: X post → app review → Privy wallet approval → Kuru (spot) / Perpl (perps) → Envio order/fill projection → dashboard.
@@ -13,7 +15,6 @@ Trading: X post → app review → Privy wallet approval → Kuru (spot) / Perpl
 - Envio: stake and trading events, keyed by chain/contract and event identity.
 - Nansen: server-side mainnet wallet/token context, with coverage and timestamps.
 - MCP: bounded access to the same evidence and trade-preparation services.
-- CRE workflow: hourly expired-call discovery, historical price evaluation and authenticated reports to CallSettlement. The source and contract exist; DON deployment is pending, and the testnet receiver still trusts the simulation forwarder.
 
 ## Data rules
 
@@ -25,7 +26,7 @@ Store transaction amounts as bigint or validated decimal integer strings. Defaul
 
 Calls retain their source, asset chain/address, direction, horizon and interpretation version. AI extracts and explains; deterministic code calculates results under published rules. Ambiguous calls and missing prices remain unresolved.
 
-Bonded calls require creator opt-in and immutable terms before their evaluation window starts. Each locks a capped call bond and reserves a reward from a funded pool. CRE evaluates the expiry-time price and submits a signed report through an allowlisted forwarder/workflow. The receiver permits one settlement per call. Success returns the bond plus the reserved reward, failure moves the bond into the reward pool, a tie returns the bond, and a missing price never slashes. Ordinary refundable CreatorStake deposits are separate. See [CRE settlement](cre-settlement.md).
+Calls are scored offchain by deterministic code: the price at the minute of posting versus the price at expiry (Binance 1-minute opens; Nansen OHLCV for MON). A missing price leaves a call unresolved. Call outcomes are hypothetical and never count as user profit.
 
 A linked-wallet sale is an observation with transaction evidence, not proof of deception. Coverage of one wallet does not establish complete financial activity.
 

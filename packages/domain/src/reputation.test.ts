@@ -16,7 +16,6 @@ function call(
       status: "available" | "not-publicly-available" | "unavailable";
       checkedAt: string;
     }[];
-    bond?: PublicCall["bond"];
   } = {},
 ): PublicCall {
   seq += 1;
@@ -29,7 +28,6 @@ function call(
     publishedAt: published,
     registeredAt: published,
     status: outcome ? "resolved" : "open",
-    bond: overrides.bond,
     evidence: {
       post: { authorHandle: "kol", text: "", verifiedAt: published },
       horizon: overrides.horizon ?? "24h",
@@ -182,30 +180,13 @@ describe("kolFlags", () => {
     expect(flags[0]?.transactions).toEqual(["0xaa"]);
   });
 
-  it("warns on mostly-wrong records and slashed bonds", () => {
+  it("warns on mostly-wrong records", () => {
     const kinds = kolFlags({
-      calls: [
-        call({
-          outcome: "failure",
-          bond: {
-            contract: "0x260264E74028d498a1A10f90dDC4f4b91F3395DF",
-            status: "failure",
-            bond: "1",
-            reward: "1",
-            start: "1",
-            expiry: "2",
-            entryPrice: "1",
-            exitPrice: "1",
-            payout: "0",
-            registeredTx: `0x${"1".repeat(64)}`,
-            settledTx: `0x${"2".repeat(64)}`,
-          },
-        }),
-      ],
+      calls: [call({ outcome: "failure" })],
       swaps: [],
       hitBps: 2000,
       scored: 5,
     }).map((f) => f.kind);
-    expect(kinds).toEqual(["mostly_wrong", "slashed_bond"]);
+    expect(kinds).toEqual(["mostly_wrong"]);
   });
 });
