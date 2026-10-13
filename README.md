@@ -1,14 +1,76 @@
 # Xtrading
 
-Creator evidence and spot/perp trading from X, built on Monad. The product includes a landing page, creator studio, user dashboard, Chrome extension and MCP server. Supported spot tickers expand into an inline Buy/Sell card inside the post. Creator payouts are opt-in. New stake deposits are closed; a previous deposit stays withdrawable and separate. Creators earn Xtrading Pro, Max and Ultra from scored calls; the tier sets their cut of each buy made from their post (0.1% verified, 0.5% Pro, 1% Max, 2% Ultra), paid atomically through Kuru Flow, and evidence-backed red flags (posts no longer public, trading against one's own call, a mostly-wrong record, slashed bonds) demote. Tiers cannot be bought.
+Trade the calls you see on X, and see whether the people making them are worth following. Built on Monad.
 
-Identity binding works. Both stake contracts and mUSDC are deployed and verified on testnet. A wallet-approved 500 mUSDC deposit is confirmed and indexed by Envio; the authenticated stake page now reads indexed history. The X extension adds creator records on profile headers, trade-call detection (Groq, or rules without a key), a call-check drawer with the creator record and a Nansen wallet check, and reviewed Kuru spot / Perpl perp trades; providers without keys run in labelled demo mode. The MCP server is live. The Chainlink CRE settlement workflow for bonded calls has run end to end on a local Monad fork (success and slash paths); its testnet deployment is pending. Confirmed Kuru fills, a live Perpl order and a keyed Nansen run remain pending.
+- **Chrome extension:** a Buy button inside X's own ticker cards (or an inline card when there is none) with live prices, creator tiers and red flags on posts and profiles, and a call-check drawer.
+- **App** ([xtradingnow.xyz](https://xtradingnow.xyz)): a live Terminal of calls from creators you follow, Kuru spot trading on Monad **mainnet and testnet**, Perpl perps (testnet), creator studio, earnings and post analytics, and an MCP server for agents.
+- **Creators** link X to a wallet (no stake, no subscription), register calls, and climb **Xtrading Pro / Max / Ultra** from scored calls. The tier sets their cut of every buy made from their post: 0.1% verified, 0.5% Pro, 1% Max, 2% Ultra, paid to their wallet inside the buyer's transaction through Kuru Flow. Evidence-backed red flags (call posts no longer public, trading against their own call, a mostly-wrong record) cost tiers.
+- **Chainlink CRE** settles registered calls onchain as a bond-free, tamper-proof scorecard.
 
-Live withdrawal request and cancellation were confirmed and indexed; the 500 mUSDC stake is active again and can be withdrawn by its owner. The public evidence endpoint exposes a recorded stable X user ID and wallet binding. It does not publish that stake balance. Chrome installation and real-X validation are pending.
+Sponsors: Kuru, Privy, Envio, Nansen, Perpl, Chainlink CRE.
 
-Profile cards and creator pages now expand to show ongoing registered calls and indexed Kuru swaps. Optional browser-only follow observations populate Watchlist without a paid X following API. This covers accounts you view, not the full following graph; creator-owned Perpl positions remain pending. See [setup and limits](docs/browser-following.md).
+## Deployments and onchain evidence
 
-Live: https://xtradingnow.xyz (Monad testnet). See [Deployment](#deployment).
+### Monad mainnet (chain 143)
+
+Xtrading deploys **no contracts on mainnet**. Trading and creator fees run on Kuru's existing contracts:
+
+| Contract | Address |
+|---|---|
+| Kuru MON/USDC order book | [`0x065C9d28E428A0db40191a54d33d5b7c71a9C394`](https://monadvision.com/address/0x065C9d28E428A0db40191a54d33d5b7c71a9C394) |
+| Kuru WETH/USDC order book | [`0xa6aFd386135B7d41a6c40C525ABc4a1019b0D132`](https://monadvision.com/address/0xa6aFd386135B7d41a6c40C525ABc4a1019b0D132) |
+| Kuru cbBTC/USDC order book | [`0x40C49f171202f91ff5D2Fae34c22Dd2bfdd22aF0`](https://monadvision.com/address/0x40C49f171202f91ff5D2Fae34c22Dd2bfdd22aF0) |
+| Kuru Flow entrypoint (creator fees) | [`0xb3e6778480b2E488385E8205eA05E20060B813cb`](https://monadvision.com/address/0xb3e6778480b2E488385E8205eA05E20060B813cb) |
+| USDC | [`0x754704Bc059F8C67012fEd69BC8A327a5aafb603`](https://monadvision.com/address/0x754704Bc059F8C67012fEd69BC8A327a5aafb603) |
+
+**Mainnet demo, 13 Oct 2026** (`scripts/mainnet-demo.sh`, receipts in `contracts/deployments/mainnet-demo.json`), from [`0x02cefD0E0547bb176f508380399A982fAb676A92`](https://monadvision.com/address/0x02cefD0E0547bb176f508380399A982fAb676A92):
+
+| Step | Transaction |
+|---|---|
+| Approve 1 USDC to the MON/USDC book | [`0xc2de59ec…`](https://monadvision.com/tx/0xc2de59ecede3de1db96ae875b103de57d53457fee1a7f8764d3f75a6f84a3514) |
+| Kuru market buy, 1 USDC → MON | [`0x54a19b58…`](https://monadvision.com/tx/0x54a19b582bc439194c7eb6d1494b6336e0c5b96d18abdb9d672b8dfa0d6013fc) |
+| Kuru market sell, MON → USDC | [`0x496c1559…`](https://monadvision.com/tx/0x496c1559e65f0086727ab1ca04b92f9ddb80d812b9b1d2421c57981e9ee6db1d) |
+| Approve 1 USDC to Kuru Flow | [`0x419458b0…`](https://monadvision.com/tx/0x419458b051d9c744ddb7648d17ccc56c7bf519225ebb8b862f1827395b2deee8) |
+| **Creator-fee buy:** 1 USDC → MON, 0.1% (0.0398 MON) paid to creator [`0x51bDFC2a4D1C3B04A89f8CA928bd377B767Df424`](https://monadvision.com/address/0x51bDFC2a4D1C3B04A89f8CA928bd377B767Df424) in the same transaction | [`0x450e00b9…`](https://monadvision.com/tx/0x450e00b927f5b1dc9703b7bbb9fc7ffa52835dfe88ac596632633eb6c1b9d64c) |
+
+All five succeeded; total gas 0.1286 MON.
+
+### Monad testnet (chain 10143)
+
+| Contract | Address | Deploy tx | Status |
+|---|---|---|---|
+| CallSettlement, bond-free scorecard | [`0x836aa86C5B013f2fbbE0Fc960E88677D4C106BB9`](https://testnet.monadvision.com/address/0x836aa86C5B013f2fbbE0Fc960E88677D4C106BB9) | [`0xa2be13e1…`](https://testnet.monadvision.com/tx/0xa2be13e1944d8ce81e9a6a38df440b0298fe026b70745e237f9fc868bf0269ba) | **Live** (app, CRE, Envio) |
+| CallSettlement, bonded | [`0x260264E74028d498a1A10f90dDC4f4b91F3395DF`](https://testnet.monadvision.com/address/0x260264E74028d498a1A10f90dDC4f4b91F3395DF) | [`0x6845266c…`](https://testnet.monadvision.com/tx/0x6845266c2a03460422c7aa5fe47f10ae1a29ddd20ce26439417fab96b313c193) | Retired |
+| mUSDC (demo token, no value) | [`0x78928c53A623585317f9102B88C2d76Df66b6825`](https://testnet.monadvision.com/address/0x78928c53A623585317f9102B88C2d76Df66b6825) | [`0x1e2f933c…`](https://testnet.monadvision.com/tx/0x1e2f933ced24e1d53a64aaaa6225f7dd30ffee4c7fd15650fe249884d3bd44a8) | Live |
+| CreatorStake (mUSDC) | [`0x9e09b97dBaDc1D6f3A3C5bA9aF0E47923C34634e`](https://testnet.monadvision.com/address/0x9e09b97dBaDc1D6f3A3C5bA9aF0E47923C34634e) | [`0x7490e4ff…`](https://testnet.monadvision.com/tx/0x7490e4ff758eaa24b33ccd6a4e1868b947bbba7d64964ef706abf85f19db447f) | Retired (staking removed) |
+| CreatorStake (Circle test USDC) | [`0x4B1a8c4E158E4E3EEa22A62205F1e0CD82d0D5B6`](https://testnet.monadvision.com/address/0x4B1a8c4E158E4E3EEa22A62205F1e0CD82d0D5B6) | [`0x4879d523…`](https://testnet.monadvision.com/tx/0x4879d523495b9a1c1fb59bd4f862d5686b3ca392e3b38f26827558a4b4f7ccf8) | Retired |
+
+External testnet contracts used: Kuru Spot V2 AccountCore [`0xdbaaDe7B42c95399bb1E9614D51B5B9e2cf78038`](https://testnet.monadvision.com/address/0xdbaaDe7B42c95399bb1E9614D51B5B9e2cf78038), MON/USDC [`0x26cd68436B6A4AEB3ec52abC20A4d121f8B4BAc9`](https://testnet.monadvision.com/address/0x26cd68436B6A4AEB3ec52abC20A4d121f8B4BAc9), WETH/USDC [`0x9d187971B64505Ac81f12c5FD2ac9c5247Ec62F3`](https://testnet.monadvision.com/address/0x9d187971B64505Ac81f12c5FD2ac9c5247Ec62F3), WBTC/USDC [`0x8661cB7c5f4f8ae3ee116B63Aa5a23c69110e357`](https://testnet.monadvision.com/address/0x8661cB7c5f4f8ae3ee116B63Aa5a23c69110e357), Kuru test USDC [`0xA402B424f392EAA05DBc8779e4502A1F6A96fEF1`](https://testnet.monadvision.com/address/0xA402B424f392EAA05DBc8779e4502A1F6A96fEF1); Perpl exchange [`0x1964c32f0be608e7d29302aff5e61268e72080cc`](https://testnet.monadvision.com/address/0x1964c32f0be608e7d29302aff5e61268e72080cc); Chainlink CRE simulation forwarder [`0xB9F79d863261869B234c481D1f9A7af84AeAd192`](https://testnet.monadvision.com/address/0xB9F79d863261869B234c481D1f9A7af84AeAd192).
+
+**Chainlink CRE settlements** (workflow `services/cre/settlement`, simulated with `cre workflow simulate --broadcast`):
+
+| Call | Register | Settlement | Outcome |
+|---|---|---|---|
+| ETH up ≥1 bp, 1h, bond-free scorecard | [`0xdd1347a1…`](https://testnet.monadvision.com/tx/0xdd1347a171cba2c5d9679eb865e76220a92a4ff371fbb20075689dc366d17f31) | [`0x66d7aeed…`](https://testnet.monadvision.com/tx/0x66d7aeed1c4318adf1255639de637eeabab1f824e8951288fc1f71ba47326b59) | **Correct** ($2,507.63 → $2,519.53) |
+| ETH up ≥1 bp, 1h, 100 mUSDC bond | [`0xabfab781…`](https://testnet.monadvision.com/tx/0xabfab781dbb3b59d4a51fbe85e1e674244b25756d850e971ad542bb3e92bd7bc) | [`0xb9dc4db9…`](https://testnet.monadvision.com/tx/0xb9dc4db91ff4cb92d91d956b23d0689cbb44bf36186a0c9968ecd54ba60003f1) | Wrong, bond slashed ($2,521.23 → $2,512.86) |
+
+**Stake lifecycle (historical, before staking was removed):** approve [`0x3a0b312a…`](https://testnet.monadvision.com/tx/0x3a0b312a96ba761a66f39d092d69015a1c3a042cc9bbcebaff69fd0d0eb84463), 500 mUSDC deposit [`0x7bef5d5e…`](https://testnet.monadvision.com/tx/0x7bef5d5e099a400590b24dfc1b43d0d217673068412b39176d4b08467b946427), withdrawal request [`0xcafe4f4d…`](https://testnet.monadvision.com/tx/0xcafe4f4d12bfd5af50f5bc8f873cdf7f698b431be68faf6060b918d91688f622), cancellation [`0x06615685…`](https://testnet.monadvision.com/tx/0x06615685b97e0d6e0d5d12148c30d21032f9545f1d0fe612c23588a125cb3879); all indexed by Envio.
+
+### Services
+
+| Service | Where | Status |
+|---|---|---|
+| Web app and API | [xtradingnow.xyz](https://xtradingnow.xyz) (Vercel) | Live |
+| MCP server | `https://xtradingnow.xyz/api/mcp` | Live |
+| Chrome extension 0.9.0 | [xtradingnow.xyz/extension](https://xtradingnow.xyz/extension) | Live download |
+| Envio indexer | Hosted project `tradepost`, deployment `6634cb9` (`https://indexer.dev.hyperindex.xyz/6634cb9/v1/graphql`) | Live: stakes, Kuru fills. The update with creator-fee payments and CRE results (`origin/envio` at `801215b`) is not deployed yet: Envio's GitHub app needs re-authorisation |
+| Chainlink CRE workflow | `tradepost-settlement-staging`, Monad testnet selector `2183018362218727504` | Simulated with broadcast; DON deployment needs Chainlink access |
+
+### Not done yet
+
+- Envio redeploy (above), after which creator earnings and Chainlink results appear in the app.
+- CRE workflow deployment to the Chainlink DON, then `setForwarder` to the production KeystoneForwarder.
+- An in-app (not scripted) mainnet trade, a live Perpl order and a keyed Nansen finding on a wallet with mainnet history.
 
 ## Run locally
 
@@ -64,9 +126,7 @@ In Chrome, enable developer mode at `chrome://extensions` and load `apps/extensi
 
 ## Contracts and indexer
 
-The stake contract accepts a fixed ERC20 and has a seven-day cooldown. Withdrawal requests immediately disable active-stake eligibility. Cancellation restores eligibility when the threshold is met. There is no administrator withdrawal or slashing.
-
-mUSDC has six decimals, no monetary value and an initial 10,000-token mint. Using it requires explicit mock mode and a matching stake deployment. Confirmed Circle-token deployment details are in `contracts/deployments/monad-testnet.json`.
+`contracts/src` holds `CallSettlement` (the Chainlink CRE scorecard, deployed bond-free on testnet; it can also lock optional bonds), `CreatorStake` (retired: staking was removed from the app, contracts left untouched) and `MockUSDC` (demo token). Foundry tests cover settlement outcomes, replay and forwarder checks, accounting conservation and the bond-free mode; `KuruCreatorFeeFork.t.sol` executes creator-fee buys at every tier rate against Kuru's mainnet contracts (`KURU_FEE_FORK_RPC=https://rpc.monad.xyz forge test --evm-version prague`).
 
 ```sh
 pnpm contracts:build
@@ -75,7 +135,7 @@ pnpm contracts:abi
 pnpm indexer:codegen
 ```
 
-Envio also indexes Kuru V2 swaps, deposits, withdrawals and account registrations for the portfolio and activity pages. Set `ENVIO_MONAD_RPC_URL` in `services/indexer/.env` to use a keyed RPC; adding contracts requires `envio start -r` (local projection rebuild). Envio is running locally and has indexed the first mock stake deposit, using contract-qualified position IDs, reorg rollback, a ten-block indexing lag and a 200-block reorg window. Its local database is isolated from the app database. The stake page shows up to 20 indexed balance updates, indexing progress and current/lagging/unavailable states. Extension projections are not connected yet.
+Envio indexes stake history, Kuru V2 swaps, deposits, withdrawals and account registrations on testnet, CallSettlement registrations and settlements, and Kuru Flow creator-fee payments on mainnet. Event IDs are chain:block:logIndex with reorg rollback, a ten-block lag and freshness checks against the chain head. Set `ENVIO_MONAD_RPC_URL` in `services/indexer/.env` for a keyed RPC; adding contracts requires `envio start -r`.
 
 To run locally, copy `services/indexer/.env.example` to `.env`, run `docker compose -p cmb-stake-indexer -f services/indexer/docker-compose.yml up -d`, then `pnpm --filter @call-my-bluff/indexer start`. Hasura is bound to localhost port 8081; its local development admin secret is `testing`. These settings are for local development only. Indexed history remains empty until stake events occur; a block lag is not a claim of chain finality.
 
