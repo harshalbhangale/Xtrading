@@ -3,7 +3,7 @@
 # Xtrading
 
 **Trade the calls you see on X, and know who's worth following.**  
-[xtradingnow.xyz](https://xtradingnow.xyz) · [Chrome extension](https://xtradingnow.xyz/extension) · [Live onchain activity](https://xtradingnow.xyz/dashboard/onchain) · [Product tour](docs/product-tour.md) · [Presentation](docs/presentation/Xtrading-presentation.pptx)
+[xtradingnow.xyz](https://xtradingnow.xyz) · [Chrome extension](https://xtradingnow.xyz/extension) · [Live onchain activity](https://xtradingnow.xyz/dashboard/onchain) · [Product tour](docs/product-tour.md) · [Presentation](https://canva.link/efa8fnb0oxts8vq)
 
 ---
 
