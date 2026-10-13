@@ -66,7 +66,12 @@ async function stored(postId: string, textHash: string) {
 
 // Keys the server adds to a stored signal later (availability checks, prices).
 // A re-classification must keep them, or every view would erase the history.
-const SERVER_KEYS = ["availability", "entryPrice", "exitPrice"] as const;
+const SERVER_KEYS = [
+  "availability",
+  "entryPrice",
+  "exitPrice",
+  "tokenRisk",
+] as const;
 const keepServerKeys = sql.raw(
   `jsonb_strip_nulls(jsonb_build_object(${SERVER_KEYS.map((k) => `'${k}', "post_signals"."signal"->'${k}'`).join(", ")}))`,
 );

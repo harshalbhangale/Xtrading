@@ -71,11 +71,13 @@ export default async function CreatorPage({
       {record && (
         <Panel
           title="Accountability"
-          description="Red flags come from evidence only: registered posts that stopped being public, trades against the creator's own calls and wrong-call rate."
+          description="Red flags come from evidence only: posts that stopped being public, fake or worthless token contracts Nansen identified in posts, trades against the creator's own calls and wrong-call rate."
         >
           <KolFlags
+            handle={handle}
             assessment={record.assessment}
             calls={ledger?.calls ?? []}
+            capturedChecked={record.postAvailability?.checked ?? 0}
           />
         </Panel>
       )}

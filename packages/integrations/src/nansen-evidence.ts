@@ -650,6 +650,20 @@ export const CANONICAL_TOKENS: Record<
 };
 
 /**
+ * Registry-only check, no provider call: the post names a ticker we hold the
+ * original contract for, and shares a different address. It cannot tell a
+ * bridged copy from a fake, so it is worded as unverified, never as fake.
+ */
+export function offRegistryContract(asset: string | null, address: string) {
+  const symbol = asset?.toUpperCase() ?? null;
+  const originals = symbol ? (CANONICAL_TOKENS[symbol] ?? []) : [];
+  const first = originals[0];
+  if (!first || originals.some((o) => o.address === address.toLowerCase()))
+    return null;
+  return `The post names ${symbol} but shares ${short(address.toLowerCase())}; the original ${symbol} is ${short(first.address)} on ${chainName(first.chain)}.`;
+}
+
+/**
  * Flags for a contract address shared in a post: does it belong to the token
  * the post names, and does it exist anywhere with value? Absence of data only
  * counts when every lookup answered.

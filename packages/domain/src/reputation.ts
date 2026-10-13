@@ -52,12 +52,36 @@ export type KolSwap = {
   transactionHash: string;
 };
 export type KolFlag = {
-  kind: "removed_post" | "counter_trade" | "mostly_wrong";
+  kind:
+    | "removed_post"
+    | "deleted_post"
+    | "risky_token"
+    | "unverified_token"
+    | "counter_trade"
+    | "mostly_wrong";
   severity: "serious" | "warning";
   title: string;
   detail: string;
   callIds: string[];
   transactions: string[];
+  /** Captured (unregistered) posts behind the flag, linked on X. */
+  posts: { postId: string; label: string }[];
+};
+
+/**
+ * Evidence from posts captured on X but not registered: posts X stopped
+ * serving in two consecutive checks, and token contracts Nansen identified as
+ * impostor or worthless. Unregistered posts are never scored, only flagged.
+ */
+export type CapturedPostEvidence = {
+  removed: { postId: string; asset: string | null }[];
+  riskyTokens: { postId: string; asset: string | null; summary: string }[];
+  /** Not the original contract for the named ticker; not yet checked by Nansen. */
+  unverifiedTokens?: {
+    postId: string;
+    asset: string | null;
+    summary: string;
+  }[];
 };
 export type Requirement = {
   label: string;
@@ -114,6 +138,7 @@ export function kolFlags(input: {
   swaps: KolSwap[];
   hitBps: number | null;
   scored: number;
+  captured?: CapturedPostEvidence;
 }): KolFlag[] {
   const flags: KolFlag[] = [];
   const gone = input.calls.filter(removed);
@@ -126,6 +151,60 @@ export function kolFlags(input: {
       detail: `X stopped serving ${gone.length === 1 ? "this post" : "these posts"} in two consecutive checks${wrong ? `; ${wrong} had resolved wrong` : ""}. Deleted, protected or suspended posts look the same from outside. The text archived at registration is kept.`,
       callIds: gone.map((c) => c.id),
       transactions: [],
+      posts: [],
+    });
+  }
+  // A registered call already has its own flag above; count each post once.
+  const registered = new Set(input.calls.map((c) => c.postId));
+  const deleted = (input.captured?.removed ?? []).filter(
+    (p) => !registered.has(p.postId),
+  );
+  if (deleted.length)
+    flags.push({
+      kind: "deleted_post",
+      severity: "serious",
+      title: `${plural(deleted.length, "captured post")} deleted or unavailable`,
+      detail: `Xtrading captured ${deleted.length === 1 ? "this post" : "these posts"} on X, then X stopped serving ${deleted.length === 1 ? "it" : "them"} in two consecutive checks. Deleted, protected or suspended posts look the same from outside.`,
+      callIds: [],
+      transactions: [],
+      posts: deleted.map((p) => ({
+        postId: p.postId,
+        label: `${p.asset ?? "post"} post`,
+      })),
+    });
+  const risky = input.captured?.riskyTokens ?? [];
+  if (risky.length) {
+    const ids = [...new Set(risky.map((r) => r.postId))];
+    flags.push({
+      kind: "risky_token",
+      severity: "serious",
+      title: `Shared a fake or worthless token in ${plural(ids.length, "post")}`,
+      detail: [...new Set(risky.map((r) => r.summary))].slice(0, 3).join(" "),
+      callIds: [],
+      transactions: [],
+      posts: ids.map((postId) => ({
+        postId,
+        label: `${risky.find((r) => r.postId === postId)?.asset ?? "token"} contract`,
+      })),
+    });
+  }
+  const confirmed = new Set(risky.map((r) => r.postId));
+  const unverified = (input.captured?.unverifiedTokens ?? []).filter(
+    (u) => !confirmed.has(u.postId),
+  );
+  if (unverified.length) {
+    const ids = [...new Set(unverified.map((u) => u.postId))];
+    flags.push({
+      kind: "unverified_token",
+      severity: "warning",
+      title: `Shared a contract that isn't the original token in ${plural(ids.length, "post")}`,
+      detail: `${[...new Set(unverified.map((u) => u.summary))].slice(0, 2).join(" ")} It could be a bridged copy or a fake; Nansen has not checked it yet.`,
+      callIds: [],
+      transactions: [],
+      posts: ids.map((postId) => ({
+        postId,
+        label: `${unverified.find((u) => u.postId === postId)?.asset ?? "token"} contract`,
+      })),
     });
   }
   const counter: { call: PublicCall; swap: KolSwap }[] = [];
@@ -154,6 +233,7 @@ export function kolFlags(input: {
         "The creator's bound wallet swapped in the opposite direction of an open call on the same asset (Kuru fills indexed by Envio). Hedging is possible; the swaps are shown as recorded.",
       callIds: calls,
       transactions: [...new Set(counter.map((c) => c.swap.transactionHash))],
+      posts: [],
     });
   }
   if (input.scored >= 5 && input.hitBps !== null && input.hitBps < 4000)
@@ -164,6 +244,7 @@ export function kolFlags(input: {
       detail: `${Math.round(input.hitBps / 100)}% of ${input.scored} scored calls were right.`,
       callIds: [],
       transactions: [],
+      posts: [],
     });
   return flags;
 }
@@ -210,6 +291,7 @@ function requirements(
 export function assessKol(input: {
   calls: PublicCall[];
   swaps: KolSwap[];
+  captured?: CapturedPostEvidence;
 }): KolAssessment {
   const settled = input.calls.filter(
     (c) => c.evidence.outcome !== null && c.evidence.returnBps !== null,

@@ -100,7 +100,11 @@ export default function ConfiguredMyReputation({ full }: { full: boolean }) {
           <h3 className="tier-subheading">All tiers</h3>
           <TierLadder current={state.assessment.tier} />
           <h3 className="tier-subheading">Red flags on your record</h3>
-          <KolFlags assessment={state.assessment} calls={state.calls} />
+          <KolFlags
+            handle={state.handle}
+            assessment={state.assessment}
+            calls={state.calls}
+          />
         </>
       )}
       <p className="small-note">

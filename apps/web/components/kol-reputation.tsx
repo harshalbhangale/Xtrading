@@ -104,11 +104,16 @@ export function TierLadder({ current }: { current: KolAssessment["tier"] }) {
 
 /** Evidence-backed accountability flags, or an honest empty state with coverage. */
 export function KolFlags({
+  handle,
   assessment,
   calls,
+  capturedChecked = 0,
 }: {
+  handle: string;
   assessment: KolAssessment;
   calls: PublicCall[];
+  /** Captured (unregistered) posts re-checked on X. */
+  capturedChecked?: number;
 }) {
   const byId = new Map(calls.map((call) => [call.id, call]));
   if (!assessment.flags.length)
@@ -120,7 +125,10 @@ export function KolFlags({
           {calls.length === 1 ? "call" : "calls"};{" "}
           {assessment.availabilityChecked}{" "}
           {assessment.availabilityChecked === 1 ? "post has" : "posts have"}{" "}
-          been re-checked on X. Absence of flags is not an endorsement.
+          been re-checked on X
+          {capturedChecked > 0 &&
+            `, plus ${capturedChecked} captured ${capturedChecked === 1 ? "post" : "posts"}`}
+          . Absence of flags is not an endorsement.
         </p>
       </div>
     );
@@ -135,7 +143,9 @@ export function KolFlags({
             <strong>{flag.title}</strong>
           </div>
           <p>{flag.detail}</p>
-          {(flag.callIds.length > 0 || flag.transactions.length > 0) && (
+          {(flag.callIds.length > 0 ||
+            flag.transactions.length > 0 ||
+            flag.posts.length > 0) && (
             <p className="flag-evidence">
               {flag.callIds.slice(0, 6).map((id) => {
                 const call = byId.get(id);
@@ -152,6 +162,16 @@ export function KolFlags({
                   </a>
                 ) : null;
               })}
+              {flag.posts.slice(0, 6).map((post) => (
+                <a
+                  key={post.postId}
+                  href={`https://x.com/${handle}/status/${post.postId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {post.label} ↗
+                </a>
+              ))}
               {flag.transactions.slice(0, 6).map((hash) => (
                 <a
                   key={hash}

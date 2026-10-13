@@ -11,6 +11,7 @@ import {
   observePrice,
   postTimestampMs,
 } from "@call-my-bluff/integrations/calls";
+import { offRegistryContract } from "@call-my-bluff/integrations/nansen-evidence";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { getDatabase } from "./database";
 import { nansenCheck } from "./nansen";
@@ -201,6 +202,109 @@ export async function creatorReputation(handle: string): Promise<Reputation> {
   }
 }
 
+// Nansen findings that the token itself is fake or worthless. Market observations
+// (young, thin liquidity, concentration) and "no data" are not accusations.
+const TOKEN_RISK_KINDS = new Set([
+  "impostor-token",
+  "not-canonical",
+  "testnet-only-contract",
+]);
+
+/**
+ * Stores Nansen's verdict on a post's token contract, so the creator record can
+ * show it without re-spending credits. Only answered checks are stored; an
+ * empty list means Nansen answered and found nothing.
+ */
+async function recordTokenRisk(postId: string, check: NansenCheck) {
+  const database = getDatabase();
+  const answered = (check.sources ?? []).some(
+    (s) => s.status === "ok" || s.status === "empty",
+  );
+  if (!database || check.mode !== "live" || !answered) return;
+  const flags = (check.flags ?? [])
+    .filter((f) => f.severity === "caution" && TOKEN_RISK_KINDS.has(f.kind))
+    .map((f) => ({ kind: f.kind, summary: f.summary }));
+  const value = { checkedAt: check.observedAt, flags };
+  await database.db
+    .update(postSignals)
+    .set({
+      signal: sql`jsonb_set(${postSignals.signal}, '{tokenRisk}', ${JSON.stringify(value)}::jsonb)`,
+    })
+    .where(eq(postSignals.postId, postId));
+}
+
+const CAPTURED_TOKEN_CHECKS_PER_REQUEST = 1;
+
+/**
+ * Stored token verdicts for a creator's captured posts. With `checkMissing`,
+ * checks at most one never-checked post with Nansen first (bounded credits).
+ */
+export async function capturedTokenRisks(
+  handle: string,
+  options: { checkMissing?: boolean } = {},
+) {
+  const database = getDatabase();
+  if (!database) return { risky: [], unverified: [] };
+  const load = () =>
+    database.db
+      .select({
+        postId: postSignals.postId,
+        asset: postSignals.asset,
+        tokenRisk: sql<unknown>`${postSignals.signal}->'tokenRisk'`,
+        references: sql<unknown>`${postSignals.signal}->'tokenReferences'`,
+      })
+      .from(postSignals)
+      .where(
+        and(
+          eq(postSignals.handle, handle),
+          sql`jsonb_array_length(coalesce(${postSignals.signal}->'tokenReferences', '[]'::jsonb)) > 0`,
+        ),
+      )
+      .limit(200);
+  let rows = await load();
+  if (options.checkMissing) {
+    const unchecked = rows
+      .filter((row) => !row.tokenRisk)
+      .slice(0, CAPTURED_TOKEN_CHECKS_PER_REQUEST);
+    if (unchecked.length) {
+      for (const row of unchecked)
+        await creatorInsights(handle, null, null, row.postId).catch(() => null);
+      rows = await load();
+    }
+  }
+  const risky: { postId: string; asset: string | null; summary: string }[] = [];
+  const unverified: typeof risky = [];
+  for (const row of rows) {
+    const risk = row.tokenRisk as {
+      flags?: { kind: string; summary: string }[];
+    } | null;
+    for (const flag of risk?.flags ?? [])
+      risky.push({
+        postId: row.postId,
+        asset: row.asset,
+        summary: flag.summary,
+      });
+    // Until Nansen answers, fall back to the free original-contract registry.
+    if (risk) continue;
+    const references = Array.isArray(row.references) ? row.references : [];
+    for (const reference of references) {
+      const address =
+        reference && typeof reference.address === "string"
+          ? reference.address
+          : null;
+      const summary =
+        address && /^0x[0-9a-fA-F]{40}$/.test(address)
+          ? offRegistryContract(row.asset, address)
+          : null;
+      if (summary) {
+        unverified.push({ postId: row.postId, asset: row.asset, summary });
+        break;
+      }
+    }
+  }
+  return { risky, unverified };
+}
+
 export type CreatorInsights = {
   handle: string;
   evidence: Awaited<ReturnType<typeof publicCreatorEvidence>>;
@@ -274,6 +378,8 @@ export async function creatorInsights(
       callAt: postedAt(post),
     }),
   ]);
+  if (post && signal?.tokenReferences.length)
+    await recordTokenRisk(post, nansen).catch(() => undefined);
   const value: CreatorInsights = { handle, evidence, reputation, nansen };
   if (insightCache.size >= 500) insightCache.clear();
   insightCache.set(key, { expires: Date.now() + 30_000, value });

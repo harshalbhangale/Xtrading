@@ -189,4 +189,63 @@ describe("kolFlags", () => {
     }).map((f) => f.kind);
     expect(kinds).toEqual(["mostly_wrong"]);
   });
+
+  it("flags deleted captured posts and fake tokens, once per post", () => {
+    const registered = call({});
+    const flags = kolFlags({
+      calls: [registered],
+      swaps: [],
+      hitBps: null,
+      scored: 0,
+      captured: {
+        removed: [
+          { postId: "777", asset: "PEPE" },
+          // Already a registered call: its own flag covers it.
+          { postId: registered.postId, asset: "ETH" },
+        ],
+        riskyTokens: [
+          { postId: "888", asset: "PEPE", summary: "Not PEPE's contract." },
+          { postId: "888", asset: "PEPE", summary: "Testnet only." },
+        ],
+      },
+    });
+    const deleted = flags.find((f) => f.kind === "deleted_post");
+    expect(deleted?.posts).toEqual([{ postId: "777", label: "PEPE post" }]);
+    expect(deleted?.severity).toBe("serious");
+    const token = flags.find((f) => f.kind === "risky_token");
+    expect(token?.posts).toEqual([{ postId: "888", label: "PEPE contract" }]);
+    expect(token?.detail).toBe("Not PEPE's contract. Testnet only.");
+  });
+
+  it("raises no captured-post flags without evidence", () => {
+    expect(
+      kolFlags({
+        calls: [],
+        swaps: [],
+        hitBps: null,
+        scored: 0,
+        captured: { removed: [], riskyTokens: [] },
+      }),
+    ).toEqual([]);
+  });
+
+  it("warns on an unverified contract until Nansen confirms it", () => {
+    const flags = kolFlags({
+      calls: [],
+      swaps: [],
+      hitBps: null,
+      scored: 0,
+      captured: {
+        removed: [],
+        riskyTokens: [{ postId: "1", asset: "PEPE", summary: "Fake." }],
+        unverifiedTokens: [
+          { postId: "1", asset: "PEPE", summary: "Not the original." },
+          { postId: "2", asset: "PEPE", summary: "Not the original." },
+        ],
+      },
+    });
+    const warning = flags.find((f) => f.kind === "unverified_token");
+    expect(warning?.severity).toBe("warning");
+    expect(warning?.posts.map((p) => p.postId)).toEqual(["2"]);
+  });
 });

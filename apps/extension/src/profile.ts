@@ -218,6 +218,16 @@ export async function scanProfile() {
       ? { kind: "chip" as const, tone: "bad" as const, group: "Red flags" }
       : { kind: "row" as const }),
   });
+  // Other evidence flags (fake tokens, counter-trades) also go in the red box.
+  for (const flag of rep?.assessment.flags ?? [])
+    if (flag.kind !== "deleted_post" && flag.kind !== "mostly_wrong")
+      panel.set(`flag:${flag.kind}`, {
+        label: flag.title,
+        value: el("span", { title: flag.detail }, flag.detail),
+        kind: "chip",
+        tone: "bad",
+        group: "Red flags",
+      });
   const ledger = publicCallLedgerSchema.safeParse(ledgerRaw);
   const tiles = statTiles(callStats(ledger.success ? ledger.data.calls : []));
   tiles.forEach((tile, index) => {
