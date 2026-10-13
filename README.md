@@ -18,8 +18,8 @@ Xtrading deploys **no contracts on mainnet**. Trading and creator fees run on Ku
 | Contract | Address |
 |---|---|
 | Kuru MON/USDC order book | [`0x065C9d28E428A0db40191a54d33d5b7c71a9C394`](https://monadvision.com/address/0x065C9d28E428A0db40191a54d33d5b7c71a9C394) |
-| Kuru WETH/USDC order book | [`0xa6aFd386135B7d41a6c40C525ABc4a1019b0D132`](https://monadvision.com/address/0xa6aFd386135B7d41a6c40C525ABc4a1019b0D132) |
-| Kuru cbBTC/USDC order book | [`0x40C49f171202f91ff5D2Fae34c22Dd2bfdd22aF0`](https://monadvision.com/address/0x40C49f171202f91ff5D2Fae34c22Dd2bfdd22aF0) |
+| Kuru WETH/USDC order book | [`0xa6aFD386135B7D41A6C40C525abC4A1019b0D132`](https://monadvision.com/address/0xa6aFD386135B7D41A6C40C525abC4A1019b0D132) |
+| Kuru cbBTC/USDC order book | [`0x40c49F171202F91ff5d2faE34c22dD2BFdD22aF0`](https://monadvision.com/address/0x40c49F171202F91ff5d2faE34c22dD2BFdD22aF0) |
 | Kuru Flow entrypoint (creator fees) | [`0xb3e6778480b2E488385E8205eA05E20060B813cb`](https://monadvision.com/address/0xb3e6778480b2E488385E8205eA05E20060B813cb) |
 | USDC | [`0x754704Bc059F8C67012fEd69BC8A327a5aafb603`](https://monadvision.com/address/0x754704Bc059F8C67012fEd69BC8A327a5aafb603) |
 

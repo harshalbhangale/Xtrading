@@ -304,7 +304,7 @@ export const kuruMainnet = {
       sizePrecision: 10_000_000_000n,
     },
     WETH: {
-      market: "0xa6aFd386135B7d41a6c40C525ABc4a1019b0D132" as Address,
+      market: "0xa6aFD386135B7D41A6C40C525abC4A1019b0D132" as Address,
       base: {
         symbol: "WETH",
         address: "0xEE8c0E9f1BFFb4Eb878d8f15f368A02a35481242" as Address,
@@ -315,7 +315,7 @@ export const kuruMainnet = {
     },
     // Coinbase-wrapped BTC; shares the "WBTC" key with the testnet market.
     WBTC: {
-      market: "0x40C49f171202f91ff5D2Fae34c22Dd2bfdd22aF0" as Address,
+      market: "0x40c49F171202F91ff5d2faE34c22dD2BFdD22aF0" as Address,
       base: {
         symbol: "cbBTC",
         address: "0xd18B7EC58Cdf4876f6AFebd3Ed1730e4Ce10414b" as Address,

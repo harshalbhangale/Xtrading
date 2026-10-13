@@ -11,6 +11,7 @@ import { observeFollowing } from "./follow-observer";
 import { inlineMarket, inlineTrade } from "./inline-trade";
 import { postImages } from "./post-media";
 import { scanProfile } from "./profile";
+import { cashtagMarket, swapCard } from "./swap-card";
 import { attachToXTicker } from "./x-ticker";
 
 function postIdentity(article: HTMLElement) {
@@ -58,8 +59,8 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
     route.status === "available" &&
     route.instrument === "spot"
   ) {
-    // X's own ticker card already carries our Buy button for this post.
-    if (article.querySelector(".cmb-xticker-host")) {
+    // The cashtag card (or X's own ticker card) already trades this post.
+    if (article.querySelector(".cmb-xticker-host, .cmb-swap-host")) {
       rendered.add(article);
       return;
     }
@@ -85,7 +86,7 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
   const routeText =
     route.status === "available"
       ? `${route.instrument === "perp" ? "Perp" : "Spot"} · ${route.venue}${route.side ? ` ${route.side}` : ""}`
-      : "No testnet market";
+      : "Not tradable on Kuru (Monad)";
   root.append(
     el(
       "div",
@@ -185,7 +186,9 @@ function scanPosts() {
       seen.get(article) === key &&
       seenText.get(article) === text &&
       (!rendered.has(article) ||
-        article.querySelector(".cmb-signal-host, .cmb-xticker-host"))
+        article.querySelector(
+          ".cmb-signal-host, .cmb-xticker-host, .cmb-swap-host",
+        ))
     ) {
       tradeFromXTicker(article, id);
       continue;
@@ -195,7 +198,7 @@ function scanPosts() {
     seenText.set(article, text);
     rendered.delete(article);
     for (const stale of article.querySelectorAll(
-      ".cmb-signal-host, .cmb-badge-host, .cmb-xticker-host, .cmb-xbuy-host",
+      ".cmb-signal-host, .cmb-badge-host, .cmb-xticker-host, .cmb-xbuy-host, .cmb-swap-host",
     ))
       stale.remove();
     tradeFromXTicker(article, id);
@@ -212,11 +215,32 @@ function tradeFromXTicker(
   article: HTMLElement,
   id: { handle: string; postId: string },
 ) {
-  if (!attachToXTicker(article, id)) return;
-  for (const card of article.querySelectorAll<HTMLElement>(
+  if (attachToXTicker(article, id)) {
+    for (const stale of article.querySelectorAll<HTMLElement>(
+      '.cmb-signal-host[data-inline="true"], .cmb-swap-host',
+    ))
+      stale.remove();
+    rendered.add(article);
+    return;
+  }
+  // No X ticker card (X shows them only in some regions): draw our own for
+  // any supported cashtag in the post text. No classification needed.
+  const market = cashtagMarket(article);
+  const textNode = article.querySelector<HTMLElement>(
+    '[data-testid="tweetText"]',
+  );
+  if (!market || !textNode || article.querySelector(".cmb-swap-host")) return;
+  const { host, root } = shadowHost("cmb-swap-host");
+  host.dataset.postId = id.postId;
+  const { card } = swapCard({ ...id, market, article });
+  root.append(card);
+  card.dataset.mounted = "true";
+  host.addEventListener("click", (event) => event.stopPropagation());
+  for (const stale of article.querySelectorAll<HTMLElement>(
     '.cmb-signal-host[data-inline="true"]',
   ))
-    card.remove();
+    stale.remove();
+  textNode.after(host);
   rendered.add(article);
 }
 

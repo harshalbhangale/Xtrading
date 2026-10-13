@@ -262,6 +262,30 @@ it("offers Buy from X's ticker card even when the post is not a call", async () 
   expect(document.querySelectorAll(".cmb-xbuy-host")).toHaveLength(1);
 });
 
+it("draws its own Kuru card for a supported cashtag without waiting for classification", async () => {
+  const text = document.querySelector('[data-testid="tweetText"]');
+  if (text) text.innerHTML = 'Much higher <a href="/search?q=%24ETH">$ETH</a>';
+  sendMessage.mockResolvedValue(null);
+  await import("./content");
+  await flush();
+  const root = document.querySelector(".cmb-swap-host")?.shadowRoot;
+  expect(root?.querySelector(".swap-title strong")?.textContent).toBe(
+    "Ethereum",
+  );
+  expect(root?.querySelector(".inline-buy")).not.toBeNull();
+  expect(document.querySelectorAll(".cmb-swap-host")).toHaveLength(1);
+});
+
+it("does not draw a Kuru card for tokens Kuru does not list", async () => {
+  const text = document.querySelector('[data-testid="tweetText"]');
+  if (text)
+    text.innerHTML = 'Early gem <a href="/search?q=%24BATON">$BATON</a>';
+  sendMessage.mockResolvedValue(null);
+  await import("./content");
+  await flush();
+  expect(document.querySelector(".cmb-swap-host")).toBeNull();
+});
+
 it("restores a card removed by an X rerender without duplicating it", async () => {
   const signal = response("buy $ETH").signal;
   sendMessage.mockResolvedValue({

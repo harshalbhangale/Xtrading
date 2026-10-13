@@ -45,7 +45,8 @@ it("never opens wallet review for invalid amounts and carries an explicit networ
   const url = new URL(String(open.mock.calls[0]?.[0]));
   expect(url.origin).toBe("https://xtradingnow.xyz");
   expect(url.pathname).toBe("/trade/inline");
-  expect(url.searchParams.get("chainId")).toBe("10143");
+  // Kuru mainnet is the default; testnet is an explicit choice.
+  expect(url.searchParams.get("chainId")).toBe("143");
   expect(url.searchParams.get("postId")).toBe("123");
   expect(url.searchParams.get("amount")).toBe("10");
   open.mockRestore();
@@ -72,10 +73,10 @@ it("discards an in-flight quote after a network switch", async () => {
   input.value = "1";
   input.dispatchEvent(new Event("input"));
   await vi.advanceTimersByTimeAsync(400);
-  network.value = "143";
+  network.value = "10143";
   network.dispatchEvent(new Event("change"));
   resolve({
-    chainId: 10143,
+    chainId: 143,
     market: "MON",
     side: "buy",
     amount: "1000000",
@@ -93,7 +94,7 @@ it("discards an in-flight quote after a network switch", async () => {
   await Promise.resolve();
   await Promise.resolve();
   expect(card.querySelector(".inline-output")?.textContent).toBe("—");
-  expect(card.querySelector(".inline-price")?.textContent).not.toContain("999");
+  expect(card.textContent).not.toContain("999");
 });
 
 it("expires indications and shows net output when a registered creator fee is selected", async () => {

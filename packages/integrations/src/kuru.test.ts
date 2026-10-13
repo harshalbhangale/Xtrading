@@ -256,3 +256,23 @@ describe("Kuru mainnet market orders", () => {
     ).toBe(247_500n);
   });
 });
+
+describe("configured addresses", () => {
+  it("are valid EIP-55 checksums (viem rejects bad ones at call time)", async () => {
+    const { getAddress } = await import("viem");
+    const all = [
+      kuruMainnet.quote.address,
+      ...Object.values(kuruMainnet.markets).flatMap((m) => [
+        m.market,
+        m.base.address,
+      ]),
+      kuruV2.accountCore,
+      kuruUsdc.address,
+      ...Object.values(kuruV2.markets).flatMap((m) => [
+        m.market,
+        m.base.address,
+      ]),
+    ];
+    for (const address of all) expect(getAddress(address)).toBe(address);
+  });
+});
