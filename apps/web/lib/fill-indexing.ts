@@ -25,13 +25,13 @@ import {
   type Address,
   decodeEventLog,
   decodeFunctionData,
-  getAddress,
   type Hex,
 } from "viem";
 import { getDatabase } from "./database";
 import { envioQuery } from "./envio";
 import { identityContext } from "./identity-http";
 import { mainnetClient, mainnetEnabled, testnetClient } from "./markets";
+import { tradingWallet } from "./trading-wallet";
 
 const marketKeys = new Map<string, KuruMarketKey>(
   (Object.keys(kuruV2.markets) as KuruMarketKey[]).map((key) => [
@@ -48,14 +48,10 @@ const tokenSymbols = new Map<string, "USDC" | "WETH" | "WBTC" | "MON">([
 
 export async function boundWallet(request: Request) {
   const { user, service } = await identityContext(request);
-  const binding = await service.current(user.privyUserId);
-  if (
-    !binding ||
-    binding.xUserId !== user.xAccount?.xUserId ||
-    !user.wallets.some((w) => w.toLowerCase() === binding.wallet)
-  )
-    throw new IdentityError("current_binding_required", 403);
-  return { wallet: getAddress(binding.wallet), privyUserId: user.privyUserId };
+  return {
+    wallet: await tradingWallet(request, user, service),
+    privyUserId: user.privyUserId,
+  };
 }
 
 type Row = Record<string, unknown>;

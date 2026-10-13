@@ -26,6 +26,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPublicClient, formatUnits, http } from "viem";
 import { monad, monadTestnet } from "viem/chains";
 import { z } from "zod";
+import { useTradingWallet, walletHeader } from "./use-trading-wallet";
 import { useWalletSend } from "./use-wallet-send";
 
 type Review = ReturnType<typeof spotReviewSchema.parse>;
@@ -52,7 +53,9 @@ const errors: Record<string, string> = {
   trade_simulation_failed:
     "The transaction would fail onchain. Nothing was sent.",
   insufficient_gas_balance: "Not enough MON for gas.",
-  current_binding_required: "Bind your X account to this wallet first.",
+  wallet_not_linked: "This wallet is not linked to your login. Sign in again.",
+  wallet_choice_required: "Connect the wallet you want to trade with.",
+  wallet_required: "Connect a wallet to trade.",
   market_verification_failed: "Market checks failed. Trading is paused.",
   insufficient_balance: "Not enough balance in your Kuru account.",
 };
@@ -78,6 +81,7 @@ export default function ConfiguredTrade({
     : "https://testnet.monadvision.com";
   const { ready, authenticated, user, login, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
+  const tradingWallet = useTradingWallet();
   const { sendTransaction } = useWalletSend();
   const [creator, setCreator] = useState<{
     xUserId: string;
@@ -222,6 +226,7 @@ export default function ConfiguredTrade({
         cache: "no-store",
         headers: {
           Authorization: `Bearer ${token}`,
+          ...walletHeader(tradingWallet),
           ...(body ? { "Content-Type": "application/json" } : {}),
         },
         ...(body ? { body: JSON.stringify(body) } : {}),
@@ -242,7 +247,7 @@ export default function ConfiguredTrade({
       }
       return value;
     },
-    [getAccessToken],
+    [getAccessToken, tradingWallet],
   );
   const loadAccount = useCallback(async () => {
     const who = owner.current;

@@ -22,12 +22,6 @@
       "matches": ["https://x.com/*", "https://twitter.com/*"],
       "js": ["content.js"],
       "css": ["content.css"]
-    },
-    {
-      "matches": ["https://x.com/*", "https://twitter.com/*"],
-      "js": ["wallet-bridge.js"],
-      "world": "MAIN",
-      "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [

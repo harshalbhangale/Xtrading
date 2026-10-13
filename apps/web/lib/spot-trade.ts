@@ -34,7 +34,6 @@ import {
   type Address,
   decodeFunctionResult,
   erc20Abi,
-  getAddress,
   type Hex,
   zeroAddress,
 } from "viem";
@@ -46,6 +45,7 @@ import {
   mainnetClient,
   testnetClient,
 } from "./markets";
+import { tradingWallet } from "./trading-wallet";
 
 const REVIEW_SECONDS = 30;
 // Onchain swap deadline; covers wallet review after the app-side expiry.
@@ -54,16 +54,7 @@ const DEADLINE_SECONDS = 120n;
 // The trading chain is explicit per request; each client enforces its own chain.
 async function boundWallet(request: Request) {
   const { user, service } = await identityContext(request);
-  const binding = await service.current(user.privyUserId);
-  if (
-    !binding ||
-    binding.xUserId !== user.xAccount?.xUserId ||
-    !user.wallets.some(
-      (wallet) => wallet.toLowerCase() === binding.wallet.toLowerCase(),
-    )
-  )
-    throw new IdentityError("current_binding_required", 403);
-  return getAddress(binding.wallet);
+  return tradingWallet(request, user, service);
 }
 
 type Client =
