@@ -9,4 +9,6 @@ export const isWorkspacePath = (path: string) =>
 
 // Routes that render without the site header and footer.
 export const isChromeless = (path: string) =>
-  isWorkspacePath(path) || within(path, "/start");
+  isWorkspacePath(path) ||
+  within(path, "/start") ||
+  within(path, "/trade/inline");

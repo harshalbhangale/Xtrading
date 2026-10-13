@@ -24,7 +24,12 @@ export const perplContextSchema = z.object({
     }),
   ),
 });
-const positive = amountSchema.refine((value) => BigInt(value) > 0n);
+const positive = amountSchema.pipe(
+  z
+    .string()
+    .max(78)
+    .refine((value) => BigInt(value) > 0n),
+);
 const token = z.object({
   symbol: z.string(),
   address,
@@ -35,6 +40,11 @@ export const kuruMarketSchema = z.enum(["WETH", "WBTC", "MON"]);
 export const spotChainIdSchema = z.union([z.literal(10143), z.literal(143)]);
 export const prepareSpotSchema = z
   .object({
+    creatorXUserId: z
+      .string()
+      .regex(/^[0-9]{1,30}$/)
+      .nullable()
+      .optional(),
     instrument: z.literal("spot"),
     chainId: spotChainIdSchema,
     market: kuruMarketSchema,
@@ -91,6 +101,17 @@ export const spotReviewSchema = z.object({
   expectedOutput: amountSchema.nullable(),
   minimumOutput: amountSchema.nullable(),
   deadline: amountSchema.nullable(),
+  creatorFee: z
+    .object({
+      xUserId: z.string(),
+      wallet: address,
+      bps: z.literal(50),
+      version: z.number().int().positive(),
+      denomination: token,
+    })
+    .nullable()
+    .default(null),
+  execution: z.enum(["orderbook", "creator-flow"]).default("orderbook"),
   takerFeePps: amountSchema,
   sourcePostId: z.string().nullable(),
   slippageBps: z.number().int().min(1).max(500),

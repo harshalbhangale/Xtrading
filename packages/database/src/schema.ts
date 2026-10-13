@@ -130,3 +130,14 @@ export const postSignals = pgTable(
     index("post_signals_handle").on(table.handle, table.classifiedAt),
   ],
 );
+
+// Opt-in payouts are keyed by immutable X ID. Wallet must match a nonce-verified binding.
+export const creatorPayouts = pgTable("creator_payouts", {
+  xUserId: text("x_user_id")
+    .primaryKey()
+    .references(() => creators.xUserId),
+  wallet: text("wallet").notNull(),
+  enabled: boolean("enabled").notNull().default(false),
+  version: integer("version").notNull().default(1),
+  updatedAt: time("updated_at").defaultNow().notNull(),
+});

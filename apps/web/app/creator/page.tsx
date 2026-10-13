@@ -11,13 +11,16 @@ export default function CreatorPage() {
     <>
       <PageHeading
         title="Creator studio"
-        description="Bind your X account, lock a refundable stake and register calls. Each one is a separate signal people can check."
+        description="Link X and your wallet to register creator payouts. Staking and bonded calls are optional, separate signals."
       />
       <AccountSummary audience="creator" signedOutPrompt={false} />
       <Panel
         title="Setup"
-        description="Complete these in order. Each step unlocks the next."
+        description="Account linking enables payout registration. Staking is optional."
       >
+        <Link className="button" href="/creator/earnings">
+          Set up creator earnings →
+        </Link>
         <CreatorStatus />
       </Panel>
       <div className="dashboard-two-column">

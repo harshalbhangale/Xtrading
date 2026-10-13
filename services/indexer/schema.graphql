@@ -87,3 +87,34 @@ type CallBond {
   settledAt: BigInt
   settledTx: String
 }
+
+# Actual creator payment, never a quote. Reorg rollback removes orphaned events.
+type CreatorFeePayment {
+  id: ID!
+  chainId: Int!
+  contract: String!
+  buyer: String!
+  creatorWallet: String!
+  token: String!
+  amount: BigInt!
+  transactionHash: String!
+  blockHash: String!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+type CreatorFlowSwap {
+  id: ID!
+  chainId: Int!
+  buyer: String!
+  creatorWallet: String!
+  tokenIn: String!
+  tokenOut: String!
+  amountIn: BigInt!
+  netAmountOut: BigInt!
+  referrerFeeBps: BigInt!
+  transactionHash: String!
+  blockHash: String!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}

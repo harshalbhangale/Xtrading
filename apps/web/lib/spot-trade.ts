@@ -1,6 +1,12 @@
 import "server-only";
 import { IdentityError } from "@call-my-bluff/database/identity";
 import {
+  creatorFeeStep,
+  flowAbi,
+  flowEntrypoint,
+  flowRouter,
+} from "@call-my-bluff/integrations/creator-fees";
+import {
   accountCoreAbi,
   bookEstimate,
   kuruMainnet,
@@ -32,6 +38,7 @@ import {
   type Hex,
   zeroAddress,
 } from "viem";
+import { resolveCreatorFee } from "./creator-payouts";
 import { identityContext } from "./identity-http";
 import {
   kuruMainnetSnapshot,
@@ -108,6 +115,11 @@ export async function prepareSpot(request: Request, body: unknown) {
   if (!parsed.success) throw new IdentityError("invalid_trade_intent");
   const input = parsed.data;
   const wallet = await boundWallet(request);
+  if (input.creatorXUserId) {
+    if (input.chainId !== 143 || input.side !== "buy" || !input.sourcePostId)
+      throw new IdentityError("creator_fee_mainnet_buy_required", 409);
+    return prepareCreatorSpot(wallet, input);
+  }
   if (input.chainId === 143) return prepareMainnetSpot(wallet, input);
   const { client, block, book, takerFeePps } = await kuruMarketSnapshot(
     input.market,
@@ -352,6 +364,118 @@ async function prepareMainnetSpot(wallet: Address, input: SpotIntent) {
     takerFeePps: (takerFeeBps * 1000n).toString(),
     sourcePostId: input.sourcePostId,
     slippageBps: input.slippageBps,
+  });
+}
+
+/** Build a single configured Kuru route locally; never forward opaque provider calldata. */
+async function prepareCreatorSpot(wallet: Address, input: SpotIntent) {
+  if (!input.creatorXUserId)
+    throw new IdentityError("creator_payout_unavailable", 409);
+  const fee = await resolveCreatorFee(input.creatorXUserId, wallet);
+  const { client, block, takerFeeBps } = await kuruMainnetSnapshot(
+    input.market,
+  );
+  const at = { blockNumber: block.number };
+  const tokens = networkTradeTokens(143, input.market, "buy");
+  const amount = BigInt(input.amount);
+  // No unused input dust is donated to the router through market precision rounding.
+  if (
+    mainnetOrderSize({ key: input.market, side: "buy", amount }).spend !==
+    amount
+  )
+    throw new IdentityError("invalid_market_amount", 409);
+  const [router, code, walletBalance, allowance, nativeBalance] =
+    await Promise.all([
+      client.readContract({
+        address: flowEntrypoint,
+        abi: flowAbi,
+        functionName: "getRouter",
+        ...at,
+      }),
+      client.getCode({ address: flowEntrypoint, ...at }),
+      client.readContract({
+        address: tokens.input.address,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [wallet],
+        ...at,
+      }),
+      client.readContract({
+        address: tokens.input.address,
+        abi: erc20Abi,
+        functionName: "allowance",
+        args: [wallet, flowEntrypoint],
+        ...at,
+      }),
+      client.getBalance({ address: wallet, ...at }),
+    ]);
+  if (
+    !code ||
+    code === "0x" ||
+    router.toLowerCase() !== flowRouter.toLowerCase()
+  )
+    throw new IdentityError("fee_router_verification_failed", 503);
+  if (walletBalance < amount)
+    throw new IdentityError("insufficient_market_token", 409);
+  let expectedOutput: bigint | null = null,
+    minimumOutput: bigint | null = null;
+  let step = creatorFeeStep({
+    market: input.market,
+    amount,
+    minimumOutput: 1n,
+    allowance,
+    recipient: fee.wallet,
+  });
+  if (step.action === "swap") {
+    try {
+      const result = await client.call({
+        account: wallet,
+        to: step.to,
+        data: step.data,
+        ...at,
+      });
+      expectedOutput = decodeFunctionResult({
+        abi: flowAbi,
+        functionName: "executeSwap",
+        data: result.data as Hex,
+      });
+      minimumOutput = minimumQuotedOutput(expectedOutput, input.slippageBps);
+      step = creatorFeeStep({
+        market: input.market,
+        amount,
+        minimumOutput,
+        allowance,
+        recipient: fee.wallet,
+      });
+    } catch {
+      throw new IdentityError(
+        "quote_unavailable_or_insufficient_liquidity",
+        409,
+      );
+    }
+  }
+  return spotReviewSchema.parse({
+    ...(await finishStep(client, 143, wallet, step, block, nativeBalance)),
+    instrument: "spot",
+    market: input.market,
+    side: "buy",
+    action: step.action,
+    amount: input.amount,
+    input: tokens.input,
+    output: tokens.output,
+    walletBalance: walletBalance.toString(),
+    accountBalance: "0",
+    indicativeOutput: null,
+    indicativeFilled: false,
+    amountInUsed: step.action === "swap" ? input.amount : null,
+    expectedOutput: expectedOutput?.toString() ?? null,
+    minimumOutput: minimumOutput?.toString() ?? null,
+    deadline: null,
+    takerFeePps: (takerFeeBps * 1000n).toString(),
+    sourcePostId: input.sourcePostId,
+    slippageBps: input.slippageBps,
+    execution: "creator-flow",
+    creatorFee: { ...fee, denomination: tokens.output },
   });
 }
 

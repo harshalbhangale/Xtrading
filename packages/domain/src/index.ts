@@ -458,3 +458,12 @@ export const preparedCallBondSchema = z.object({
   termsHash: bytes32Schema.nullable(),
   state: callBondStateSchema,
 });
+
+export type { InlineQuote } from "./inline-trade";
+export {
+  decimalAtoms,
+  displayAtoms,
+  inlineQuoteRequestSchema,
+  inlineQuoteSchema,
+  publicPayoutSchema,
+} from "./inline-trade";

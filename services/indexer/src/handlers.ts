@@ -190,3 +190,43 @@ indexer.onEvent(
     });
   },
 );
+
+indexer.onEvent(
+  { contract: "KuruFlow", event: "FeeCollected" },
+  async ({ event, context }) => {
+    if (event.params.referrerAmount === 0n) return;
+    context.CreatorFeePayment.set({
+      id: `${event.chainId}:${event.transaction.hash.toLowerCase()}:${event.logIndex}`,
+      chainId: event.chainId,
+      contract: event.srcAddress.toLowerCase(),
+      buyer: event.params.user.toLowerCase(),
+      creatorWallet: event.params.referrer.toLowerCase(),
+      token: event.params.token.toLowerCase(),
+      amount: event.params.referrerAmount,
+      transactionHash: event.transaction.hash.toLowerCase(),
+      blockHash: event.block.hash.toLowerCase(),
+      blockNumber: BigInt(event.block.number),
+      timestamp: BigInt(event.block.timestamp),
+    });
+  },
+);
+indexer.onEvent(
+  { contract: "KuruFlow", event: "KuruFlowSwap" },
+  async ({ event, context }) => {
+    context.CreatorFlowSwap.set({
+      id: `${event.chainId}:${event.transaction.hash.toLowerCase()}:${event.logIndex}`,
+      chainId: event.chainId,
+      buyer: event.params.user.toLowerCase(),
+      creatorWallet: event.params.referrer.toLowerCase(),
+      tokenIn: event.params.tokenIn.toLowerCase(),
+      tokenOut: event.params.tokenOut.toLowerCase(),
+      amountIn: event.params.amountIn,
+      netAmountOut: event.params.amountOut,
+      referrerFeeBps: event.params.referrerFeeBps,
+      transactionHash: event.transaction.hash.toLowerCase(),
+      blockHash: event.block.hash.toLowerCase(),
+      blockNumber: BigInt(event.block.number),
+      timestamp: BigInt(event.block.timestamp),
+    });
+  },
+);

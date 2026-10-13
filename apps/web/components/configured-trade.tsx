@@ -1,5 +1,9 @@
 "use client";
 import {
+  confirmedCreatorPayment,
+  flowEntrypoint,
+} from "@call-my-bluff/integrations/creator-fees";
+import {
   kuruNetwork,
   networkTradeTokens,
 } from "@call-my-bluff/integrations/kuru";
@@ -13,6 +17,7 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPublicClient, formatUnits, http } from "viem";
 import { monad, monadTestnet } from "viem/chains";
+import { z } from "zod";
 import { useWalletSend } from "./use-wallet-send";
 
 type Review = ReturnType<typeof spotReviewSchema.parse>;
@@ -50,6 +55,15 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
   const { ready, authenticated, user, login, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const { sendTransaction } = useWalletSend();
+  const [creator, setCreator] = useState<{
+    xUserId: string;
+    handle: string;
+    wallet: string;
+  } | null>(null);
+  const [payCreator, setPayCreator] = useState(false);
+  const [creatorStatus, setCreatorStatus] = useState(
+    "No creator fee selected.",
+  );
   const [market, setMarket] = useState<Market>("MON");
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [amount, setAmount] = useState("");
@@ -66,6 +80,48 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const handle = params.get("handle");
+    let cancelled = false;
+    if (handle && /^[a-zA-Z0-9_]{1,15}$/.test(handle)) {
+      setCreatorStatus("Checking creator payout registration…");
+      void fetch(`/api/creators/${handle.toLowerCase()}/payout`, {
+        cache: "no-store",
+      })
+        .then(async (r) => {
+          if (!r.ok) throw new Error("unavailable");
+          const data = z
+            .object({
+              creator: z
+                .object({
+                  xUserId: z.string().regex(/^[0-9]+$/),
+                  handle: z.string(),
+                  wallet: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+                })
+                .nullable(),
+              mainnetFeesEnabled: z.boolean(),
+            })
+            .parse(await r.json());
+          if (cancelled) return;
+          setCreator(data.mainnetFeesEnabled ? data.creator : null);
+          if (
+            data.mainnetFeesEnabled &&
+            data.creator &&
+            params.get("payCreator") === "1"
+          )
+            setPayCreator(true);
+          setCreatorStatus(
+            data.mainnetFeesEnabled && data.creator
+              ? "Optional creator fee: 0.5% of bought-token output."
+              : "Creator fees are unavailable for this post. No creator fee will be charged.",
+          );
+        })
+        .catch(() => {
+          if (!cancelled)
+            setCreatorStatus(
+              "Creator payout lookup unavailable. No creator fee will be charged.",
+            );
+        });
+    }
     const requested = params.get("side"),
       source = params.get("postId"),
       requestedMarket = params.get("market");
@@ -77,10 +133,30 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
     )
       setMarket(requestedMarket);
     if (source && /^[0-9]{1,30}$/.test(source)) setPostId(source);
+    const initialAmount = params.get("amount"),
+      initialSlippage = params.get("slippage");
+    if (
+      initialAmount &&
+      /^(0|[1-9][0-9]{0,38})(\.[0-9]{1,36})?$/.test(initialAmount)
+    )
+      setAmount(initialAmount);
+    if (
+      initialSlippage &&
+      /^[0-9]{1,3}$/.test(initialSlippage) &&
+      Number(initialSlippage) >= 1 &&
+      Number(initialSlippage) <= 500
+    )
+      setSlippage(initialSlippage);
+    return () => {
+      cancelled = true;
+    };
   }, []);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      owner.current = undefined;
+    };
   }, []);
 
   const api = useCallback(
@@ -115,14 +191,14 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
     [getAccessToken],
   );
   const loadAccount = useCallback(async () => {
+    const who = owner.current;
     try {
-      setAccount(
-        kuruAccountSchema.parse(
-          await api(`/api/trades/account?chainId=${chainId}`),
-        ),
+      const data = kuruAccountSchema.parse(
+        await api(`/api/trades/account?chainId=${chainId}`),
       );
+      if (owner.current === who) setAccount(data);
     } catch {
-      setAccount(null);
+      if (owner.current === who) setAccount(null);
     }
   }, [api, chainId]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reset private state on account change.
@@ -130,6 +206,8 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
     setReview(null);
     setHash(null);
     setNotice("");
+    setAccount(null);
+    setBusy(false);
     if (ready && authenticated) void loadAccount();
   }, [ready, authenticated, user?.id, chainId]);
 
@@ -161,24 +239,36 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
       amount: units.toString(),
       slippageBps: Number(slippage),
       sourcePostId: postId || null,
+      creatorXUserId:
+        mainnet && side === "buy" && payCreator
+          ? (creator?.xUserId ?? null)
+          : null,
     };
   }
   async function fresh(current: Review | Withdrawal | null) {
-    if (current?.action === "withdraw")
-      return withdrawReviewSchema.parse(
+    const who = owner.current;
+    if (current?.action === "withdraw") {
+      const result = withdrawReviewSchema.parse(
         await api("/api/trades/withdraw", {
           chainId: 10143,
           token: current.token.symbol,
           amount: current.amount,
         }),
       );
+      if (owner.current !== who)
+        throw new Error("Account changed. Prepare a new review.");
+      return result;
+    }
     const result = spotReviewSchema.parse(
       await api("/api/trades/prepare", intent()),
     );
+    if (owner.current !== who)
+      throw new Error("Account changed. Prepare a new review.");
     const allowed = [
       ...("accountCore" in network ? [network.accountCore] : []),
       network.markets[result.market].market,
       result.input.address,
+      ...(result.execution === "creator-flow" ? [flowEntrypoint] : []),
     ].map((a) => a.toLowerCase());
     if (
       result.chainId !== chainId ||
@@ -199,7 +289,7 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
         setNotice(error instanceof Error ? error.message : "Request failed.");
       }
     } finally {
-      setBusy(false);
+      if (owner.current === who) setBusy(false);
     }
   }
   const prepare = () =>
@@ -234,7 +324,11 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
         current.action !== previous.action ||
         current.to !== previous.to ||
         current.data !== previous.data ||
-        current.value !== previous.value
+        current.value !== previous.value ||
+        (current.action !== "withdraw" &&
+          previous.action !== "withdraw" &&
+          JSON.stringify(current.creatorFee) !==
+            JSON.stringify(previous.creatorFee))
       ) {
         setReview(current);
         setNotice("The quote or step changed. Review the updated values.");
@@ -284,6 +378,19 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
           transactionHash: sent.hash,
           sourcePostId: current.sourcePostId,
         }).catch(() => undefined);
+      if (current.action === "swap" && current.creatorFee) {
+        const paid = confirmedCreatorPayment(receipt.logs, {
+          buyer: current.wallet,
+          recipient: current.creatorFee.wallet,
+          token: current.output.address,
+        });
+        setNotice(
+          paid === null
+            ? `Transaction confirmed in block ${receipt.blockNumber}, but the creator payment could not be verified. Check the receipt; no earnings amount is assumed.`
+            : `Swap confirmed in block ${receipt.blockNumber}. Creator received ${units(paid.toString(), current.output.decimals, current.output.symbol)} at ${current.creatorFee.wallet}. Your output is net of that payment. Indexed earnings appear after Envio catches up.`,
+        );
+        return;
+      }
       setNotice(
         current.action === "swap" && mainnet
           ? `Market order confirmed in block ${receipt.blockNumber} on Monad mainnet. The output is in your wallet; check the receipt for the exact fill.`
@@ -389,6 +496,21 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
           setReview(null);
         }}
       />
+      {mainnet && side === "buy" && creator && (
+        <label>
+          <input
+            type="checkbox"
+            disabled={busy}
+            checked={payCreator}
+            onChange={(e) => {
+              setPayCreator(e.target.checked);
+              setReview(null);
+            }}
+          />
+          Pay 0.5% of output to @{creator.handle} · {creator.wallet}
+        </label>
+      )}
+      <p className="small-note">{creatorStatus}</p>
       <button
         type="button"
         className="button"
@@ -488,7 +610,9 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
                     )}{" "}
                     {review.action === "approve"
                       ? mainnet
-                        ? "to the Kuru order book, exact amount"
+                        ? review.execution === "creator-flow"
+                          ? "to the Kuru Flow entrypoint, exact amount"
+                          : "to the Kuru order book, exact amount"
                         : "to Kuru AccountCore, exact amount"
                       : review.input.symbol === "MON"
                         ? "native MON, sent as the transaction value. Leave enough MON for gas."
@@ -496,6 +620,16 @@ export default function ConfiguredTrade({ chainId }: { chainId: 10143 | 143 }) {
                   </dd>
                 </div>
               </>
+            )}
+            {review.creatorFee && (
+              <div>
+                <dt>Creator fee</dt>
+                <dd>
+                  0.5% of gross {review.creatorFee.denomination.symbol} output
+                  to {review.creatorFee.wallet}. Expected and minimum received
+                  above are after this fee.
+                </dd>
+              </div>
             )}
             <div>
               <dt>Kuru taker fee</dt>

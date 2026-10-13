@@ -79,9 +79,9 @@ export default function ConfiguredCreatorStatus() {
             action: "Sign in with X",
           },
           {
-            title: "Lock a refundable stake",
+            title: "Optional refundable stake",
             done: false,
-            detail: "Available after binding.",
+            detail: "Optional; not required for trading or creator payouts.",
             href: "/creator/stake",
             action: "Stake",
           },
@@ -123,7 +123,7 @@ export default function ConfiguredCreatorStatus() {
       action: bound ? "View identity" : "Bind account",
     },
     {
-      title: "Lock a refundable stake",
+      title: "Optional refundable stake",
       done: stake?.status === "active",
       detail: !bound
         ? "Available after binding."

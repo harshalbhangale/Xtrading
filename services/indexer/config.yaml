@@ -1,7 +1,7 @@
 # Verified deployments: contracts/deployments/{monad-testnet,mock-stake-monad-testnet}.json.
 # Kuru Spot V2: https://kuru-testnet-docs.mintlify.site/deployments/testnet (SDK 0.2.0 ABIs).
 name: call-my-bluff-stakes
-description: Refundable creator stakes and Kuru V2 spot swaps on Monad testnet
+description: Testnet creator stakes and spot swaps; mainnet Kuru Flow creator payments
 rollback_on_reorg: true
 field_selection:
   transaction_fields:
@@ -30,6 +30,11 @@ contracts:
       - event: CallSettled(bytes32 indexed callId, address indexed creator, uint8 outcome, uint256 entryPrice, uint256 exitPrice, uint256 payout, uint256 slashed)
       - event: CallRefunded(bytes32 indexed callId, address indexed creator, uint256 bond)
       - event: SettlementRejected(bytes32 indexed callId, uint8 reason)
+  - name: KuruFlow
+    handler: src/handlers.ts
+    events:
+      - event: FeeCollected(address feeCollector, uint256 amount, address referrer, uint256 referrerAmount, address user, address token)
+      - event: KuruFlowSwap(address indexed user, address indexed referrer, address tokenIn, address tokenOut, bool isFeeInInput, uint256 amountIn, uint256 amountOut, uint256 referrerFeeBps, uint256 totalFeeBps)
 chains:
   - id: 10143
     start_block: 70144598
@@ -62,3 +67,18 @@ chains:
         start_block: 70449727
         address:
           - "0x260264E74028d498a1A10f90dDC4f4b91F3395DF"
+
+  - id: 143
+    # Creator-fee projection starts at the integration validation window, not protocol genesis.
+    start_block: 112914000
+    max_reorg_depth: 200
+    block_lag: 10
+    rpc:
+      url: ${ENVIO_MONAD_MAINNET_RPC_URL:-https://rpc.monad.xyz}
+      for: sync
+      initial_block_interval: 99
+      interval_ceiling: 99
+    contracts:
+      - name: KuruFlow
+        address:
+          - "0xb3e6778480b2E488385E8205eA05E20060B813cb"

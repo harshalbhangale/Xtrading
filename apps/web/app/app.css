@@ -1488,3 +1488,20 @@
 .sk-deposit .sk-meta {
   margin-top: 10px;
 }
+
+.inline-wallet-review {
+  width: min(100% - 32px, 440px);
+  margin: 24px auto;
+  padding-bottom: 24px;
+}
+.inline-wallet-review h1 {
+  font-size: 22px;
+  margin: 16px 0 8px;
+}
+.inline-wallet-review .stake-form {
+  padding: 0;
+}
+.inline-wallet-review .ownership-message {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
