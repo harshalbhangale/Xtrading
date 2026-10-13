@@ -11,6 +11,7 @@ import { observeFollowing } from "./follow-observer";
 import { inlineMarket, inlineTrade } from "./inline-trade";
 import { postImages } from "./post-media";
 import { scanProfile } from "./profile";
+import { attachToXTicker } from "./x-ticker";
 
 function postIdentity(article: HTMLElement) {
   const postLink = Array.from(
@@ -57,7 +58,13 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
     route.status === "available" &&
     route.instrument === "spot"
   ) {
-    const card = inlineTrade(signal, route, article);
+    // X's own ticker card already carries our Buy button for this post.
+    if (article.querySelector(".cmb-xticker-host")) {
+      rendered.add(article);
+      return;
+    }
+    const card = inlineTrade({ ...signal, signal }, route, article);
+    host.dataset.inline = "true";
     root.append(card);
     card.dataset.mounted = "true";
     host.addEventListener("click", (event) => event.stopPropagation());
@@ -177,19 +184,40 @@ function scanPosts() {
     if (
       seen.get(article) === key &&
       seenText.get(article) === text &&
-      (!rendered.has(article) || article.querySelector(".cmb-signal-host"))
-    )
+      (!rendered.has(article) ||
+        article.querySelector(".cmb-signal-host, .cmb-xticker-host"))
+    ) {
+      tradeFromXTicker(article, id);
       continue;
+    }
     // X recycles article nodes while scrolling; clear our UI when the post changes.
     seen.set(article, key);
     seenText.set(article, text);
     rendered.delete(article);
     for (const stale of article.querySelectorAll(
-      ".cmb-signal-host, .cmb-badge-host",
+      ".cmb-signal-host, .cmb-badge-host, .cmb-xticker-host, .cmb-xbuy-host",
     ))
       stale.remove();
+    tradeFromXTicker(article, id);
     visible.observe(article);
   }
+}
+
+/**
+ * Any post where X shows its ticker card for a market we trade gets a Buy
+ * button inside that card, whether or not the post was classified as a call.
+ * A separate inline card for the same post is then redundant and removed.
+ */
+function tradeFromXTicker(
+  article: HTMLElement,
+  id: { handle: string; postId: string },
+) {
+  if (!attachToXTicker(article, id)) return;
+  for (const card of article.querySelectorAll<HTMLElement>(
+    '.cmb-signal-host[data-inline="true"]',
+  ))
+    card.remove();
+  rendered.add(article);
 }
 
 let queued = false;

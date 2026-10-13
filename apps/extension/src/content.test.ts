@@ -227,6 +227,41 @@ it("expands buy and sell inline without opening a sidebar", async () => {
   expect(openDrawer).not.toHaveBeenCalled();
 });
 
+it("uses X's ticker card instead of a second card when the post has one", async () => {
+  document.querySelector("article")?.insertAdjacentHTML(
+    "beforeend",
+    `<div class="x-container"><nav><div data-testid="ScrollSnap-List">
+      <a role="link"><div style="display:flex"><span>Ethereum</span><span>ETH</span><span>$2,511.29</span><svg></svg></div></a>
+    </div></nav></div>`,
+  );
+  const signal = response("buy $ETH").signal;
+  sendMessage.mockResolvedValue({
+    signal,
+    route: deriveTradeRoute(signal, []),
+    llm: "unavailable",
+  });
+  await import("./content");
+  await flush();
+  expect(document.querySelectorAll(".cmb-xticker-host")).toHaveLength(1);
+  expect(document.querySelectorAll(".cmb-xbuy-host")).toHaveLength(1);
+  expect(
+    document.querySelector('.cmb-signal-host[data-inline="true"]'),
+  ).toBeNull();
+});
+
+it("offers Buy from X's ticker card even when the post is not a call", async () => {
+  document.querySelector("article")?.insertAdjacentHTML(
+    "beforeend",
+    `<div class="x-container"><nav><div data-testid="ScrollSnap-List">
+      <a role="link"><div style="display:flex"><span>Monad</span><span>MON</span><span>$0.0248</span><svg></svg></div></a>
+    </div></nav></div>`,
+  );
+  sendMessage.mockResolvedValue(null);
+  await import("./content");
+  await flush();
+  expect(document.querySelectorAll(".cmb-xbuy-host")).toHaveLength(1);
+});
+
 it("restores a card removed by an X rerender without duplicating it", async () => {
   const signal = response("buy $ETH").signal;
   sendMessage.mockResolvedValue({

@@ -269,6 +269,7 @@ a { color: inherit; }
 .inline-asset { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .inline-asset strong { font-size: 17px; }
 .inline-price, .inline-note { font-size: 12px; color: var(--muted); margin: 4px 0; }
+.inline-card.inline-attached { margin-top: 8px; }
 .inline-ticker-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
 .inline-ticker { display: inline-flex; align-items: baseline; gap: 6px; font-size: 14px; }
 .inline-ticker b { font-weight: 700; color: var(--foreground); }

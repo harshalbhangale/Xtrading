@@ -16,8 +16,14 @@ import {
   sparklineSvg,
 } from "./ticker-price";
 
+/** What the inline card needs about a post; a classified signal is optional. */
+export type InlinePost = Pick<
+  PostSignal,
+  "postId" | "handle" | "asset" | "direction" | "instrument" | "tokenReferences"
+> & { signal?: PostSignal };
+
 export function inlineMarket(
-  signal: PostSignal,
+  signal: Pick<PostSignal, "asset" | "instrument" | "tokenReferences">,
 ): "MON" | "WETH" | "WBTC" | null {
   if (signal.tokenReferences.length || signal.instrument === "perp")
     return null;
@@ -32,10 +38,29 @@ export function inlineMarket(
 
 /** All amounts stay in the isolated extension; authentication/signing stay on the app origin. */
 export function inlineTrade(
-  signal: PostSignal,
+  signal: InlinePost,
   route: TradeRoute,
   article?: HTMLElement,
 ) {
+  return buildInline(signal, route, { article, attached: false }).card;
+}
+
+/**
+ * The same panel, attached beneath X's own ticker card: X's card already shows
+ * the live price and chart, so only a Buy button goes into it and the panel
+ * starts hidden until that button is pressed.
+ */
+export function attachedTrade(post: InlinePost, route: TradeRoute) {
+  const { card, buy } = buildInline(post, route, { attached: true });
+  return { panel: card, buy };
+}
+
+function buildInline(
+  signal: InlinePost,
+  route: TradeRoute,
+  options: { article?: HTMLElement; attached: boolean },
+) {
+  const { article, attached } = options;
   const market = inlineMarket(signal);
   const card = el("section", {
     class: "inline-card",
@@ -76,11 +101,13 @@ export function inlineTrade(
       : null;
     tickerRow.replaceChildren(priceLine(live), ...(spark ? [spark] : []));
   };
-  void updateTicker();
-  const tickerTimer = setInterval(() => {
-    if (!card.isConnected && card.dataset.mounted) clearInterval(tickerTimer);
-    else void updateTicker();
-  }, 30000);
+  if (!attached) {
+    void updateTicker();
+    const tickerTimer = setInterval(() => {
+      if (!card.isConnected && card.dataset.mounted) clearInterval(tickerTimer);
+      else void updateTicker();
+    }, 30000);
+  }
   const buy = el(
     "button",
     { type: "button", class: "inline-buy", "aria-expanded": "false" },
@@ -96,20 +123,37 @@ export function inlineTrade(
     },
     "× Close",
   );
-  card.append(
-    el(
-      "header",
-      { class: "inline-header" },
+  if (attached) {
+    card.hidden = true;
+    card.classList.add("inline-attached");
+    card.append(
       el(
-        "span",
-        { class: "asset-icon", "aria-hidden": "true" },
-        symbol === "ETH" ? "Ξ" : symbol === "BTC" ? "₿" : "M",
+        "header",
+        { class: "inline-header" },
+        el(
+          "div",
+          { class: "inline-asset" },
+          el("strong", {}, `Trade ${symbol} on Kuru`),
+          price,
+        ),
+        close,
       ),
-      el("div", { class: "inline-asset" }, title, tickerRow, price),
-      buy,
-      close,
-    ),
-  );
+    );
+  } else
+    card.append(
+      el(
+        "header",
+        { class: "inline-header" },
+        el(
+          "span",
+          { class: "asset-icon", "aria-hidden": "true" },
+          symbol === "ETH" ? "Ξ" : symbol === "BTC" ? "₿" : "M",
+        ),
+        el("div", { class: "inline-asset" }, title, tickerRow, price),
+        buy,
+        close,
+      ),
+    );
   const panel = el("div", { class: "inline-panel", hidden: "" });
   let chainId: 10143 | 143 = 10143,
     side: "buy" | "sell" = "buy",
@@ -303,6 +347,7 @@ export function inlineTrade(
   slippage.addEventListener("change", refresh);
   function toggle(open: boolean) {
     panel.hidden = !open;
+    if (attached) card.hidden = !open;
     buy.hidden = open;
     close.hidden = !open;
     buy.setAttribute("aria-expanded", String(open));
@@ -419,7 +464,7 @@ export function inlineTrade(
         new URL(`/creators/${signal.handle}`, appOrigin).href,
         "Full creator analytics ↗",
       ),
-      postAttachments(signal),
+      ...(signal.signal ? [postAttachments(signal.signal)] : []),
     );
   });
   card.append(
@@ -477,5 +522,5 @@ export function inlineTrade(
         Math.max(0, Date.parse(quote.data.expiresAt) - Date.now()),
       );
     });
-  return card;
+  return { card, buy };
 }
