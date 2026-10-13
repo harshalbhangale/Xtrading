@@ -306,6 +306,7 @@ export const publicCallLedgerSchema = z.object({
   observedAt: z.iso.datetime(),
 });
 export * from "./signals";
+export * from "./watchlist";
 
 const txHashSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
 const indexedIdSchema = z.string().regex(/^10143:[0-9]+:[0-9]+$/);

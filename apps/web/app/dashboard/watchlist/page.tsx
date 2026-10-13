@@ -9,7 +9,7 @@ export default function WatchlistPage() {
     <>
       <PageHeading
         title="Watchlist"
-        description="Creator handles saved in this browser."
+        description="Creator handles saved from X profiles with the Xtrading extension, or added here."
       />
       <Panel title="Following observed on X">
         <BrowserFollowingControl />

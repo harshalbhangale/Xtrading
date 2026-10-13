@@ -111,9 +111,10 @@ it("shows one honest creator card on profile pages without adding feed panels", 
   expect(
     document.querySelector(".cmb-profile-host")?.shadowRoot?.textContent,
   ).toContain("service unavailable");
-  // Only the header badge's identity lookup; an unverified creator gets no badge.
+  // Only the header badge's identity lookup and the saved-handle read for Follow KOL; an unverified creator gets no badge.
   expect(sendMessage.mock.calls.map(([message]) => message.type)).toEqual([
     "creator-evidence",
+    "watchlist",
   ]);
   expect(document.querySelector(".cmb-profile-badge-host")).toBeNull();
 });
