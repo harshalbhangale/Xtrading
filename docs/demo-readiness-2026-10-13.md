@@ -1,19 +1,45 @@
 # Demo readiness — 13 October 2026
 
-Network plan: Kuru spot and Nansen on Monad mainnet (143). Perpl on Monad testnet (10143) with test AUSD. Autonomous CRE deployment is deferred. No trades or financial signatures were sent during these checks.
+Network plan: Kuru spot and Nansen on Monad mainnet (143). Perpl on Monad testnet (10143) with test AUSD. Autonomous CRE deployment is deferred. The initial account/Nansen checks were read-only. A subsequent user-approved scripted mainnet round trip completed; its exact costs and receipts are below.
 
 ## Accounts checked
 
 | Account / wallet | Verified state | Demo use |
 |---|---|---|
-| Previous buyer `0x02cefD0E0547bb176f508380399A982fAb676A92` | 3.895576 mainnet USDC; 40.6229762602769 MON | Best funded candidate for a small mainnet Kuru trade, subject to the user connecting it in MetaMask. It is not currently a creator binding. |
+| Previous buyer `0x02cefD0E0547bb176f508380399A982fAb676A92` | After round trip: 3.894421 mainnet USDC; 40.4607383242769 MON | Successfully used for the scripted Kuru round trip; still needs connection in MetaMask for the real X UI demonstration. It is not currently a creator binding. |
 | @xtradingnow / `0x51bdfc2a4d1c3b04a89f8ca928bd377b767df424` | Bound; 0 mainnet USDC; 0.0398263570831 MON; payout registration absent | Project creator identity and authorized Perpl operator. Needs funding if used as the spot buyer instead. |
 | @ishbubbles1 / `0x716ae38ccd2c044d33b9aa040a2a6901f6ffd964` | Bound; 0 mainnet USDC and MON; not a Perpl operator | Not funded for the trade demo. |
 | Perpl team exchange account 1096 | Signed read: forwarding on, frozen false, collateral balance 99145768 base units = 99.145768 test AUSD | Funded testnet account. Execution is through the team's API account, not from the user's mainnet wallet. |
 
 Perpl's public context confirms AUSD has six decimals at `0xa9012a055bd4e0edff8ce09f960291c09d5322dc` on testnet. Wallet AUSD and deposited exchange collateral are different balances. Local configured account is 1096; production authenticated preparation still needs to confirm live operator mode.
 
-Balances are snapshots; recheck before signing. The previous buyer has funds for a 1-USDC demonstration without a new deposit. Do not imply that the user's ability to control it has been confirmed this turn.
+Balances are snapshots; recheck before signing. The previous buyer has funds for a 1-USDC demonstration without a new deposit. Signing from the existing environment key proved control for the scripted round trip; connection in the browser has not been demonstrated.
+
+## Completed mainnet round trip
+
+Wallet: `0x02cefD0E0547bb176f508380399A982fAb676A92`. Network: Monad mainnet **143**. Approved budget: **1 USDC** with a **0.2 MON gas cap**. A local fork rehearsal preceded mainnet execution; Foundry tests passed.
+
+| Item | Verified result |
+|---|---|
+| Buy spend | 1 USDC |
+| MON bought and sold back | 39.8231850583 MON |
+| USDC recovered into wallet | 0.998845 USDC |
+| Trading cost | 0.001155 USDC |
+| Total gas | 0.162237936 MON, below the 0.2 MON cap |
+| Final wallet snapshot | 3.894421 USDC + 40.4607383242769 MON |
+| Remaining USDC allowance to this Kuru book | 0 |
+| Exchange deposits / creator fees | None |
+| Unreturned purchased MON | None |
+
+All three receipts were independently re-read and confirmed successful:
+
+- [Exact 1-USDC approval](https://monadvision.com/tx/0x9671cbe9dbc10cc8880e34d2c9617d64b15fc000404cd246cf304ccb46fc1a71): 0.021658884 MON gas.
+- [Buy](https://monadvision.com/tx/0x7b3a5f41719f6c0d7611d0d64da497dd50fb3c2f6c7079c103e33fa6a26392ff): 0.07186614 MON gas.
+- [Sell back](https://monadvision.com/tx/0x45db923a8a1ee310fd6890df3ad03dd6fcb43cbfcbccf9d3bce5206636c3b289): 0.068712912 MON gas.
+
+Machine-readable evidence: `contracts/deployments/mainnet-roundtrip-2026-10-13.json`. Runner: `scripts/mainnet-roundtrip.mjs`. The runner refuses a second live run when the receipt record exists; inspect submitted hashes rather than retrying blindly. Keep the environment key private and never put it in the video, logs or Git.
+
+This confirms **scripted execution**, not an X-extension trade, dashboard attribution, a profitable user outcome or creator fee eligibility. Gas and trading costs are not refundable. The purchased MON was sold back directly; there was no exchange balance to withdraw.
 
 ## Nansen: live coverage and limitations
 

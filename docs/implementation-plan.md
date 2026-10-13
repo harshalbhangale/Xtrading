@@ -1,5 +1,6 @@
 # Delivery checklist
 
+> Historical implementation plan: staking phases below are retired. The current checklist is in [README](../README.md). The approved scripted mainnet Kuru round trip is complete: 1 USDC spent, 0.998845 USDC returned, 0.162237936 MON gas below a 0.2-MON cap, no exchange deposit, and zero remaining book allowance. See [demo readiness](demo-readiness-2026-10-13.md) for receipts and final balances. The real X → trade → dashboard flow still needs demonstration.
 Updated 13 October 2026. Core sponsors: Kuru, Privy, Envio and Nansen; added targets: Perpl API and Chainlink CRE. The Chrome extension is the priority product surface.
 
 ## Done

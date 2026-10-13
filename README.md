@@ -35,7 +35,7 @@ Xtrading deploys **no contracts on mainnet**. Trading and creator fees run on Ku
 
 All five succeeded; total gas 0.1286 MON.
 
-**Second mainnet round trip, 13 October:** exact 1-USDC approval → [MON buy](https://monadvision.com/tx/0x7b3a5f41719f6c0d7611d0d64da497dd50fb3c2f6c7079c103e33fa6a26392ff) → [sell back](https://monadvision.com/tx/0x45db923a8a1ee310fd6890df3ad03dd6fcb43cbfcbccf9d3bce5206636c3b289). Returned 0.998845 USDC; gas 0.162237936 MON under the approved 0.2-MON cap. No creator fee or exchange deposit; remaining book allowance is zero. Receipts: `contracts/deployments/mainnet-roundtrip-2026-10-13.json`. This was scripted execution, not the complete X UI flow.
+**Second mainnet round trip, 13 October:** exact 1-USDC approval → [MON buy](https://monadvision.com/tx/0x7b3a5f41719f6c0d7611d0d64da497dd50fb3c2f6c7079c103e33fa6a26392ff) → [sell back](https://monadvision.com/tx/0x45db923a8a1ee310fd6890df3ad03dd6fcb43cbfcbccf9d3bce5206636c3b289). Returned 0.998845 USDC; gas 0.162237936 MON under the approved 0.2-MON cap. No creator fee or exchange deposit; remaining book allowance is zero. Receipts: `contracts/deployments/mainnet-roundtrip-2026-10-13.json`. Final wallet snapshot: **3.894421 USDC + 40.4607383242769 MON**; all purchased MON was sold back. This was scripted execution, not the complete X UI flow. See [demo readiness and full cost breakdown](docs/demo-readiness-2026-10-13.md).
 
 ### Monad testnet (chain 10143)
 
@@ -214,6 +214,7 @@ Latest `pnpm check` passed formatting, TypeScript, 171 application tests, 30 Fou
 
 - Current delivery checklist: see above. [Original implementation plan](docs/implementation-plan.md) is historical and includes retired staking phases.
 - [Envio demo](docs/envio-demo.md)
+- [Demo accounts, mainnet round-trip receipts and video checklist](docs/demo-readiness-2026-10-13.md)
 - [Frontend and API handoff](docs/frontend-handoff.md)
 - [Architecture](docs/architecture.md)
 - [Required sponsors](SPONSORS.md)

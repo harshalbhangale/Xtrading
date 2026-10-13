@@ -13,7 +13,7 @@ Primary track: **Onchain Finance & Trading**.
 
 Current evidence, verified 13 October 2026:
 
-- Kuru: real scripted mainnet buy/sell and creator payment; complete X-interface execution remains to be demonstrated.
+- Kuru: real scripted mainnet buy/sell and creator payment. The later approved 1-USDC round trip returned 0.998845 USDC, used 0.162237936 MON gas under a 0.2-MON cap, left zero book allowance, and required no exchange deposit. [Receipts and costs](docs/demo-readiness-2026-10-13.md). Complete X-interface execution remains to be demonstrated.
 - Privy: identity and wallet-binding flows implemented. Rehearse the exact demo account and wallet approval.
 - Envio: mainnet creator payments and testnet bond-free call outcomes are live through HyperSync and checked against receipts. HyperIndex supplies historical testnet activity. Repairing the hosted deployment connection is separate from this working feature.
 - Nansen: integration implemented; a useful sourced mainnet wallet finding still needs demonstration.
