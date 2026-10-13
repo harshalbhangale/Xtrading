@@ -10,6 +10,7 @@ import {
   type NansenPath,
 } from "@call-my-bluff/integrations/nansen";
 import {
+  addressFlags,
   assessWalletTiming,
   dexTradesResponse,
   EVM_TOKEN_CHAINS,
@@ -33,6 +34,8 @@ import {
   walletWindow,
   whoBoughtSoldResponse,
 } from "@call-my-bluff/integrations/nansen-evidence";
+import { createPublicClient, erc20Abi, http } from "viem";
+import { monadTestnet } from "viem/chains";
 import type { z } from "zod";
 
 // Nansen covers mainnets only; `monad` here is Monad mainnet, never testnet.
@@ -159,6 +162,49 @@ async function resolveToken(
   return value;
 }
 
+// Contracts unknown on mainnets are looked up on Monad testnet, where a shilled
+// token has no value. Results rarely change; keep them for a day.
+const testnetCache = new Map<
+  string,
+  { expires: number; value: { symbol: string | null } | null }
+>();
+const testnet = createPublicClient({
+  chain: monadTestnet,
+  transport: http(
+    process.env.MONAD_RPC_URL || "https://testnet-rpc.monad.xyz",
+    {
+      timeout: 5000,
+      retryCount: 0,
+    },
+  ),
+});
+async function testnetContract(address: string) {
+  const hit = testnetCache.get(address);
+  if (hit && hit.expires > Date.now()) return hit.value;
+  let value: { symbol: string | null } | null = null;
+  try {
+    const code = await testnet.getCode({ address: address as `0x${string}` });
+    if (code && code !== "0x") {
+      const symbol = await testnet
+        .readContract({
+          address: address as `0x${string}`,
+          abi: erc20Abi,
+          functionName: "symbol",
+        })
+        .catch(() => null);
+      value = {
+        symbol: symbol?.replace(/[^\x20-\x7e]/g, "").slice(0, 24) || null,
+      };
+    }
+  } catch {
+    // Unreachable RPC: claim nothing.
+    return null;
+  }
+  if (testnetCache.size >= 500) testnetCache.clear();
+  testnetCache.set(address, { expires: Date.now() + 86_400_000, value });
+  return value;
+}
+
 const checkCache = new Map<string, { expires: number; value: NansenCheck }>();
 
 export type NansenCheckInput = {
@@ -218,6 +264,21 @@ export async function nansenCheck(
 
   const s = session(apiKey);
   const resolved = ref ? await resolveToken(s, ref) : null;
+  // Only a lookup that every chain answered as empty counts as "no such token";
+  // failed or skipped lookups prove nothing.
+  const lookups = s.sources.filter(
+    (x) => x.endpoint === "tgm/token-information",
+  );
+  const unknownContract =
+    ref !== null &&
+    !resolved &&
+    lookups.length > 0 &&
+    lookups.every((x) => x.status === "empty");
+  const lookedUp = ref?.kind === "solana" ? ["solana"] : [...EVM_TOKEN_CHAINS];
+  const onTestnet =
+    unknownContract && ref?.kind === "evm"
+      ? await testnetContract(ref.address)
+      : null;
   // The bound wallet is EVM, so wallet checks run only on EVM chains.
   const evmToken = resolved && resolved.chain !== "solana" ? resolved : null;
   const targets: MajorTarget[] = evmToken
@@ -474,6 +535,22 @@ export async function nansenCheck(
   const flags = token
     ? tokenFlags({ direction, callAt: callMs, token, onToken })
     : [];
+  if (ref)
+    flags.unshift(
+      ...addressFlags({
+        asset,
+        address: ref.address,
+        resolved: resolved
+          ? {
+              chain: resolved.chain,
+              symbol: resolved.info.data?.symbol ?? null,
+            }
+          : null,
+        unknownOnMainnets: unknownContract,
+        checkedChains: lookedUp,
+        testnet: onTestnet,
+      }),
+    );
 
   // Wallet verdict: only when a wallet, a direction and at least one answered request exist.
   const events: PositionEvent[] = [];
@@ -498,6 +575,10 @@ export async function nansenCheck(
     verdict = "unavailable";
     walletNote =
       "No verified wallet binding for this creator; there is no wallet to check.";
+  } else if (unknownContract) {
+    verdict = "unavailable";
+    walletNote =
+      "Wallet trades were not checked: Nansen has no token at the address in this post.";
   } else if (!answered) {
     verdict = "unavailable";
     walletNote = "No wallet request succeeded. No wallet finding is claimed.";

@@ -171,6 +171,14 @@ export const nansenFlagSchema = z.object({
     "creator-took-profit",
     "young-token",
     "thin-liquidity",
+    // A contract address in the post that Nansen has no token for on any checked chain.
+    "unknown-contract",
+    // The post names a ticker but the address is a different token.
+    "impostor-token",
+    // Same symbol as the named ticker, but not its original contract.
+    "not-canonical",
+    // Unknown on mainnets and deployed on Monad testnet, so worthless.
+    "testnet-only-contract",
   ]),
   severity: z.enum(["info", "caution"]),
   summary: z.string().max(300),
@@ -239,7 +247,17 @@ export const nansenCheckSchema = z.object({
   callAt: z.iso.datetime().nullable().optional(),
   chains: z.array(z.string().max(20)).max(6).optional(),
   token: nansenTokenSchema.nullable().optional(),
-  flags: z.array(nansenFlagSchema).max(10).optional(),
+  // Unknown flag kinds (from a newer server) are dropped, not fatal to the whole check.
+  flags: z
+    .array(z.unknown())
+    .max(10)
+    .transform((items) =>
+      items.flatMap((item) => {
+        const flag = nansenFlagSchema.safeParse(item);
+        return flag.success ? [flag.data] : [];
+      }),
+    )
+    .optional(),
   // Actual wallet returns: separate from call outcomes and from identity.
   walletPnl: z
     .object({

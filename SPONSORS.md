@@ -8,7 +8,7 @@ Xtrading is entered in the **Onchain Finance & Trading** track. Each section bel
 
 Every trade in Xtrading goes through Kuru's order books on Monad.
 
-- **Market orders without an exchange account.** On mainnet the user's wallet trades directly against the MON, WETH and cbBTC / USDC books. There's one exact USDC approval, then one immediate-or-cancel order. The minimum output comes from an `eth_call` of the same order, so the price the user approves is the price the chain enforces.
+- **Market orders without an exchange account.** The user's wallet trades directly against the MON, WETH and cbBTC / USDC books. There's one exact USDC approval, then one immediate-or-cancel order. The minimum output comes from an `eth_call` of the same order, so the price the user approves is the price the chain enforces.
 - **Creator fees through Kuru Flow.** When the post belongs to a registered creator, the buy is routed through the Kuru Flow entrypoint. The creator's 0.1–2% share is paid to their wallet in the same transaction as the swap, and if anything fails, the whole trade reverts.
 - **Live prices and book history** on the extension's ticker cards and in the Terminal.
 
@@ -35,7 +35,7 @@ Privy is the front door to the app.
 
 Envio lets Xtrading show what happened onchain, not just what someone claims happened.
 
-- **HyperIndex** indexes Kuru V2 swaps, deposits, withdrawals and account registrations on testnet, plus Kuru Flow creator payments on mainnet. Events are keyed by `chain:block:logIndex` and rolled back on reorgs.
+- **HyperIndex** indexes Kuru swaps, deposits, withdrawals and account registrations, plus Kuru Flow creator payments. Events are keyed by `chain:block:logIndex` and rolled back on reorgs.
 - **HyperSync** scans the Kuru Flow `FeeCollected` events live. Each event is checked against its transaction receipt and block hash before it's shown, and the page reports how fresh the data is.
 - **Creator earnings** read from the same source, so the dashboard total matches what the chain shows.
 
@@ -69,7 +69,7 @@ Some calls are leveraged by nature. Xtrading routes those to Perpl.
 
 **Code:** [`packages/integrations/src/perpl-exchange.ts`](packages/integrations/src/perpl-exchange.ts), [`apps/web/lib/perpl-trade.ts`](apps/web/lib/perpl-trade.ts), [`apps/extension/src/perp-card.ts`](apps/extension/src/perp-card.ts). The exit flow is described in [docs/perpl-exits.md](docs/perpl-exits.md).
 
-**Network:** Monad testnet, exchange [`0x1964…80cc`](https://testnet.monadvision.com/address/0x1964c32f0be608e7d29302aff5e61268e72080cc).
+**Exchange:** [`0x1964…80cc`](https://testnet.monadvision.com/address/0x1964c32f0be608e7d29302aff5e61268e72080cc).
 
 ---
 

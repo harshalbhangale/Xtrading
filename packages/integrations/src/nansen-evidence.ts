@@ -584,3 +584,130 @@ export function tokenFlags(input: {
     });
   return flags.slice(0, 10);
 }
+
+const CHAIN_NAMES: Record<string, string> = {
+  monad: "Monad",
+  base: "Base",
+  ethereum: "Ethereum",
+  bnb: "BNB Chain",
+  arbitrum: "Arbitrum",
+  solana: "Solana",
+};
+export const chainName = (chain: string) => CHAIN_NAMES[chain] ?? chain;
+export function chainList(chains: readonly string[]) {
+  const names = chains.map(chainName);
+  return names.length > 1
+    ? `${names.slice(0, -1).join(", ")} or ${names.at(-1)}`
+    : (names[0] ?? "");
+}
+const short = (address: string) =>
+  `${address.slice(0, 6)}…${address.slice(-4)}`;
+
+/**
+ * Original mainnet contracts for tickers that are commonly impersonated, each
+ * checked onchain. Lowercase. A ticker missing here is never called fake.
+ */
+export const CANONICAL_TOKENS: Record<
+  string,
+  { chain: string; address: string }[]
+> = {
+  PEPE: [
+    {
+      chain: "ethereum",
+      address: "0x6982508145454ce325ddbe47a25d4ec3d2311933",
+    },
+  ],
+  SHIB: [
+    {
+      chain: "ethereum",
+      address: "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
+    },
+  ],
+  USDT: [
+    {
+      chain: "ethereum",
+      address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    },
+  ],
+  USDC: [
+    {
+      chain: "ethereum",
+      address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    },
+    { chain: "base", address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" },
+    { chain: "monad", address: "0x754704bc059f8c67012fed69bc8a327a5aafb603" },
+  ],
+  ...Object.fromEntries(
+    Object.entries(MAJOR_TARGETS).map(([asset, targets]) => [
+      asset,
+      targets.flatMap((t) =>
+        t.addresses
+          .filter((a) => a !== EVM_NATIVE && a !== ZERO)
+          .map((address) => ({ chain: t.chain, address })),
+      ),
+    ]),
+  ),
+};
+
+/**
+ * Flags for a contract address shared in a post: does it belong to the token
+ * the post names, and does it exist anywhere with value? Absence of data only
+ * counts when every lookup answered.
+ */
+export function addressFlags(input: {
+  asset: string | null;
+  address: string;
+  // Nansen's answer for the address, if any chain knew it.
+  resolved: { chain: string; symbol: string | null } | null;
+  // True only when every mainnet lookup answered "no such token".
+  unknownOnMainnets: boolean;
+  checkedChains: readonly string[];
+  // Contract found on Monad testnet, with its self-reported symbol.
+  testnet: { symbol: string | null } | null;
+}): NansenFlag[] {
+  const flags: NansenFlag[] = [];
+  const asset = input.asset?.toUpperCase() ?? null;
+  const address = input.address.toLowerCase();
+  const originals = asset ? (CANONICAL_TOKENS[asset] ?? []) : [];
+  if (originals.some((o) => o.address === address)) return flags;
+  const first = originals[0];
+  const original = first
+    ? `${short(first.address)} on ${chainName(first.chain)}`
+    : null;
+  const real = original ? ` The real ${asset} is ${original}.` : "";
+  const named = input.resolved?.symbol?.toUpperCase() ?? null;
+  if (asset && original && !input.resolved && input.unknownOnMainnets)
+    flags.push({
+      kind: "impostor-token",
+      severity: "caution",
+      summary: `The post says ${asset}, but this isn't ${asset}'s contract.${real}`,
+    });
+  else if (asset && named && named !== asset)
+    flags.push({
+      kind: "impostor-token",
+      severity: "caution",
+      summary: `The post says ${asset}, but Nansen identifies this address as ${named}.${real}`,
+    });
+  else if (asset && original && named === asset)
+    flags.push({
+      kind: "not-canonical",
+      severity: "info",
+      summary: `Not the original ${asset} contract (${original}). It may be a bridged copy or a copycat.`,
+    });
+  if (input.unknownOnMainnets && input.testnet)
+    flags.push({
+      kind: "testnet-only-contract",
+      severity: "caution",
+      summary: `This contract is on Monad testnet${input.testnet.symbol ? `, calling itself ${input.testnet.symbol.slice(0, 12)}` : ""}. Testnet tokens have no value.`,
+    });
+  if (
+    input.unknownOnMainnets &&
+    !flags.some((f) => f.kind === "impostor-token")
+  )
+    flags.push({
+      kind: "unknown-contract",
+      severity: "caution",
+      summary: `Nansen knows no token at this address on ${chainList(input.checkedChains)}.`,
+    });
+  return flags;
+}

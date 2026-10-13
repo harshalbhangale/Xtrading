@@ -608,6 +608,7 @@ a { color: inherit; }
 .risk-line.clean .risk-dot { background: var(--positive); }
 .risk-line.unknown { color: var(--muted); font-weight: 500; }
 .risk-link { flex: 0 0 auto; font-size: 12px; font-weight: 600; }
+.bar + .risk-line { margin-top: 8px; }
 
 /* One card, two instruments: Spot (Kuru) and Perp (Perpl). */
 .trade-pane { display: grid; gap: 8px; }

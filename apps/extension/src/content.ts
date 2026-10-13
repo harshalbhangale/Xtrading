@@ -12,6 +12,7 @@ import { inlineTrade, kuruMarket } from "./inline-trade";
 import { perpCard } from "./perp-card";
 import { postImages } from "./post-media";
 import { scanProfile } from "./profile";
+import { riskLine } from "./risk-line";
 import { cashtagMarket, swapCard, tradeControl } from "./swap-card";
 import { attachToXTicker } from "./x-ticker";
 
@@ -168,6 +169,12 @@ async function addSignal(article: HTMLElement, handle: string, postId: string) {
             `${label} unavailable`,
           ),
     );
+  }
+  // A shared contract address is the riskiest post to act on: show Nansen's one line up front.
+  if (signal.tokenReferences.length) {
+    const risk = riskLine({ postId, handle, asset: signal.asset, signal });
+    root.append(risk.line);
+    risk.load();
   }
   // Clicks inside the bar must not open the post.
   host.addEventListener("click", (e) => e.stopPropagation());
