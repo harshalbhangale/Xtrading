@@ -124,7 +124,7 @@ export default function ConfiguredCreatorStatus() {
         : calls === null
           ? "Call ledger unavailable."
           : calls === 0
-            ? "Register a prediction from one of your posts within 24 hours of posting."
+            ? "Register a prediction from one of your posts within 15 minutes of posting."
             : `${calls} registered.`,
       href: "/creator/calls",
       action: calls ? "View calls" : "Register a call",

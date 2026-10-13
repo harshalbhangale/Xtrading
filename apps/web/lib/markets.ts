@@ -9,6 +9,10 @@ import {
   orderBookAbi,
 } from "@call-my-bluff/integrations/kuru";
 import { perplContextSchema } from "@call-my-bluff/integrations/market-schemas";
+import {
+  PERPL_TESTNET,
+  type PerplNetwork,
+} from "@call-my-bluff/integrations/perpl-exchange";
 import { createPublicClient, erc20Abi, http } from "viem";
 import { monad, monadTestnet } from "viem/chains";
 
@@ -49,6 +53,31 @@ export function mainnetClient() {
       },
     ),
   });
+}
+
+/**
+ * Perpl on mainnet trades real AUSD, so it has its own switch, separate from
+ * Kuru's. Off unless PERPL_MAINNET_ENABLED is exactly "true"; never falls back.
+ */
+export function perplMainnetEnabled() {
+  return process.env.PERPL_MAINNET_ENABLED === "true";
+}
+
+/** Read client for one Perpl network; the mainnet client checks its chain ID. */
+export async function perplClient(network: PerplNetwork) {
+  if (network.network === "testnet") return testnetClient();
+  if (!perplMainnetEnabled())
+    throw new IdentityError("perpl_mainnet_disabled", 409);
+  const client = createPublicClient({
+    chain: monad,
+    transport: http(
+      process.env.MONAD_MAINNET_RPC_URL || "https://rpc.monad.xyz",
+      { timeout: 15000, retryCount: 0 },
+    ),
+  });
+  if ((await client.getChainId()) !== network.chainId)
+    throw new IdentityError("rpc_chain_mismatch", 503);
+  return client;
 }
 
 /** Verifies the configured Kuru mainnet order book at one block before any read is trusted. */
@@ -177,21 +206,26 @@ export async function kuruMarketSnapshot(key: KuruMarketKey) {
 const price = (value: number | undefined) =>
   value === undefined || value <= 0 ? null : String(value);
 
-export async function perplSnapshot() {
+export async function perplSnapshot(network: PerplNetwork = PERPL_TESTNET) {
+  if (network.network === "mainnet" && !perplMainnetEnabled())
+    throw new IdentityError("perpl_mainnet_disabled", 409);
   // Fixed public discovery endpoint only. No credentials, trading forwarding or arbitrary proxy.
-  const response = await fetch("https://testnet.perpl.xyz/api/v1/pub/context", {
+  const response = await fetch(network.context, {
     cache: "no-store",
     redirect: "error",
     signal: AbortSignal.timeout(10000),
   });
   if (!response.ok) throw new Error("Perpl discovery unavailable");
   const context = perplContextSchema.parse(await response.json());
+  if (context.chain.chain_id !== network.chainId)
+    throw new Error("Perpl context is for another chain");
   return {
     venue: "Perpl",
     instrument: "perp",
-    chainId: 10143,
+    network: network.network,
+    chainId: network.chainId,
     observedAt: new Date().toISOString(),
-    source: "https://testnet.perpl.xyz/api/v1/pub/context",
+    source: network.context,
     execution: "unavailable",
     markets: context.markets.map((market) => {
       const instance = context.instances.find(
@@ -201,13 +235,15 @@ export async function perplSnapshot() {
         (item) => item.id === instance?.collateral_token_id,
       );
       if (!instance || !collateral) throw new Error("Incomplete Perpl context");
+      // Mainnet leaves some symbols empty (BTC, MON) and names them instead.
+      const symbol = market.symbol || market.name || `#${market.id}`;
       return {
         marketId: market.id,
-        symbol: market.symbol,
+        symbol,
         exchange: instance.address,
         collateral,
-        name: market.name ?? `${market.symbol} Perp`,
-        sizeUnits: market.size_units ?? market.symbol,
+        name: `${symbol} Perp`,
+        sizeUnits: market.size_units || symbol,
         priceDecimals: market.config.price_decimals,
         sizeDecimals: market.config.size_decimals,
         open: market.config.is_open,

@@ -2,9 +2,11 @@ import "server-only";
 import { IdentityError } from "@call-my-bluff/database/identity";
 import {
   PERPL_TESTNET,
+  type PerplNetwork,
   perplCloseOrder,
   perplCollateralNeeded,
   perplExchangeAbi,
+  perplNetwork,
   perplOrderAction,
   perplOrderOutcome,
   perplOrderStep,
@@ -22,11 +24,17 @@ import {
 } from "viem";
 import { z } from "zod";
 import { identityContext } from "./identity-http";
-import { perplSnapshot, testnetClient } from "./markets";
+import { perplClient, perplMainnetEnabled, perplSnapshot } from "./markets";
 import { tradingWallet } from "./trading-wallet";
+
+/** Testnet unless the caller names mainnet; mainnet moves real AUSD. */
+const chainIdSchema = z
+  .union([z.literal(10143), z.literal(143)])
+  .default(PERPL_TESTNET.chainId);
 
 export const perpRequestSchema = z
   .object({
+    chainId: chainIdSchema,
     marketId: z.number().int().nonnegative(),
     side: z.enum(["long", "short"]),
     // Human decimal size in the market's base asset; converted with market size decimals.
@@ -43,6 +51,7 @@ export const perpRequestSchema = z
 
 export const perpConfirmSchema = z
   .object({
+    chainId: chainIdSchema,
     transactionHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
     requestId: z.string().regex(/^[1-9][0-9]{0,30}$/),
     sourcePostId: z
@@ -52,42 +61,76 @@ export const perpConfirmSchema = z
   })
   .strict();
 
-function config() {
-  const maxLeverage = Number(process.env.PERPL_MAX_LEVERAGE || "5");
+/**
+ * Order caps per network. Mainnet has its own, lower defaults because it moves
+ * real AUSD: leverage, an optional size cap and a cap on collateral per order.
+ */
+function config(network: PerplNetwork) {
+  const mainnet = network.network === "mainnet";
+  const fallback = mainnet ? 3 : 5;
+  const maxLeverage = Number(
+    (mainnet
+      ? process.env.PERPL_MAINNET_MAX_LEVERAGE
+      : process.env.PERPL_MAX_LEVERAGE) || fallback,
+  );
   return {
     maxLeverage:
       Number.isInteger(maxLeverage) && maxLeverage >= 1 && maxLeverage <= 50
         ? maxLeverage
-        : 5,
-    maxSize: process.env.PERPL_MAX_SIZE || "1",
+        : fallback,
+    // Base-asset size per order; null means no size cap (mainnet relies on the collateral cap).
+    maxSize: mainnet
+      ? process.env.PERPL_MAINNET_MAX_SIZE || null
+      : process.env.PERPL_MAX_SIZE || "1",
+    // AUSD one order may lock, as a decimal string; testnet has no cap.
+    maxCollateral: mainnet
+      ? process.env.PERPL_MAINNET_MAX_COLLATERAL || "50"
+      : null,
   };
 }
 
 /** Public order caps; the same limits are enforced again on prepare. */
-export function perpLimits() {
-  const c = config();
-  return { maxLeverage: c.maxLeverage, maxSize: c.maxSize };
+export function perpLimits(network: PerplNetwork = PERPL_TESTNET) {
+  return config(network);
 }
 
-const execution = (wallet: string) =>
-  `Signed and sent by your wallet ${wallet} to your own Perpl testnet account. Xtrading never signs or holds keys.`;
+const execution = (wallet: string, network: PerplNetwork) =>
+  `Signed and sent by your wallet ${wallet} to your own Perpl ${network.network} account${network.network === "mainnet" ? " with real AUSD" : ""}. Xtrading never signs or holds keys.`;
 
 type Context = typeof identityContext;
 
+/** The network for a request; mainnet only when the server enables it. */
+function network(chainId: number) {
+  let selected: PerplNetwork;
+  try {
+    selected = perplNetwork(chainId);
+  } catch {
+    throw new IdentityError("unsupported_chain", 409);
+  }
+  if (selected.network === "mainnet" && !perplMainnetEnabled())
+    throw new IdentityError("perpl_mainnet_disabled", 409);
+  return selected;
+}
+
 /** The signed-in user's own wallet; every Perpl action is scoped to it. */
-async function boundWallet(request: Request, context: Context) {
+async function boundWallet(
+  request: Request,
+  context: Context,
+  selected: PerplNetwork,
+) {
   const { user, service, chainId } = await context(request);
-  if (chainId !== PERPL_TESTNET.chainId)
+  // Testnet stays bound to a testnet deployment; mainnet needs its explicit switch (above).
+  if (selected.network === "testnet" && chainId !== PERPL_TESTNET.chainId)
     throw new IdentityError("trading_testnet_only", 409);
   return tradingWallet(request, user, service);
 }
 
 /** The wallet's own exchange account, or null when it has not opened one. */
-async function exchangeAccount(wallet: `0x${string}`) {
-  const client = testnetClient();
+async function exchangeAccount(wallet: `0x${string}`, selected: PerplNetwork) {
+  const client = await perplClient(selected);
   try {
     const account = await client.readContract({
-      address: PERPL_TESTNET.exchange,
+      address: selected.exchange,
       abi: perplExchangeAbi,
       functionName: "getAccountByAddr",
       args: [wallet],
@@ -111,20 +154,20 @@ async function exchangeAccount(wallet: `0x${string}`) {
   }
 }
 
-async function walletCollateral(wallet: `0x${string}`) {
-  const client = testnetClient();
+async function walletCollateral(wallet: `0x${string}`, selected: PerplNetwork) {
+  const client = await perplClient(selected);
   const [balance, allowance] = await Promise.all([
     client.readContract({
-      address: PERPL_TESTNET.collateral,
+      address: selected.collateral,
       abi: erc20Abi,
       functionName: "balanceOf",
       args: [wallet],
     }),
     client.readContract({
-      address: PERPL_TESTNET.collateral,
+      address: selected.collateral,
       abi: erc20Abi,
       functionName: "allowance",
-      args: [wallet, PERPL_TESTNET.exchange],
+      args: [wallet, selected.exchange],
     }),
   ]);
   return { balance, allowance };
@@ -140,7 +183,8 @@ export async function preparePerp(
   input: z.infer<typeof perpRequestSchema>,
   context: Context = identityContext,
 ) {
-  return preparePerpFor(await boundWallet(request, context), input);
+  const selected = network(input.chainId);
+  return preparePerpFor(await boundWallet(request, context, selected), input);
 }
 
 /**
@@ -152,21 +196,20 @@ export async function preparePerpFor(
   wallet: `0x${string}`,
   input: z.infer<typeof perpRequestSchema>,
 ) {
-  const snapshot = await perplSnapshot().catch(() => {
+  const selected = network(input.chainId);
+  const snapshot = await perplSnapshot(selected).catch((error) => {
+    if (error instanceof IdentityError) throw error;
     throw new IdentityError("perpl_unavailable", 503);
   });
   const market = snapshot.markets.find((m) => m.marketId === input.marketId);
   if (!market) throw new IdentityError("market_unavailable", 409);
   if (!market.open) throw new IdentityError("market_closed", 409);
   // Explicit configuration: never send orders to an exchange Perpl's context names differently.
-  if (getAddress(market.exchange) !== getAddress(PERPL_TESTNET.exchange))
+  if (getAddress(market.exchange) !== getAddress(selected.exchange))
     throw new IdentityError("perpl_exchange_mismatch", 409);
-  if (
-    getAddress(market.collateral.address) !==
-    getAddress(PERPL_TESTNET.collateral)
-  )
+  if (getAddress(market.collateral.address) !== getAddress(selected.collateral))
     throw new IdentityError("perpl_collateral_mismatch", 409);
-  const c = config();
+  const c = config(selected);
   if (input.leverage > c.maxLeverage)
     throw new IdentityError("leverage_above_cap", 409);
   if (market.marketMaxLeverage && input.leverage > market.marketMaxLeverage)
@@ -177,7 +220,7 @@ export async function preparePerpFor(
   let lots: bigint, maxLots: bigint;
   try {
     lots = stakeUnits(input.size, market.sizeDecimals);
-    maxLots = stakeUnits(c.maxSize, market.sizeDecimals);
+    maxLots = c.maxSize ? stakeUnits(c.maxSize, market.sizeDecimals) : lots;
   } catch {
     throw new IdentityError("invalid_amount");
   }
@@ -198,15 +241,16 @@ export async function preparePerpFor(
   } catch {
     throw new IdentityError("invalid_order");
   }
-  const client = testnetClient();
   const [account, funds, minOpen] = await Promise.all([
-    exchangeAccount(wallet),
-    walletCollateral(wallet),
-    client.readContract({
-      address: PERPL_TESTNET.exchange,
-      abi: perplExchangeAbi,
-      functionName: "getMinAccountOpenCNS",
-    }),
+    exchangeAccount(wallet, selected),
+    walletCollateral(wallet, selected),
+    perplClient(selected).then((client) =>
+      client.readContract({
+        address: selected.exchange,
+        abi: perplExchangeAbi,
+        functionName: "getMinAccountOpenCNS",
+      }),
+    ),
   ]).catch((error) => {
     if (error instanceof IdentityError) throw error;
     throw new IdentityError("perpl_unavailable", 503);
@@ -220,6 +264,11 @@ export async function preparePerpFor(
     leverage: input.leverage,
     takerFeePer100k: market.takerFeePpm ?? 0,
   });
+  if (
+    c.maxCollateral &&
+    needed > stakeUnits(c.maxCollateral, selected.collateralDecimals)
+  )
+    throw new IdentityError("collateral_above_cap", 409);
   let steps: ReturnType<typeof perplWalletSteps>;
   try {
     steps = perplWalletSteps({
@@ -229,6 +278,7 @@ export async function preparePerpFor(
       minAccountOpen: minOpen,
       needed,
       order,
+      network: selected,
     });
   } catch {
     throw new IdentityError("collateral_insufficient", 409);
@@ -237,14 +287,15 @@ export async function preparePerpFor(
     status: "prepared" as const,
     venue: "Perpl" as const,
     instrument: "perp" as const,
-    execution: execution(wallet),
-    chainId: PERPL_TESTNET.chainId,
+    execution: execution(wallet, selected),
+    network: selected.network,
+    chainId: selected.chainId,
     wallet,
     market: market.symbol,
     marketId: market.marketId,
-    exchange: PERPL_TESTNET.exchange,
+    exchange: selected.exchange,
     collateral: market.collateral.symbol,
-    collateralDecimals: PERPL_TESTNET.collateralDecimals,
+    collateralDecimals: selected.collateralDecimals,
     side: input.side,
     size: input.size,
     sizeUnits: lots.toString(),
@@ -280,7 +331,8 @@ export async function confirmPerp(
   input: z.infer<typeof perpConfirmSchema>,
   context: Context = identityContext,
 ) {
-  return confirmPerpFor(await boundWallet(request, context), input);
+  const selected = network(input.chainId);
+  return confirmPerpFor(await boundWallet(request, context, selected), input);
 }
 
 /** Read-only check of an order the named wallet sent; nothing is recorded. */
@@ -288,7 +340,8 @@ export async function confirmPerpFor(
   wallet: `0x${string}`,
   input: z.infer<typeof perpConfirmSchema>,
 ) {
-  const client = testnetClient();
+  const selected = network(input.chainId);
+  const client = await perplClient(selected);
   const hash = input.transactionHash as `0x${string}`;
   const [transaction, receipt] = await Promise.all([
     client.getTransaction({ hash }),
@@ -300,7 +353,7 @@ export async function confirmPerpFor(
     throw new IdentityError("transaction_not_from_wallet", 403);
   if (
     !transaction.to ||
-    getAddress(transaction.to) !== getAddress(PERPL_TESTNET.exchange)
+    getAddress(transaction.to) !== getAddress(selected.exchange)
   )
     throw new IdentityError("transaction_not_perpl", 409);
   let desc: Extract<
@@ -322,18 +375,20 @@ export async function confirmPerpFor(
   if (receipt.status !== "success")
     return {
       status: "reverted" as const,
+      chainId: selected.chainId,
       wallet,
       transactionHash: hash,
       block: Number(receipt.blockNumber),
       message: "The transaction reverted. No order was placed.",
       observedAt: new Date().toISOString(),
     };
-  const account = await exchangeAccount(wallet);
+  const account = await exchangeAccount(wallet, selected);
   if (!account) throw new IdentityError("perpl_account_missing", 409);
   const outcome = perplOrderOutcome({
     logs: receipt.logs,
     accountId: account.id,
     orderDescId: desc.orderDescId,
+    network: selected,
   });
   if (!outcome.found) throw new IdentityError("order_not_found", 409);
   const filled = outcome.filledLots;
@@ -344,6 +399,7 @@ export async function confirmPerpFor(
         : filled < desc.lotLNS
           ? ("partially-filled" as const)
           : ("filled" as const),
+    chainId: selected.chainId,
     wallet,
     accountId: account.id.toString(),
     marketId: Number(desc.perpId),
@@ -366,13 +422,15 @@ export async function confirmPerpFor(
 /** The bound wallet's own Perpl exchange account and wallet AUSD, read from chain. */
 export async function perpAccount(
   request: Request,
+  chainId: number = PERPL_TESTNET.chainId,
   context: Context = identityContext,
 ) {
-  const wallet = await boundWallet(request, context);
+  const selected = network(chainId);
+  const wallet = await boundWallet(request, context, selected);
   const [account, funds, snapshot] = await Promise.all([
-    exchangeAccount(wallet),
-    walletCollateral(wallet),
-    perplSnapshot(),
+    exchangeAccount(wallet, selected),
+    walletCollateral(wallet, selected),
+    perplSnapshot(selected),
   ]).catch((error) => {
     if (error instanceof IdentityError) throw error;
     throw new IdentityError("perpl_unavailable", 503);
@@ -382,7 +440,7 @@ export async function perpAccount(
         await Promise.all(
           snapshot.markets.map(async (market) => ({
             market,
-            position: await openPosition(market.marketId, account.id),
+            position: await openPosition(selected, market.marketId, account.id),
           })),
         )
       ).flatMap(({ market, position }) =>
@@ -405,10 +463,11 @@ export async function perpAccount(
     : [];
   return {
     wallet,
-    chainId: PERPL_TESTNET.chainId,
-    exchange: PERPL_TESTNET.exchange,
+    network: selected.network,
+    chainId: selected.chainId,
+    exchange: selected.exchange,
     collateralSymbol: "AUSD",
-    collateralDecimals: PERPL_TESTNET.collateralDecimals,
+    collateralDecimals: selected.collateralDecimals,
     walletCollateral: funds.balance.toString(),
     account: account
       ? {
@@ -419,15 +478,20 @@ export async function perpAccount(
         }
       : null,
     positions,
-    source: "Perpl Exchange contract on Monad testnet",
+    source: `Perpl Exchange contract on Monad ${selected.network}`,
     observedAt: new Date().toISOString(),
   };
 }
 
 /** The account's open position on one market, read from the Exchange contract. */
-async function openPosition(perpId: number, accountId: bigint) {
-  const [position, markPNS] = await testnetClient().readContract({
-    address: PERPL_TESTNET.exchange,
+async function openPosition(
+  selected: PerplNetwork,
+  perpId: number,
+  accountId: bigint,
+) {
+  const client = await perplClient(selected);
+  const [position, markPNS] = await client.readContract({
+    address: selected.exchange,
     abi: perplExchangeAbi,
     functionName: "getPosition",
     args: [BigInt(perpId), accountId],
@@ -445,6 +509,7 @@ async function openPosition(perpId: number, accountId: bigint) {
 
 export const closeRequestSchema = z
   .object({
+    chainId: chainIdSchema,
     marketId: z.number().int().nonnegative(),
     slippageBps: z.number().int().min(1).max(500),
   })
@@ -459,10 +524,11 @@ export async function preparePerpClose(
   input: z.infer<typeof closeRequestSchema>,
   context: Context = identityContext,
 ) {
-  const wallet = await boundWallet(request, context);
+  const selected = network(input.chainId);
+  const wallet = await boundWallet(request, context, selected);
   const [account, snapshot] = await Promise.all([
-    exchangeAccount(wallet),
-    perplSnapshot(),
+    exchangeAccount(wallet, selected),
+    perplSnapshot(selected),
   ]).catch((error) => {
     if (error instanceof IdentityError) throw error;
     throw new IdentityError("perpl_unavailable", 503);
@@ -473,7 +539,11 @@ export async function preparePerpClose(
   if (!market?.open) throw new IdentityError("market_closed", 409);
   if (market.maxSlippageBps && input.slippageBps > market.maxSlippageBps)
     throw new IdentityError("slippage_above_market_max", 409);
-  const position = await openPosition(market.marketId, account.id).catch(() => {
+  const position = await openPosition(
+    selected,
+    market.marketId,
+    account.id,
+  ).catch(() => {
     throw new IdentityError("perpl_unavailable", 503);
   });
   if (!position) throw new IdentityError("position_not_open", 409);
@@ -486,6 +556,8 @@ export async function preparePerpClose(
     slippageBps: input.slippageBps,
   });
   return {
+    network: selected.network,
+    chainId: selected.chainId,
     wallet,
     accountId: account.id.toString(),
     market: market.symbol,
@@ -502,6 +574,7 @@ export async function preparePerpClose(
       perplOrderStep(
         order,
         `Close your ${market.symbol} ${position.side} from your wallet`,
+        selected,
       ),
     ],
     note: "Reduce-only, immediate-or-cancel; it may fill partially. Freed margin stays in your Perpl account until you withdraw it.",
@@ -510,7 +583,10 @@ export async function preparePerpClose(
 }
 
 export const withdrawRequestSchema = z
-  .object({ amount: z.string().regex(/^[0-9]{1,12}(\.[0-9]{1,6})?$/) })
+  .object({
+    chainId: chainIdSchema,
+    amount: z.string().regex(/^[0-9]{1,12}(\.[0-9]{1,6})?$/),
+  })
   .strict();
 
 /** Withdraws free AUSD from the wallet's own Perpl account back to that wallet. */
@@ -519,23 +595,26 @@ export async function preparePerpWithdraw(
   input: z.infer<typeof withdrawRequestSchema>,
   context: Context = identityContext,
 ) {
-  const wallet = await boundWallet(request, context);
-  const account = await exchangeAccount(wallet);
+  const selected = network(input.chainId);
+  const wallet = await boundWallet(request, context, selected);
+  const account = await exchangeAccount(wallet, selected);
   if (!account) throw new IdentityError("perpl_account_missing", 409);
   if (account.frozen) throw new IdentityError("perpl_account_frozen", 409);
   let amount: bigint;
   try {
-    amount = stakeUnits(input.amount, PERPL_TESTNET.collateralDecimals);
+    amount = stakeUnits(input.amount, selected.collateralDecimals);
   } catch {
     throw new IdentityError("invalid_amount");
   }
   let step: ReturnType<typeof perplWithdrawStep>;
   try {
-    step = perplWithdrawStep(amount, account.balanceCNS);
+    step = perplWithdrawStep(amount, account.balanceCNS, selected);
   } catch {
     throw new IdentityError("amount_above_available", 409);
   }
   return {
+    network: selected.network,
+    chainId: selected.chainId,
     wallet,
     accountId: account.id.toString(),
     amount: amount.toString(),

@@ -6,7 +6,10 @@ import {
   type PostSignalRequest,
   postSignalSchema,
 } from "@call-my-bluff/domain";
-import { fetchPublicPost } from "@call-my-bluff/integrations/calls";
+import {
+  fetchPublicPost,
+  postTextMatches,
+} from "@call-my-bluff/integrations/calls";
 import {
   deriveTradeRoute,
   heuristicSignal,
@@ -78,12 +81,17 @@ const keepServerKeys = sql.raw(
 
 /**
  * The extension reports post ID, handle and text; none of it is trusted. A new
- * post is stored only after X's public embed confirms it exists and that the
- * handle wrote it, so a caller cannot plant calls on someone's record.
+ * post is stored only after X's public embed confirms it exists, that the
+ * handle wrote it and that it says what was captured, so a caller cannot plant
+ * calls or token contracts on someone's record.
  */
 async function confirmedOnX(signal: PostSignal) {
   const post = await fetchPublicPost(signal.postId).catch(() => null);
-  return post?.authorHandle === signal.handle.toLowerCase();
+  return (
+    post?.authorHandle === signal.handle.toLowerCase() &&
+    signal.capturedText !== undefined &&
+    postTextMatches(signal.capturedText, post.text)
+  );
 }
 
 async function persist(signal: PostSignal, textHash: string) {

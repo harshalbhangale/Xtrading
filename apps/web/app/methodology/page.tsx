@@ -19,9 +19,12 @@ export default function MethodologyPage() {
           a horizon (24 hours, 7 days or 30 days) and an optional minimum move.
         </li>
         <li>
-          The post must be registered within 24 hours of being published. Terms
-          cannot be changed afterwards. The creator chooses which posts to
-          register, so the ledger is not a complete record of their posts.
+          The post itself must state the call: its text must name the same asset
+          and an unambiguous direction. It must be registered within 15 minutes
+          of being published (calls registered before 14 October 2026 had 24
+          hours and no text check). Terms cannot be changed afterwards. The
+          creator chooses which posts to register, so the ledger is not a
+          complete record of their posts.
         </li>
       </ul>
       <h2>Prices</h2>

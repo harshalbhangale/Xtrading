@@ -6,6 +6,7 @@ import {
   mainnetTopOfBookEstimate,
   networkTradeTokens,
 } from "@call-my-bluff/integrations/kuru";
+import { PERPL_MAINNET } from "@call-my-bluff/integrations/perpl-exchange";
 import { stakeUnits } from "@call-my-bluff/integrations/stake";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { formatUnits } from "viem";
@@ -16,8 +17,15 @@ import { mainnetTrades, myActivity } from "./fill-indexing";
 import {
   kuruMainnetSnapshot,
   kuruMarketSnapshot,
+  perplMainnetEnabled,
   perplSnapshot,
 } from "./markets";
+import {
+  perpAccount,
+  preparePerp,
+  preparePerpClose,
+  preparePerpWithdraw,
+} from "./perpl-trade";
 import { publicCreatorEvidence } from "./public-creator";
 import { classifyPost } from "./signals";
 import { kuruAccount, prepareSpot } from "./spot-trade";
@@ -44,6 +52,15 @@ const amount = z
     "Decimal amount of the input token: USDC when buying, the base token when selling",
   );
 
+const perpMarketId = z
+  .number()
+  .int()
+  .nonnegative()
+  .describe(
+    "Perpl marketId from get_markets for the same network (perpl or perplMainnet markets[].marketId); IDs differ between testnet and mainnet",
+  );
+const slippageBps = z.number().int().min(1).max(500).default(100);
+
 const json = (value: unknown) => ({
   content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }],
 });
@@ -58,6 +75,13 @@ function errorText(error: unknown) {
       ? "This tool needs the user's Xtrading session: send their Privy access token as an Authorization: Bearer header on the MCP connection."
       : `Request refused: ${error.code}.`;
   return "The service is temporarily unavailable.";
+}
+/** A link to the trade page that opens the same review for the user to sign. */
+function approvalUrl(request: Request, entries: Record<string, string>) {
+  const url = new URL("/dashboard/trade", new URL(request.url).origin);
+  for (const [name, entry] of Object.entries(entries))
+    if (entry) url.searchParams.set(name, entry);
+  return url.href;
 }
 /** An empty book side is reported as unavailable, never as a zero-output quote. */
 function noLiquidity(key: string, side: "buy" | "sell", sideEmpty: boolean) {
@@ -88,7 +112,7 @@ export function xtradingMcp(request: Request) {
     { name: "xtrading", version: "0.1.0" },
     {
       instructions:
-        "Xtrading evidence and trade preparation on Monad. Testnet (10143) is the default; mainnet (143) moves real funds and must be requested explicitly with chainId. Identity, call outcomes and wallet returns are separate signals; never merge them into one judgement. prepare_trade returns an unsigned transaction and an approvalUrl for the user to approve in their own wallet; nothing here signs or submits. recent_calls only covers posts seen by Xtrading users, not a full X feed.",
+        "Xtrading evidence and trade preparation on Monad. Testnet (10143) is the default; mainnet (143) moves real funds and must be requested explicitly with chainId. Identity, call outcomes and wallet returns are separate signals; never merge them into one judgement. prepare_trade (Kuru spot) and prepare_perp, prepare_perp_close and prepare_perp_withdraw (Perpl perps; testnet unless chainId 143 is passed) return unsigned transactions and an approvalUrl for the user to approve in their own wallet; nothing here signs or submits. recent_calls only covers posts seen by Xtrading users, not a full X feed.",
     },
   );
 
@@ -132,13 +156,16 @@ export function xtradingMcp(request: Request) {
     {
       title: "Tradable markets",
       description:
-        "Kuru Spot V2 testnet markets (MON/USDC, WETH/USDC, WBTC/USDC) with top of book, and open Perpl perpetual markets.",
+        "Kuru Spot V2 testnet markets (MON/USDC, WETH/USDC, WBTC/USDC) with top of book, open Perpl testnet perp markets (perpl) and, when the server enables it, Perpl mainnet markets (perplMainnet, real AUSD).",
       annotations: { readOnlyHint: true },
     },
     () =>
       run(async () => {
-        const [perpl, ...books] = await Promise.allSettled([
+        const [perpl, perplMainnet, ...books] = await Promise.allSettled([
           perplSnapshot(),
+          perplMainnetEnabled()
+            ? perplSnapshot(PERPL_MAINNET)
+            : Promise.reject(new Error("disabled")),
           kuruMarketSnapshot("MON"),
           kuruMarketSnapshot("WETH"),
           kuruMarketSnapshot("WBTC"),
@@ -153,6 +180,12 @@ export function xtradingMcp(request: Request) {
             perpl.status === "fulfilled"
               ? perpl.value
               : { status: "unavailable" },
+          perplMainnet:
+            perplMainnet.status === "fulfilled"
+              ? perplMainnet.value
+              : {
+                  status: perplMainnetEnabled() ? "unavailable" : "disabled",
+                },
         };
       }),
   );
@@ -310,7 +343,7 @@ export function xtradingMcp(request: Request) {
         handle: handle
           .optional()
           .describe("Creator whose post prompted the trade"),
-        slippageBps: z.number().int().min(1).max(500).default(100),
+        slippageBps,
         sourcePostId: z
           .string()
           .regex(/^[0-9]{1,30}$/)
@@ -344,24 +377,18 @@ export function xtradingMcp(request: Request) {
           slippageBps,
           sourcePostId: sourcePostId ?? null,
         });
-        const approvalUrl = new URL(
-          "/dashboard/trade",
-          new URL(request.url).origin,
-        );
-        for (const [name, entry] of Object.entries({
-          chainId: String(chain),
-          market: key,
-          side: direction,
-          amount: value,
-          slippage: String(slippageBps),
-          postId: sourcePostId ?? "",
-          handle: creator?.replace(/^@/, "") ?? "",
-        }))
-          if (entry) approvalUrl.searchParams.set(name, entry);
         return {
           ...review,
           approveIn: "the user's own wallet",
-          approvalUrl: approvalUrl.href,
+          approvalUrl: approvalUrl(request, {
+            chainId: String(chain),
+            market: key,
+            side: direction,
+            amount: value,
+            slippage: String(slippageBps),
+            postId: sourcePostId ?? "",
+            handle: creator?.replace(/^@/, "") ?? "",
+          }),
         };
       }),
   );
@@ -398,6 +425,113 @@ export function xtradingMcp(request: Request) {
     ({ market: key }) => run(() => mainnetPosition(request, key)),
   );
 
+  server.registerTool(
+    "get_perp_account",
+    {
+      title: "Your Perpl account and positions",
+      description:
+        "Signed-in users only. Testnet by default; pass chainId 143 for mainnet. Your wallet's AUSD, your own Perpl exchange account (available and locked collateral) and open positions, read from the Exchange contract. Sizes and prices are integers; scale them with sizeDecimals, priceDecimals and collateralDecimals.",
+      inputSchema: { chainId },
+      annotations: { readOnlyHint: true },
+    },
+    ({ chainId: chain }) => run(() => perpAccount(request, chain)),
+  );
+
+  server.registerTool(
+    "prepare_perp",
+    {
+      title: "Prepare a Perpl perp order",
+      description:
+        "Signed-in users only. Testnet by default; chainId 143 trades real AUSD on mainnet (only when the server enables it, with lower caps including a per-order collateral cap). Reviews an immediate-or-cancel order (limit at mark ± slippage) and returns the unsigned steps (exact AUSD approval and account funding when needed, then the order) plus an approvalUrl for the user to sign in their own wallet. Leverage and size are capped by the server. Positions can be liquidated. This tool never signs or submits. Reviews expire after 60 seconds.",
+      inputSchema: {
+        chainId,
+        marketId: perpMarketId,
+        side: z.enum(["long", "short"]),
+        size: z
+          .string()
+          .regex(/^(0|[1-9][0-9]*)(\.[0-9]+)?$/)
+          .max(40)
+          .describe("Position size in the market's base asset, e.g. 0.01 BTC"),
+        leverage: z.number().int().min(1).max(50),
+        slippageBps,
+        handle: handle
+          .optional()
+          .describe("Creator whose post prompted the trade"),
+        sourcePostId: z
+          .string()
+          .regex(/^[0-9]{1,30}$/)
+          .optional()
+          .describe("X post that prompted the trade; recorded as unverified"),
+      },
+    },
+    ({ handle: creator, sourcePostId, ...order }) =>
+      run(async () => {
+        const review = await preparePerp(request, {
+          ...order,
+          sourcePostId: sourcePostId ?? null,
+        });
+        return {
+          ...review,
+          approveIn: "the user's own wallet",
+          approvalUrl: approvalUrl(request, {
+            instrument: "perp",
+            chainId: String(review.chainId),
+            marketId: String(order.marketId),
+            side: order.side,
+            size: order.size,
+            leverage: String(order.leverage),
+            slippage: String(order.slippageBps),
+            postId: sourcePostId ?? "",
+            handle: creator?.replace(/^@/, "") ?? "",
+          }),
+        };
+      }),
+  );
+
+  server.registerTool(
+    "prepare_perp_close",
+    {
+      title: "Prepare closing a Perpl position",
+      description:
+        "Signed-in users only. Testnet by default; pass chainId 143 for mainnet. One unsigned reduce-only order that closes your whole position on one market; side and size are read from the chain. It may fill partially. Freed margin stays in your Perpl account until prepare_perp_withdraw. The approvalUrl opens your Perpl account panel to sign. Never signs or submits.",
+      inputSchema: { chainId, marketId: perpMarketId, slippageBps },
+    },
+    (input) =>
+      run(async () => ({
+        ...(await preparePerpClose(request, input)),
+        approveIn: "the user's own wallet",
+        approvalUrl: approvalUrl(request, {
+          instrument: "perp",
+          chainId: String(input.chainId),
+        }),
+      })),
+  );
+
+  server.registerTool(
+    "prepare_perp_withdraw",
+    {
+      title: "Prepare a Perpl withdrawal",
+      description:
+        "Signed-in users only. Testnet by default; pass chainId 143 for mainnet. One unsigned step that moves free AUSD from your Perpl account back to the same wallet, capped at the available balance. The approvalUrl opens your Perpl account panel to sign. Never signs or submits.",
+      inputSchema: {
+        chainId,
+        amount: z
+          .string()
+          .regex(/^[0-9]{1,12}(\.[0-9]{1,6})?$/)
+          .describe("AUSD amount, up to 6 decimals"),
+      },
+    },
+    (input) =>
+      run(async () => ({
+        ...(await preparePerpWithdraw(request, input)),
+        approveIn: "the user's own wallet",
+        approvalUrl: approvalUrl(request, {
+          instrument: "perp",
+          chainId: String(input.chainId),
+        }),
+      })),
+  );
+
   return server;
 }
 
@@ -411,4 +545,8 @@ export const mcpTools = [
   "prepare_trade",
   "recent_calls",
   "get_position",
+  "get_perp_account",
+  "prepare_perp",
+  "prepare_perp_close",
+  "prepare_perp_withdraw",
 ] as const;

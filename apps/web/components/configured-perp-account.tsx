@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { formatUnits } from "viem";
 import { z } from "zod";
 import PerpCloseReview from "./perp-close-review";
-import { usePerplSteps } from "./use-perpl-steps";
+import { type PerplChainId, usePerplSteps } from "./use-perpl-steps";
 import { useTradingWallet, walletHeader } from "./use-trading-wallet";
 
 const amount = z.string().regex(/^[0-9]+$/);
@@ -55,11 +55,16 @@ const withdrawSchema = z.object({
     .length(1),
 });
 
-/** The signed-in user's own Perpl testnet account, read from the Exchange contract. */
-export default function ConfiguredPerpAccount() {
+/** The signed-in user's own Perpl account on one chain, read from the Exchange contract. */
+export default function ConfiguredPerpAccount({
+  chainId = 10143,
+}: {
+  chainId?: PerplChainId;
+}) {
+  const mainnet = chainId === 143;
   const { ready, authenticated, user, getAccessToken } = usePrivy();
   const tradingWallet = useTradingWallet();
-  const runSteps = usePerplSteps();
+  const runSteps = usePerplSteps(chainId);
   const [state, setState] = useState<z.infer<typeof schema> | null>(null);
   const [notice, setNotice] = useState("");
   const [withdraw, setWithdraw] = useState("");
@@ -72,7 +77,7 @@ export default function ConfiguredPerpAccount() {
     const who = owner.current;
     try {
       const token = await getAccessToken();
-      const r = await fetch("/api/trades/perp/account", {
+      const r = await fetch(`/api/trades/perp/account?chainId=${chainId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           ...walletHeader(tradingWallet),
@@ -96,7 +101,7 @@ export default function ConfiguredPerpAccount() {
         setNotice(e instanceof Error ? e.message : "Account unavailable.");
       }
     }
-  }, [ready, authenticated, getAccessToken, tradingWallet]);
+  }, [ready, authenticated, getAccessToken, tradingWallet, chainId]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: Clear private exchange state when the signed-in account changes.
   useEffect(() => {
     setState(null);
@@ -121,7 +126,7 @@ export default function ConfiguredPerpAccount() {
           ...walletHeader(tradingWallet),
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ amount: withdraw.trim() }),
+        body: JSON.stringify({ chainId, amount: withdraw.trim() }),
       });
       const data = await response.json();
       if (!response.ok)
@@ -154,7 +159,7 @@ export default function ConfiguredPerpAccount() {
   return (
     <section className="dashboard-panel">
       <h2>
-        Your Perpl testnet account
+        Your Perpl {mainnet ? "mainnet" : "testnet"} account
         {state.account ? ` · #${state.account.id}` : ""}
       </h2>
       <p>
@@ -172,7 +177,10 @@ export default function ConfiguredPerpAccount() {
           (minimum deposit set by Perpl).
         </p>
       )}
-      <p>{ausd(state.walletCollateral)} test AUSD in your wallet.</p>
+      <p>
+        {ausd(state.walletCollateral)}{" "}
+        {mainnet ? "AUSD (real funds)" : "test AUSD"} in your wallet.
+      </p>
       <p>
         Orders, closes and withdrawals are signed by your own wallet and act
         only on this account. Xtrading holds no Perpl key.
@@ -191,6 +199,7 @@ export default function ConfiguredPerpAccount() {
                 {ausd(p.collateral)} AUSD collateral
               </p>
               <PerpCloseReview
+                chainId={chainId}
                 marketId={p.marketId}
                 onDone={() => void load()}
               />

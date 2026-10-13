@@ -26,6 +26,9 @@ export async function POST(request: Request) {
       return reply({ error: "rate_limited" }, 429);
     const body = bodySchema.safeParse(await jsonBody(request));
     if (!body.success) throw new IdentityError("invalid_body");
+    // The extension stays on testnet; mainnet orders go through the signed-in dashboard.
+    if (body.data.order.chainId !== 10143)
+      throw new IdentityError("trading_testnet_only", 409);
     return reply(
       await preparePerpFor(getAddress(body.data.wallet), body.data.order),
     );

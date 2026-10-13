@@ -24,12 +24,52 @@ import {
 import { and, desc, eq, gt, sql } from "drizzle-orm";
 import { getDatabase } from "./database";
 import { identityContext, requireX } from "./identity-http";
+import { classifyPost } from "./signals";
 
 const DAILY_LIMIT = 10;
 // Bounds provider usage per page view; remaining due calls resolve on later views.
 const EVALUATIONS_PER_REQUEST = 4;
 const RETRY_AFTER_MS = 10 * 60_000;
 const priceOptions = () => ({ nansenApiKey: process.env.NANSEN_API_KEY });
+
+// Wrapped and ticker variants the classifier may report for a callable asset.
+const assetAliases: Record<string, string> = {
+  WBTC: "BTC",
+  CBBTC: "BTC",
+  WETH: "ETH",
+  WSOL: "SOL",
+  WMON: "MON",
+};
+
+/**
+ * The registered terms must be what the post itself says, classified from the
+ * text X serves: the same asset, and an unambiguous direction matching the
+ * one registered. A creator cannot attach a direction to a post that has none.
+ */
+async function postStatesCall(
+  post: { postId: string; authorHandle: string; text: string },
+  terms: { asset: string; direction: "up" | "down" },
+) {
+  let signal: Awaited<ReturnType<typeof classifyPost>>["signal"];
+  try {
+    ({ signal } = await classifyPost({
+      postId: post.postId,
+      handle: post.authorHandle,
+      text: post.text.slice(0, 2000),
+      images: [],
+    }));
+  } catch {
+    throw new IdentityError("call_check_unavailable", 503);
+  }
+  const asset = signal.asset?.replace(/^\$/, "").toUpperCase() ?? null;
+  if (
+    !signal.isCall ||
+    !asset ||
+    (assetAliases[asset] ?? asset) !== terms.asset ||
+    signal.direction !== (terms.direction === "up" ? "bullish" : "bearish")
+  )
+    throw new IdentityError("call_not_in_post", 409);
+}
 
 export async function registerCall(request: Request, input: unknown) {
   const { user, service } = await identityContext(request);
@@ -62,6 +102,7 @@ export async function registerCall(request: Request, input: unknown) {
   if (!post) throw new IdentityError("post_not_found", 404);
   if (post.authorHandle !== binding.handle)
     throw new IdentityError("post_not_yours", 403);
+  await postStatesCall(post, body.data);
 
   const database = getDatabase();
   if (!database) throw new IdentityError("database_unavailable", 503);
@@ -94,7 +135,7 @@ export async function registerCall(request: Request, input: unknown) {
   const evidence: CallEvidence = {
     post: {
       authorHandle: post.authorHandle,
-      text: post.text,
+      text: post.text.slice(0, 1000),
       verifiedAt: new Date(now).toISOString(),
     },
     horizon: body.data.horizon,

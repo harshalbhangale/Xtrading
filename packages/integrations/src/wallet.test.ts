@@ -22,7 +22,9 @@ describe("wallet transfers", () => {
     expect(walletToken(10143, "AUSD")?.address).toBe(
       "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
     );
-    expect(walletToken(143, "AUSD")).toBeUndefined();
+    expect(walletToken(143, "AUSD")?.address).toBe(
+      "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a",
+    );
   });
 
   it("sends native MON as value with empty calldata", () => {

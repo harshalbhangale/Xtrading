@@ -8,11 +8,15 @@ const ConfiguredPerpAccount = dynamic(
 const ConfiguredPerpTrade = dynamic(() => import("./configured-perp-trade"), {
   ssr: false,
 });
-export function PerpTradeControl() {
+export function PerpTradeControl({
+  chainId = 10143,
+}: {
+  chainId?: 10143 | 143;
+}) {
   return process.env.NEXT_PUBLIC_PRIVY_APP_ID ? (
     <>
-      <ConfiguredPerpAccount />
-      <ConfiguredPerpTrade />
+      <ConfiguredPerpAccount key={`account:${chainId}`} chainId={chainId} />
+      <ConfiguredPerpTrade key={`trade:${chainId}`} chainId={chainId} />
     </>
   ) : (
     <p>Privy is not configured. Trading is unavailable.</p>

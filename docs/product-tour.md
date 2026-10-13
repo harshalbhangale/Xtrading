@@ -38,7 +38,7 @@ A walk through Xtrading in screenshots: the website, the trader dashboard, the c
 
 ![Creator overview with setup steps and tier progress](assets/screenshots/creator-overview.png)
 
-**Calls.** Paste one of your posts from the last 24 hours and pick the asset, direction, horizon and minimum move. Entry is the price at the minute you posted, the result uses the price at expiry, and the terms can't be edited afterwards.
+**Calls.** Paste one of your posts from the last 15 minutes and pick the asset, direction, horizon and minimum move. The post's text must name that asset and direction. Entry is the price at the minute you posted, the result uses the price at expiry, and the terms can't be edited afterwards.
 
 ![Register a call from an X post](assets/screenshots/creator-calls.png)
 

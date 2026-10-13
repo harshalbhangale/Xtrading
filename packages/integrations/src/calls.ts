@@ -1,5 +1,6 @@
 import type { PostAvailability } from "@call-my-bluff/domain";
 import { z } from "zod";
+import { tokenReferences } from "./token-references";
 
 /**
  * Call registration and pricing for methodology directional-return-v1.
@@ -11,8 +12,12 @@ import { z } from "zod";
 export const CALL_METHODOLOGY = "directional-return-v1";
 export const PRICE_DECIMALS = 8;
 export const PRICE_TOLERANCE_SECONDS = 600;
-/** A post must be registered within this window after publication. */
-export const REGISTRATION_WINDOW_SECONDS = 24 * 3600;
+/**
+ * A post must be registered within this window after publication. Kept short
+ * so a creator cannot wait to see which way the price went and register only
+ * the winners.
+ */
+export const REGISTRATION_WINDOW_SECONDS = 15 * 60;
 export const CALL_HORIZONS = { "24h": 86400, "7d": 604800, "30d": 2592000 };
 
 export const CALL_ASSETS = {
@@ -92,6 +97,11 @@ function decodeEntities(text: string) {
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) =>
+      String.fromCodePoint(Number.parseInt(code, 16)),
+    )
+    .replace(/&nbsp;/g, " ")
+    .replace(/&hellip;/g, "…")
     .replace(/&quot;/g, '"')
     .replace(/&#39;|&apos;/g, "'")
     .replace(/&lt;/g, "<")
@@ -125,8 +135,44 @@ export async function fetchPublicPost(
   return {
     postId,
     authorHandle: author.toLowerCase(),
-    text: decodeEntities(paragraph).slice(0, 1000),
+    // Full text so captured copies can be compared; callers bound what they store.
+    text: decodeEntities(paragraph),
   };
+}
+
+/**
+ * Comparable form of post text. X's page and its embed render the same post
+ * differently: links (t.co vs display URL), emoji (image vs character),
+ * whitespace and leading reply mentions. Those are dropped; words, numbers,
+ * cashtags, mentions and addresses are kept exactly, case included.
+ */
+function comparable(text: string) {
+  return text
+    .normalize("NFKC")
+    .replace(/^(?:\s*@[A-Za-z0-9_]{1,15})+\s+/, "")
+    .split(/\s+/)
+    .filter(
+      (word) =>
+        !word.includes("/") &&
+        !word.includes("…") &&
+        !/^(?:https?:)?[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/.test(
+          word,
+        ),
+    )
+    .join("")
+    .replace(/[^\p{L}\p{N}\p{M}$#@_.%]/gu, "");
+}
+
+/**
+ * True when text captured from X's page is the post X publicly serves. The
+ * capture may stop early ("Show more"), so it must be a prefix of the public
+ * text, and it may not name an address the public post does not contain.
+ */
+export function postTextMatches(captured: string, published: string) {
+  const mine = comparable(captured);
+  if (!mine || !comparable(published).startsWith(mine)) return false;
+  const known = new Set(tokenReferences(published).map((ref) => ref.address));
+  return tokenReferences(captured).every((ref) => known.has(ref.address));
 }
 
 const binanceSchema = z.array(

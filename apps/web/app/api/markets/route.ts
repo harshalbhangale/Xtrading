@@ -1,11 +1,19 @@
 import { kuruMarketKeys } from "@call-my-bluff/integrations/kuru";
+import { PERPL_MAINNET } from "@call-my-bluff/integrations/perpl-exchange";
 import { reply } from "../../../lib/identity-http";
-import { kuruMarketSnapshot, perplSnapshot } from "../../../lib/markets";
+import {
+  kuruMarketSnapshot,
+  perplMainnetEnabled,
+  perplSnapshot,
+} from "../../../lib/markets";
 import { perpLimits } from "../../../lib/perpl-trade";
 export const dynamic = "force-dynamic";
-export async function GET() {
+export async function GET(request: Request) {
+  // ?perplChainId=143 returns Perpl mainnet markets instead of testnet; Kuru books stay testnet.
+  const perplMainnet =
+    new URL(request.url).searchParams.get("perplChainId") === "143";
   const [perpl, ...books] = await Promise.allSettled([
-    perplSnapshot(),
+    perplMainnet ? perplSnapshot(PERPL_MAINNET) : perplSnapshot(),
     ...kuruMarketKeys.map((key) => kuruMarketSnapshot(key)),
   ]);
   return reply({
@@ -21,7 +29,17 @@ export async function GET() {
     ),
     perpl:
       perpl.status === "fulfilled"
-        ? { ...perpl.value, limits: perpLimits() }
-        : { venue: "Perpl", status: "unavailable" },
+        ? {
+            ...perpl.value,
+            limits: perpLimits(perplMainnet ? PERPL_MAINNET : undefined),
+          }
+        : {
+            venue: "Perpl",
+            chainId: perplMainnet ? 143 : 10143,
+            status:
+              perplMainnet && !perplMainnetEnabled()
+                ? "disabled"
+                : "unavailable",
+          },
   });
 }

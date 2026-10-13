@@ -14,7 +14,10 @@ const errors: Record<string, string> = {
   x_account_required: "Link your X account first.",
   invalid_call: "Check the call details.",
   invalid_post_url: "Paste a link like https://x.com/you/status/123…",
-  post_too_old: "Posts can only be registered within 24 hours of posting.",
+  post_too_old: "Posts can only be registered within 15 minutes of posting.",
+  call_not_in_post:
+    'The post doesn\'t clearly say this. Its text must name the same asset and direction (for example, "Buying $BTC" or "Selling $ETH").',
+  call_check_unavailable: "The post could not be checked. Try again shortly.",
   post_not_found: "X could not find that post. It may be private or deleted.",
   post_not_yours: "That post was not written by your bound X account.",
   post_lookup_unavailable: "X could not be reached. Try again shortly.",
@@ -201,9 +204,10 @@ export default function ConfiguredCalls() {
         </button>
       </form>
       <p className="small-note">
-        The post must be yours and under 24 hours old. Entry is the price when
-        you posted; the result uses the price at expiry. Terms can't be edited
-        afterwards. {message && <strong role="status">{message}</strong>}
+        The post must be yours, under 15 minutes old, and its text must name the
+        asset and direction you register. Entry is the price when you posted;
+        the result uses the price at expiry. Terms can't be edited afterwards.{" "}
+        {message && <strong role="status">{message}</strong>}
       </p>
       {calls === null ? (
         <p className="small-note">Loading your calls…</p>

@@ -51,7 +51,7 @@ The extension, trader dashboard, creator studio and agent access in screenshots:
 
 ### Plug in an agent
 
-- **MCP server** at `https://xtradingnow.xyz/api/mcp`. Agents can look up a creator's record, detect a trade call in a post, fetch markets and quotes, and prepare a Kuru trade for the user to sign. Agents never get signing power.
+- **MCP server** at `https://xtradingnow.xyz/api/mcp`. Agents can look up a creator's record, detect a trade call in a post, fetch markets and quotes, and prepare a Kuru spot trade or a Perpl perp order for the user to sign. Agents never get signing power. See the [MCP docs](docs/mcp.md) for setup and every tool.
 
 ## Built with
 

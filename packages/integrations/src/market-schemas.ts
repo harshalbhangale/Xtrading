@@ -4,7 +4,7 @@ import { z } from "zod";
 const uint = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const address = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
 export const perplContextSchema = z.object({
-  chain: z.object({ chain_id: z.literal(10143) }),
+  chain: z.object({ chain_id: z.union([z.literal(10143), z.literal(143)]) }),
   instances: z.array(
     z.object({ id: uint, address, collateral_token_id: uint }),
   ),

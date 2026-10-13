@@ -50,7 +50,8 @@ export const hyperSyncResponse = z.object({
           .max(5000),
       }),
     )
-    .max(20),
+    // HyperSync splits one response into many batches; the caller caps body size.
+    .max(5000),
 });
 export type EnvioEvent = {
   id: string;

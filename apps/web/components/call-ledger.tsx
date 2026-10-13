@@ -41,8 +41,9 @@ export function CallSummary({ calls }: { calls: PublicCall[] }) {
       {calls.length} registered · {resolved.length} resolved
       {resolved.length > 0 &&
         ` · ${correct.length} of ${resolved.length} correct`}{" "}
-      · {calls.length - resolved.length} open. Creator-registered within 24h of
-      posting; posts they did not register are not covered.
+      · {calls.length - resolved.length} open. Creator-registered within 15
+      minutes of posting (24 hours before 14 Oct 2026); posts they did not
+      register are not covered.
     </p>
   );
 }

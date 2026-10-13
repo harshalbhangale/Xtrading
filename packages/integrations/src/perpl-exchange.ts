@@ -9,16 +9,42 @@ import {
 } from "viem";
 
 /**
- * Perpl's testnet Exchange. Orders are sent by the user's own wallet to its own
- * exchange account (`execOrder` acts on msg.sender's account), so nothing here
- * can trade for anyone else. Addresses from Perpl's network reference.
+ * Perpl's Exchange per network. Orders are sent by the user's own wallet to its
+ * own exchange account (`execOrder` acts on msg.sender's account), so nothing
+ * here can trade for anyone else. Addresses from Perpl's network reference.
  */
 export const PERPL_TESTNET = {
+  network: "testnet",
   chainId: 10143,
   exchange: "0x1964C32f0bE608E7D29302AFF5E61268E72080cc",
   collateral: "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
   collateralDecimals: 6,
+  context: "https://testnet.perpl.xyz/api/v1/pub/context",
+  app: "https://testnet.perpl.xyz",
+  explorer: "https://testnet.monadvision.com",
 } as const;
+
+/** Monad mainnet: real AUSD. Same Exchange contract version as testnet (1.7.5). */
+export const PERPL_MAINNET = {
+  network: "mainnet",
+  chainId: 143,
+  exchange: "0x34B6552d57a35a1D042CcAe1951BD1C370112a6F",
+  collateral: "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a",
+  collateralDecimals: 6,
+  context: "https://app.perpl.xyz/api/v1/pub/context",
+  app: "https://app.perpl.xyz",
+  explorer: "https://monadvision.com",
+} as const;
+
+export type PerplNetwork = typeof PERPL_TESTNET | typeof PERPL_MAINNET;
+export type PerplChainId = PerplNetwork["chainId"];
+
+/** The explicit network for a chain ID; never falls back to another chain. */
+export function perplNetwork(chainId: number): PerplNetwork {
+  if (chainId === PERPL_TESTNET.chainId) return PERPL_TESTNET;
+  if (chainId === PERPL_MAINNET.chainId) return PERPL_MAINNET;
+  throw new Error("Unsupported Perpl chain");
+}
 
 const orderDesc =
   "(uint256 orderDescId,uint256 perpId,uint8 orderType,uint256 orderId,uint256 pricePNS,uint256 lotLNS,uint256 expiryBlock,bool postOnly,bool fillOrKill,bool immediateOrCancel,uint256 maxMatches,uint256 leverageHdths,uint256 lastExecutionBlock,uint256 amountCNS,uint256 maxNegPnlCollatBPS)";
@@ -178,13 +204,17 @@ export function perplCloseOrder(input: {
 }
 
 /** Moves free exchange-account AUSD back to the wallet that owns the account. */
-export function perplWithdrawStep(amountCNS: bigint, available: bigint) {
+export function perplWithdrawStep(
+  amountCNS: bigint,
+  available: bigint,
+  network: PerplNetwork = PERPL_TESTNET,
+) {
   if (amountCNS <= 0n) throw new Error("Amount must be positive");
   if (amountCNS > available) throw new Error("amount_above_available");
   return {
     kind: "withdraw" as const,
     label: `Withdraw ${units(amountCNS)} AUSD to your wallet`,
-    to: PERPL_TESTNET.exchange as Address,
+    to: network.exchange as Address,
     data: encodeFunctionData({
       abi: perplExchangeAbi,
       functionName: "withdrawCollateral",
@@ -197,11 +227,12 @@ export function perplWithdrawStep(amountCNS: bigint, available: bigint) {
 export function perplOrderStep(
   order: PerplOrderDesc,
   label: string,
+  network: PerplNetwork = PERPL_TESTNET,
 ): PerplStep {
   return {
     kind: "order",
     label,
-    to: PERPL_TESTNET.exchange,
+    to: network.exchange,
     data: encodeFunctionData({
       abi: perplExchangeAbi,
       functionName: "execOrder",
@@ -248,7 +279,9 @@ export function perplWalletSteps(input: {
   minAccountOpen: bigint;
   needed: bigint;
   order: PerplOrderDesc;
+  network?: PerplNetwork;
 }): PerplStep[] {
+  const network = input.network ?? PERPL_TESTNET;
   const steps: PerplStep[] = [];
   const fund = input.account
     ? input.needed > input.account.balanceCNS
@@ -263,11 +296,11 @@ export function perplWalletSteps(input: {
       steps.push({
         kind: "approve",
         label: `Approve ${units(fund)} AUSD for Perpl`,
-        to: PERPL_TESTNET.collateral,
+        to: network.collateral,
         data: encodeFunctionData({
           abi: erc20Abi,
           functionName: "approve",
-          args: [PERPL_TESTNET.exchange, fund],
+          args: [network.exchange, fund],
         }),
       });
     steps.push(
@@ -275,7 +308,7 @@ export function perplWalletSteps(input: {
         ? {
             kind: "deposit",
             label: `Deposit ${units(fund)} AUSD into your Perpl account`,
-            to: PERPL_TESTNET.exchange,
+            to: network.exchange,
             data: encodeFunctionData({
               abi: perplExchangeAbi,
               functionName: "depositCollateral",
@@ -285,7 +318,7 @@ export function perplWalletSteps(input: {
         : {
             kind: "create-account",
             label: `Open your Perpl account with ${units(fund)} AUSD`,
-            to: PERPL_TESTNET.exchange,
+            to: network.exchange,
             data: encodeFunctionData({
               abi: perplExchangeAbi,
               functionName: "createAccount",
@@ -294,7 +327,9 @@ export function perplWalletSteps(input: {
           },
     );
   }
-  steps.push(perplOrderStep(input.order, "Place the order from your wallet"));
+  steps.push(
+    perplOrderStep(input.order, "Place the order from your wallet", network),
+  );
   return steps;
 }
 
@@ -313,6 +348,7 @@ export function perplOrderOutcome(input: {
   logs: readonly Log[];
   accountId: bigint;
   orderDescId: bigint;
+  network?: PerplNetwork;
 }) {
   let matched = false;
   let seen = false;
@@ -320,7 +356,7 @@ export function perplOrderOutcome(input: {
   let fee = 0n;
   let weighted = 0n;
   let failedReason: bigint | null = null;
-  const exchange = getAddress(PERPL_TESTNET.exchange);
+  const exchange = getAddress((input.network ?? PERPL_TESTNET).exchange);
   for (const log of input.logs) {
     if (getAddress(log.address) !== exchange) continue;
     let event: ReturnType<typeof decodeEventLog<typeof perplExchangeAbi>>;

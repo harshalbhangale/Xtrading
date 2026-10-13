@@ -3,7 +3,7 @@ import { formatUsd, fromUnits } from "@call-my-bluff/domain";
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { usePerplSteps } from "./use-perpl-steps";
+import { type PerplChainId, usePerplSteps } from "./use-perpl-steps";
 import { useTradingWallet, walletHeader } from "./use-trading-wallet";
 
 const integer = z.string().regex(/^[0-9]+$/);
@@ -40,15 +40,17 @@ const resultSchema = z.object({
 
 /** Full, reduce-only close of one of the user's own positions, signed by their wallet. */
 export default function PerpCloseReview({
+  chainId,
   marketId,
   onDone,
 }: {
+  chainId: PerplChainId;
   marketId: number;
   onDone: () => void;
 }) {
   const { getAccessToken, user } = usePrivy();
   const tradingWallet = useTradingWallet();
-  const runSteps = usePerplSteps();
+  const runSteps = usePerplSteps(chainId);
   const [review, setReview] = useState<z.infer<typeof reviewSchema> | null>(
     null,
   );
@@ -90,6 +92,7 @@ export default function PerpCloseReview({
     try {
       const value = reviewSchema.parse(
         await call("/api/trades/perp/close/prepare", {
+          chainId,
           marketId,
           slippageBps: 50,
         }),
@@ -117,6 +120,7 @@ export default function PerpCloseReview({
       });
       const result = resultSchema.parse(
         await call("/api/trades/perp/confirm", {
+          chainId,
           transactionHash: hashes.order,
           requestId: review.requestId,
           sourcePostId: null,

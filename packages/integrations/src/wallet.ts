@@ -10,7 +10,7 @@ import {
 } from "viem";
 import { z } from "zod";
 import { kuruNetwork } from "./kuru";
-import { PERPL_TESTNET } from "./perpl-exchange";
+import { perplNetwork } from "./perpl-exchange";
 
 /**
  * Plain wallet transfers: MON and the configured Kuru tokens, per chain.
@@ -32,13 +32,13 @@ export function walletTokens(chainId: WalletChainId): WalletToken[] {
     network.markets.WETH.base,
     network.markets.WBTC.base,
   ];
-  // Perpl's testnet collateral (AUSD from the faucet).
-  if (chainId === PERPL_TESTNET.chainId)
-    tokens.push({
-      symbol: "AUSD",
-      address: PERPL_TESTNET.collateral,
-      decimals: PERPL_TESTNET.collateralDecimals,
-    });
+  // Perpl's collateral on this chain (test AUSD from the faucet on testnet).
+  const perpl = perplNetwork(chainId);
+  tokens.push({
+    symbol: "AUSD",
+    address: perpl.collateral,
+    decimals: perpl.collateralDecimals,
+  });
   return tokens;
 }
 

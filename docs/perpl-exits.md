@@ -1,10 +1,10 @@
-# Perpl testnet exits
+# Perpl exits
 
-Network: Monad testnet 10143. Every Perpl action is signed by the user's own bound wallet and acts on that wallet's own exchange account (`execOrder`, `withdrawCollateral` and `depositCollateral` act on `msg.sender`). The server holds no Perpl key and never signs.
+Network: Monad testnet 10143, or mainnet 143 when the server sets `PERPL_MAINNET_ENABLED=true` (real AUSD; links use `chainId=143`). Every Perpl action is signed by the user's own bound wallet and acts on that wallet's own exchange account (`execOrder`, `withdrawCollateral` and `depositCollateral` act on `msg.sender`). The server holds no Perpl key and never signs.
 
 ## Close a position
 
-1. Sign in to `/dashboard/trade?instrument=perp&chainId=10143`. Open positions are read from the Exchange contract (`getPosition` per market) for the wallet's account.
+1. Sign in to `/dashboard/trade?instrument=perp&chainId=10143` (or `chainId=143` for mainnet). Open positions are read from the Exchange contract (`getPosition` per market) for the wallet's account.
 2. **Review full close** asks the server for one unsigned `execOrder` step. Size and side come from the chain, not the browser. The order is CloseLong (2) or CloseShort (3): reduce-only, immediate-or-cancel, limit at mark ∓ 0.5%. It cannot open or invert a position.
 3. **Sign close in wallet** sends it. `/api/trades/perp/confirm` then checks the transaction came from the bound wallet, called `execOrder` on Perpl's exchange with the reviewed ID, and reads fills from the receipt events. A close can fill partially; the account panel refreshes with the remaining size.
 

@@ -7,10 +7,12 @@ import {
 } from "viem";
 import { describe, expect, it } from "vitest";
 import {
+  PERPL_MAINNET,
   PERPL_TESTNET,
   perplCloseOrder,
   perplCollateralNeeded,
   perplExchangeAbi,
+  perplNetwork,
   perplOrderOutcome,
   perplWalletOrder,
   perplWalletSteps,
@@ -246,5 +248,55 @@ describe("closes and withdrawals", () => {
     expect(() => perplWithdrawStep(9_000_001n, 9_000_000n)).toThrow(
       "amount_above_available",
     );
+  });
+});
+
+describe("Perpl networks", () => {
+  it("maps each chain explicitly and never falls back", () => {
+    expect(perplNetwork(10143)).toBe(PERPL_TESTNET);
+    expect(perplNetwork(143)).toBe(PERPL_MAINNET);
+    expect(() => perplNetwork(1)).toThrow();
+  });
+  it("sends mainnet steps to the mainnet exchange and AUSD", () => {
+    const steps = perplWalletSteps({
+      account: null,
+      walletCollateral: 50_000_000n,
+      allowance: 0n,
+      minAccountOpen: 10_000_000n,
+      needed: 1_000_000n,
+      order: perplWalletOrder(base),
+      network: PERPL_MAINNET,
+    });
+    expect(steps.map((s) => [s.kind, s.to])).toEqual([
+      ["approve", PERPL_MAINNET.collateral],
+      ["create-account", PERPL_MAINNET.exchange],
+      ["order", PERPL_MAINNET.exchange],
+    ]);
+    const approve = decodeFunctionData({
+      abi: erc20Abi,
+      data: steps[0]?.data as Hex,
+    });
+    expect(approve.args).toEqual([PERPL_MAINNET.exchange, 10_000_000n]);
+    expect(perplWithdrawStep(1n, 2n, PERPL_MAINNET).to).toBe(
+      PERPL_MAINNET.exchange,
+    );
+  });
+  it("ignores logs from the other network's exchange", () => {
+    const log = {
+      address: PERPL_TESTNET.exchange,
+      topics: encodeEventTopics({
+        abi: perplExchangeAbi,
+        eventName: "OrderPostFailed",
+      }) as Hex[],
+      data: encodeAbiParameters([{ type: "uint256" }], [1n]),
+    };
+    expect(
+      perplOrderOutcome({
+        logs: [log],
+        accountId: 1n,
+        orderDescId: 42n,
+        network: PERPL_MAINNET,
+      }).found,
+    ).toBe(false);
   });
 });

@@ -26,6 +26,26 @@ const tools = [
     "One unsigned Kuru transaction and an approval link for you to sign.",
     "Signed in · prepare only",
   ],
+  [
+    "get_perp_account",
+    "Your Perpl collateral and open positions, testnet or mainnet.",
+    "Signed in",
+  ],
+  [
+    "prepare_perp",
+    "An unsigned Perpl order (testnet, or mainnet when enabled) and an approval link.",
+    "Signed in · prepare only",
+  ],
+  [
+    "prepare_perp_close",
+    "An unsigned reduce-only order that closes one Perpl position.",
+    "Signed in · prepare only",
+  ],
+  [
+    "prepare_perp_withdraw",
+    "An unsigned withdrawal of free AUSD back to your wallet.",
+    "Signed in · prepare only",
+  ],
 ] as const;
 
 export default function IntegrationsPage() {

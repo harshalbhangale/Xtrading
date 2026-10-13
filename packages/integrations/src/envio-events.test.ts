@@ -59,6 +59,15 @@ describe("Envio fixed-contract projections", () => {
       timestamp: "100",
     });
   });
+  it("accepts a response split into many batches", () => {
+    const one = payment();
+    const empty = { blocks: [], transactions: [], logs: [] };
+    const many = {
+      ...one,
+      data: [...Array.from({ length: 49 }, () => empty), ...one.data],
+    };
+    expect(projectEnvioEvents(143, many)).toHaveLength(1);
+  });
   it("skips fee events without a creator payment", () => {
     expect(projectEnvioEvents(143, payment(0n))).toHaveLength(0);
   });

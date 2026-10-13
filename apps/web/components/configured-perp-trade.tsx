@@ -10,7 +10,11 @@ import {
 } from "@call-my-bluff/domain";
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useRef, useState } from "react";
-import { type PerplStep, usePerplSteps } from "./use-perpl-steps";
+import {
+  type PerplChainId,
+  type PerplStep,
+  usePerplSteps,
+} from "./use-perpl-steps";
 import { useTradingWallet, walletHeader } from "./use-trading-wallet";
 
 type Review = {
@@ -57,7 +61,11 @@ type Market = {
   marketMaxLeverage?: number | null;
   maintenanceMarginHundredths?: number | null;
 };
-type Limits = { maxLeverage: number; maxSize: string };
+type Limits = {
+  maxLeverage: number;
+  maxSize: string | null;
+  maxCollateral: string | null;
+};
 type Result = {
   status: "filled" | "partially-filled" | "not-filled" | "reverted";
   accountId?: string;
@@ -70,11 +78,29 @@ type Result = {
   message: string;
 };
 
+const networks = {
+  10143: {
+    label: "Monad testnet",
+    collateral: "AUSD collateral",
+    explorer: "https://testnet.monadvision.com",
+    app: "https://testnet.perpl.xyz",
+  },
+  143: {
+    label: "Monad mainnet · real funds",
+    collateral: "real AUSD collateral",
+    explorer: "https://monadvision.com",
+    app: "https://app.perpl.xyz",
+  },
+} as const;
+
 export default function ConfiguredPerpTrade({
   initialParams,
+  chainId = 10143,
 }: {
   initialParams?: string;
+  chainId?: PerplChainId;
 } = {}) {
+  const network = networks[chainId];
   const { ready, authenticated, user, login, getAccessToken } = usePrivy();
   const tradingWallet = useTradingWallet();
   const [marketId, setMarketId] = useState("");
@@ -93,7 +119,7 @@ export default function ConfiguredPerpTrade({
   const [unit, setUnit] = useState<"base" | "usd">("base");
   const [showLeverage, setShowLeverage] = useState(false);
   const [progress, setProgress] = useState("");
-  const runSteps = usePerplSteps();
+  const runSteps = usePerplSteps(chainId);
   const owner = useRef(user?.id);
   owner.current = user?.id;
   // Opened from X with review=1: review once the session and markets are ready.
@@ -115,7 +141,7 @@ export default function ConfiguredPerpTrade({
     if (bps && /^[0-9]{1,3}$/.test(bps)) setSlippage(bps);
   }, [initialParams]);
   useEffect(() => {
-    fetch("/api/markets", { cache: "no-store" })
+    fetch(`/api/markets?perplChainId=${chainId}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((value: { perpl?: { markets?: Market[]; limits?: Limits } }) => {
         const open = (value.perpl?.markets ?? []).filter((m) => m.open);
@@ -132,7 +158,7 @@ export default function ConfiguredPerpTrade({
         );
       })
       .catch(() => setMarkets([]));
-  }, []);
+  }, [chainId]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: Clear private state on account change.
   useEffect(() => {
     setReview(null);
@@ -158,7 +184,9 @@ export default function ConfiguredPerpTrade({
       ? fromUnits(sizeUnits, selected.sizeDecimals)
       : size.trim();
   const maxUnits =
-    selected && limits ? toUnits(limits.maxSize, selected.sizeDecimals) : null;
+    selected && limits?.maxSize
+      ? toUnits(limits.maxSize, selected.sizeDecimals)
+      : null;
   const quote =
     selected && mark && sizeUnits
       ? ticketQuote({
@@ -214,6 +242,7 @@ export default function ConfiguredPerpTrade({
     if (postId && !/^[0-9]{1,30}$/.test(postId))
       throw new Error("Source post ID must be digits.");
     return {
+      chainId,
       marketId: Number(marketId),
       side,
       size: orderSize,
@@ -289,6 +318,7 @@ export default function ConfiguredPerpTrade({
       for (let attempt = 0; attempt < 5 && !value; attempt++) {
         try {
           value = (await call("/api/trades/perp/confirm", {
+            chainId,
             transactionHash: orderHash,
             requestId: reviewed.requestId,
             sourcePostId: postId || null,
@@ -385,12 +415,16 @@ export default function ConfiguredPerpTrade({
           <div>
             <dt>Max size</dt>
             <dd>
-              {limits ? `${limits.maxSize} ${selected?.symbol ?? ""}` : "—"}
+              {limits?.maxSize
+                ? `${limits.maxSize} ${selected?.symbol ?? ""}`
+                : limits?.maxCollateral
+                  ? `${limits.maxCollateral} AUSD margin`
+                  : "—"}
             </dd>
           </div>
         </dl>
         <p className="pt-foot">
-          Perpl · Monad testnet · AUSD collateral · market (IOC) orders
+          Perpl · {network.label} · {network.collateral} · market (IOC) orders
         </p>
       </section>
 
@@ -687,7 +721,7 @@ export default function ConfiguredPerpTrade({
                 <dd>
                   <a
                     className="text-link"
-                    href={`https://testnet.monadvision.com/tx/${result.transactionHash}`}
+                    href={`${network.explorer}/tx/${result.transactionHash}`}
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -698,7 +732,7 @@ export default function ConfiguredPerpTrade({
             </dl>
             <a
               className="text-link"
-              href="https://testnet.perpl.xyz"
+              href={network.app}
               target="_blank"
               rel="noreferrer"
             >

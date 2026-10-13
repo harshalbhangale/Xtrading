@@ -29,6 +29,7 @@ export default async function TradePage({
         : "143"
       : (one(params.chainId) ?? "invalid");
   const mainnetEnabled = process.env.KURU_MAINNET_ENABLED === "true";
+  const perplMainnetEnabled = process.env.PERPL_MAINNET_ENABLED === "true";
   const supportedNetwork = network === "10143" || network === "143";
   const mainnet = network === "143";
   const href = (changes: Record<string, string>) => {
@@ -53,7 +54,9 @@ export default async function TradePage({
             ? "Unsupported network. Select Monad testnet or mainnet."
             : mainnet
               ? perp
-                ? "Monad mainnet · real funds. Perpl mainnet trading is not wired yet."
+                ? perplMainnetEnabled
+                  ? "Perpl perpetuals on Monad mainnet · real AUSD. Lower leverage and a per-order margin cap apply. Perp positions can be liquidated."
+                  : "Monad mainnet · real funds. Perpl mainnet trading is switched off on this server."
                 : "Kuru spot on Monad mainnet · real funds. Market orders spend straight from your wallet with a simulated minimum output; there is no minimum size."
               : perp
                 ? "Perpl perpetuals on Monad testnet. Check market, size, leverage and caps before confirming. Perp positions can be liquidated."
@@ -89,13 +92,14 @@ export default async function TradePage({
           }
         />
       )}
-      {!supportedNetwork || (mainnet && (perp || !mainnetEnabled)) ? (
+      {!supportedNetwork ||
+      (mainnet && (perp ? !perplMainnetEnabled : !mainnetEnabled)) ? (
         <Panel
           title={
             !supportedNetwork
               ? "Unsupported network"
               : perp
-                ? "Perpl mainnet not available"
+                ? "Perpl mainnet is switched off"
                 : "Mainnet trading is switched off"
           }
           description="No wallet approval or transaction is available here."
@@ -104,9 +108,16 @@ export default async function TradePage({
             {!supportedNetwork
               ? "Choose a supported network above to continue."
               : perp
-                ? "Perpl perps run on Monad testnet only in this app. Your selection never falls back to testnet; switch networks above to trade testnet perps."
+                ? "This server has not enabled Perpl mainnet trading. Your selection never falls back to testnet; switch networks above to trade testnet perps."
                 : "This server has not enabled Kuru mainnet trading. Your selection never falls back to testnet."}
           </p>
+        </Panel>
+      ) : mainnet && perp ? (
+        <Panel
+          title="Perpl perpetual order · mainnet"
+          description="Immediate-or-cancel market order with real AUSD. Server-enforced leverage and margin caps; each step is a separate wallet confirmation."
+        >
+          <PerpTradeControl chainId={143} />
         </Panel>
       ) : mainnet ? (
         <Panel
@@ -120,7 +131,7 @@ export default async function TradePage({
           title="Perpl perpetual order"
           description="Immediate-or-cancel market order with server-enforced leverage and size caps."
         >
-          <PerpTradeControl />
+          <PerpTradeControl chainId={10143} />
         </Panel>
       ) : (
         <Panel

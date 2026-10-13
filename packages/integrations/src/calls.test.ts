@@ -6,6 +6,7 @@ import {
   firstNansenCandle,
   observePrice,
   parsePostUrl,
+  postTextMatches,
   postTimestampMs,
 } from "./calls";
 
@@ -64,6 +65,44 @@ describe("fetchPublicPost", () => {
         json({ author_url: "https://evil.com/x", html: "<p>x</p>" }),
       ),
     ).rejects.toThrow();
+  });
+});
+
+describe("postTextMatches", () => {
+  const evm = "0x1111111111111111111111111111111111111111";
+  const published = `@bob Buy $PEPE here, CA ${evm} 🚀\nhttps://t.co/abc123 https://t.co/pic456`;
+
+  it("accepts the same post as X's page renders it", () => {
+    // Page text: reply mention hidden, emoji as an image, display URL, no media link.
+    expect(
+      postTextMatches(
+        `Buy $PEPE here, CA ${evm}\nexample.com/pepe…`,
+        published,
+      ),
+    ).toBe(true);
+    expect(postTextMatches("Buy $PEPE here, CA", published)).toBe(true);
+  });
+
+  it("rejects text the post does not contain", () => {
+    expect(postTextMatches("gm", "gm ☀️")).toBe(true);
+    expect(
+      postTextMatches(
+        "gm Buy $SCAM 0x2222222222222222222222222222222222222222",
+        "gm ☀️",
+      ),
+    ).toBe(false);
+    expect(postTextMatches("Sell $PEPE here", published)).toBe(false);
+    expect(postTextMatches("Buy PEPE here", "Buy $PEPE here")).toBe(false);
+    expect(postTextMatches("", published)).toBe(false);
+  });
+
+  it("rejects an address hidden inside a link-shaped word", () => {
+    expect(
+      postTextMatches(
+        "gm a.co/0x2222222222222222222222222222222222222222",
+        "gm",
+      ),
+    ).toBe(false);
   });
 });
 
