@@ -9,6 +9,7 @@ import { loadInsights, openDrawer } from "./drawer";
 vi.mock("./drawer", () => ({
   openDrawer: vi.fn(),
   loadInsights: vi.fn().mockResolvedValue(null),
+  tradeUrl: vi.fn(() => null),
 }));
 
 const response = (text: string) => ({
@@ -223,8 +224,50 @@ it("expands buy and sell inline without opening a sidebar", async () => {
   expect(root?.querySelector<HTMLElement>(".inline-panel")?.hidden).toBe(true);
   root?.querySelector<HTMLElement>(".inline-buy")?.click();
   expect(root?.querySelector<HTMLElement>(".inline-panel")?.hidden).toBe(false);
-  expect(root?.querySelectorAll(".inline-sides button")).toHaveLength(2);
+  expect(root?.querySelectorAll(".swap-row .inline-sides button")).toHaveLength(
+    2,
+  );
+  // A spot call offers no perp switch.
+  expect(root?.querySelector<HTMLElement>(".trade-modes")?.hidden).toBe(true);
   expect(openDrawer).not.toHaveBeenCalled();
+});
+
+it("shows one card for a perp call with a cashtag: Perpl by default, spot one tap away", async () => {
+  const textNode = document.querySelector('[data-testid="tweetText"]');
+  if (textNode)
+    textNode.innerHTML = 'go long <a href="/search?q=%24ETH">$ETH</a>';
+  const signal = heuristicSignal({
+    handle: "alice",
+    postId: "123",
+    now: new Date("2026-10-12T08:00:00Z"),
+    text: "go long $ETH",
+  });
+  sendMessage.mockImplementation(async (message) =>
+    message.type === "classify-post"
+      ? {
+          signal,
+          route: deriveTradeRoute(signal, [
+            { marketId: 32, symbol: "ETH", open: true },
+          ]),
+          llm: "unavailable",
+        }
+      : null,
+  );
+  await import("./content");
+  await flush();
+  const hosts = document.querySelectorAll(
+    ".cmb-swap-host, .cmb-signal-host, .cmb-xticker-host",
+  );
+  expect(hosts).toHaveLength(1);
+  const root = hosts[0]?.shadowRoot;
+  const modes = root?.querySelector<HTMLElement>(".trade-modes");
+  expect(modes?.hidden).toBe(false);
+  const [spot, perp] = Array.from(modes?.querySelectorAll("button") ?? []);
+  expect(perp?.getAttribute("aria-pressed")).toBe("true");
+  expect(root?.querySelector(".inline-buy")?.textContent).toBe("⇄ Long");
+  spot?.click();
+  expect(spot?.getAttribute("aria-pressed")).toBe("true");
+  expect(root?.querySelector(".inline-buy")?.textContent).toBe("⇄ Buy");
 });
 
 it("uses X's ticker card instead of a second card when the post has one", async () => {

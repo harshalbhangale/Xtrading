@@ -6,18 +6,25 @@ export type InlinePost = Pick<
   "postId" | "handle" | "asset" | "direction" | "instrument" | "tokenReferences"
 > & { signal?: PostSignal };
 
+/** Kuru spot market for an asset, if we trade it. */
+export function kuruMarket(
+  asset: string | null,
+): "MON" | "WETH" | "WBTC" | null {
+  return asset === "ETH" || asset === "WETH"
+    ? "WETH"
+    : asset === "BTC" || asset === "WBTC"
+      ? "WBTC"
+      : asset === "MON"
+        ? "MON"
+        : null;
+}
+
 export function inlineMarket(
   signal: Pick<PostSignal, "asset" | "instrument" | "tokenReferences">,
 ): "MON" | "WETH" | "WBTC" | null {
   if (signal.tokenReferences.length || signal.instrument === "perp")
     return null;
-  return signal.asset === "ETH" || signal.asset === "WETH"
-    ? "WETH"
-    : signal.asset === "BTC" || signal.asset === "WBTC"
-      ? "WBTC"
-      : signal.asset === "MON"
-        ? "MON"
-        : null;
+  return kuruMarket(signal.asset);
 }
 
 /** Trade card for a post (Kuru mainnet by default); signing stays on the app origin. */

@@ -4,12 +4,14 @@ import {
   inlineQuoteSchema,
   type PostSignal,
   publicPayoutSchema,
+  type TradeRoute,
 } from "@call-my-bluff/domain";
 import { getAddress } from "viem";
 import { callInsights } from "./call-insights";
 import { appOrigin } from "./config";
 import { directTrade } from "./direct-trade";
 import { assetUrl, el, safeLink, send } from "./dom";
+import { perpTicket } from "./perp-ticket";
 import { riskLine } from "./risk-line";
 import {
   formatPrice,
@@ -21,6 +23,27 @@ import {
 import { hasBrowserWallet } from "./wallet";
 
 export type SwapMarket = "MON" | "WETH" | "WBTC";
+
+/** Lets a later classification upgrade a card that was drawn from a cashtag. */
+export type TradeControl = {
+  setSignal(signal: PostSignal): void;
+  enablePerp(
+    signal: PostSignal,
+    route: Extract<TradeRoute, { status: "available" }>,
+  ): void;
+};
+const controls = new WeakMap<HTMLElement, TradeControl>();
+/** The control for the one trade card inside a post, if there is one. */
+export function tradeControl(article: HTMLElement): TradeControl | null {
+  for (const host of article.querySelectorAll<HTMLElement>(
+    ".cmb-swap-host, .cmb-xticker-host, .cmb-signal-host",
+  )) {
+    const card = host.shadowRoot?.querySelector<HTMLElement>(".swap-card");
+    const control = card ? controls.get(card) : undefined;
+    if (control) return control;
+  }
+  return null;
+}
 type Asset = "ETH" | "BTC" | "MON";
 const assets: Record<SwapMarket, { asset: Asset; name: string }> = {
   WETH: { asset: "ETH", name: "Ethereum" },
@@ -110,6 +133,11 @@ export function swapCard(input: {
   attached?: boolean;
   /** The post's classification, when it was read as a call. */
   signal?: PostSignal;
+  /** A perp call on this asset: the card opens on Perpl, spot stays one tap away. */
+  perp?: {
+    signal: PostSignal;
+    route: Extract<TradeRoute, { status: "available" }>;
+  };
 }) {
   const { asset, name } = assets[input.market];
   let chainId: 143 | 10143 = 143,
@@ -489,7 +517,70 @@ export function swapCard(input: {
     );
   });
 
-  panel.append(
+  // Spot (Kuru) and perp (Perpl) share this one card; the post's wording picks
+  // the default and the user can switch.
+  const spotPane = el("div", { class: "trade-pane" });
+  const perpPane = el("div", { class: "trade-pane", hidden: "" });
+  const modes = el("div", {
+    class: "inline-sides seg trade-modes",
+    role: "group",
+    "aria-label": "Instrument",
+    hidden: "",
+  });
+  const venue = el("span", { class: "swap-venue" });
+  let mode: "spot" | "perp" = "spot";
+  let perp: {
+    signal: PostSignal;
+    route: Extract<TradeRoute, { status: "available" }>;
+  } | null = null;
+  let perpMounted = false;
+  const modeButtons = (["spot", "perp"] as const).map((value) => {
+    const button = el(
+      "button",
+      { type: "button", "aria-pressed": String(value === mode) },
+      value === "spot" ? "Spot · Kuru" : "Perp · Perpl",
+    );
+    button.addEventListener("click", () => setMode(value));
+    modes.append(button);
+    return button;
+  });
+  function setMode(next: "spot" | "perp") {
+    if (next === "perp" && !perp) return;
+    mode = next;
+    for (const [index, button] of modeButtons.entries())
+      button.setAttribute(
+        "aria-pressed",
+        String((index === 0 ? "spot" : "perp") === mode),
+      );
+    spotPane.hidden = mode !== "spot";
+    perpPane.hidden = mode !== "perp";
+    if (mode === "perp" && perp && !perpMounted) {
+      perpMounted = true;
+      perpPane.append(perpTicket(input.postId, perp.signal, perp.route));
+    }
+    venue.replaceChildren(
+      mode === "spot"
+        ? el("img", {
+            class: "swap-kuru",
+            src: assetUrl("brand/kuru.png"),
+            alt: "Kuru",
+            width: "52",
+            height: "13",
+          })
+        : el("b", { class: "perp-venue" }, "Perpl"),
+    );
+    const side = perp?.route.side;
+    buy.textContent =
+      mode === "spot"
+        ? "⇄ Buy"
+        : side === "short"
+          ? "⇄ Short"
+          : side === "long"
+            ? "⇄ Long"
+            : "⇄ Trade";
+  }
+
+  spotPane.append(
     el(
       "div",
       { class: "swap-row" },
@@ -530,8 +621,13 @@ export function swapCard(input: {
     meta,
     creatorLine,
     status,
-    risk.line,
     submit,
+  );
+  panel.append(
+    modes,
+    risk.line,
+    spotPane,
+    perpPane,
     el(
       "footer",
       { class: "swap-footer" },
@@ -541,13 +637,7 @@ export function swapCard(input: {
         "Powered by",
         logo(),
         el("i", { class: "swap-powered-sep", "aria-hidden": "true" }),
-        el("img", {
-          class: "swap-kuru",
-          src: assetUrl("brand/kuru.png"),
-          alt: "Kuru",
-          width: "52",
-          height: "13",
-        }),
+        venue,
       ),
       safeLink(
         new URL(`/creators/${input.handle}`, appOrigin).href,
@@ -576,7 +666,7 @@ export function swapCard(input: {
   });
 
   // Evidence for every card, call or not: token data loads from the asset alone.
-  const insights = callInsights({
+  let insights = callInsights({
     postId: input.postId,
     handle: input.handle,
     signal: input.signal,
@@ -600,6 +690,28 @@ export function swapCard(input: {
     );
   } else card.append(header, insights, panel);
   renderTokens();
+  setMode("spot");
+  const control: TradeControl = {
+    setSignal(signal) {
+      // Swap in the classified call check unless the user already opened it.
+      if ((insights as HTMLDetailsElement).open) return;
+      const next = callInsights({
+        postId: input.postId,
+        handle: input.handle,
+        signal,
+        asset,
+      });
+      insights.replaceWith(next);
+      insights = next;
+    },
+    enablePerp(signal, route) {
+      perp = { signal, route };
+      modes.hidden = false;
+      setMode("perp");
+    },
+  };
+  controls.set(card, control);
+  if (input.perp) control.enablePerp(input.perp.signal, input.perp.route);
   return { card, buy };
 }
 

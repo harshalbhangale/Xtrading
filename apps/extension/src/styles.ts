@@ -592,11 +592,10 @@ a { color: inherit; }
   font-size: 12px; font-weight: 700; white-space: nowrap; }
 .perp-venue { color: var(--foreground); font-weight: 800; letter-spacing: -0.01em; }
 .perp-card .inline-panel { display: grid; gap: 10px; }
-.perp-card .ticket-head { display: none; }
-.perp-card .ticket-go { border-radius: 99px; }
-.perp-card .ticket-size, .perp-card .ticket-sum { border-radius: 14px; background: var(--raised); }
-.perp-card .ticket-side { border-radius: 99px; }
-.perp-card .ticket-side .side { border-radius: 99px; }
+.inline-card .ticket-go { border-radius: 99px; }
+.inline-card .ticket-size, .inline-card .ticket-sum { border-radius: 14px; background: var(--raised); }
+.inline-card .ticket-side { border-radius: 99px; }
+.inline-card .ticket-side .side { border-radius: 99px; }
 
 /* One-line pre-trade verdict from Nansen. */
 .risk-line { display: flex; align-items: center; gap: 8px; margin: 0; padding: 9px 12px; border-radius: 12px;
@@ -609,4 +608,11 @@ a { color: inherit; }
 .risk-line.clean .risk-dot { background: var(--positive); }
 .risk-line.unknown { color: var(--muted); font-weight: 500; }
 .risk-link { flex: 0 0 auto; font-size: 12px; font-weight: 600; }
+
+/* One card, two instruments: Spot (Kuru) and Perp (Perpl). */
+.trade-pane { display: grid; gap: 8px; }
+.trade-pane[hidden] { display: none; }
+.trade-modes { justify-self: start; }
+.swap-venue { display: inline-flex; align-items: center; }
+.perp-card .ticket-head { display: none; }
 `;
