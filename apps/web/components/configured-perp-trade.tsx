@@ -124,12 +124,16 @@ export default function ConfiguredPerpTrade({
   owner.current = user?.id;
   // Opened from X with review=1: review once the session and markets are ready.
   const autoReview = useRef(false);
+  // Opened from an agent link with sign=1: open the wallet prompt as soon as the review is ready.
+  // The user still approves or rejects every step in their own wallet.
+  const autoSign = useRef(false);
   // The detected call's asset: market IDs differ per network, so it picks the market
   // when a link's marketId (routed on testnet) is not on this network.
   const asset = useRef<string | null>(null);
   useEffect(() => {
     const params = new URLSearchParams(initialParams ?? window.location.search);
-    autoReview.current = params.get("review") === "1";
+    autoSign.current = params.get("sign") === "1";
+    autoReview.current = params.get("review") === "1" || autoSign.current;
     const market = params.get("marketId"),
       requested = params.get("side"),
       source = params.get("postId"),
@@ -304,6 +308,12 @@ export default function ConfiguredPerpTrade({
     autoReview.current = false;
     void prepare();
   }, [ready, authenticated, canReview]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Runs once when the auto-prepared review arrives.
+  useEffect(() => {
+    if (!autoSign.current || !review || expired || busy) return;
+    autoSign.current = false;
+    void submit();
+  }, [review]);
   // Each step is signed by the user's own wallet; the server only reviews and reads back.
   async function submit() {
     if (!review || expired) {
@@ -347,6 +357,7 @@ export default function ConfiguredPerpTrade({
     } finally {
       setBusy(false);
       setProgress("");
+      autoSign.current = false;
     }
   }
   if (!ready) return <p>Loading wallet session…</p>;

@@ -483,6 +483,8 @@ export function xtradingMcp(request: Request) {
             slippage: String(order.slippageBps),
             postId: sourcePostId ?? "",
             handle: creator?.replace(/^@/, "") ?? "",
+            // Opening the link goes straight to the wallet prompt; the user approves each step there.
+            sign: "1",
           }),
         };
       }),
