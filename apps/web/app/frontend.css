@@ -2087,3 +2087,13 @@ select.wlt-chip {
   color: var(--negative);
   background: #ff8a7a1f;
 }
+
+.agent-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+}

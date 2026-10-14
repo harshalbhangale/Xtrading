@@ -141,3 +141,13 @@ export const creatorPayouts = pgTable("creator_payouts", {
   version: integer("version").notNull().default(1),
   updatedAt: time("updated_at").defaultNow().notNull(),
 });
+
+// Last MCP use per Privy user, so the portal can show an agent is connected. No tokens stored.
+export const agentConnections = pgTable("agent_connections", {
+  privyUserId: text("privy_user_id").primaryKey(),
+  client: text("client"),
+  lastTool: text("last_tool"),
+  calls: integer("calls").notNull().default(0),
+  firstSeenAt: time("first_seen_at").defaultNow().notNull(),
+  lastSeenAt: time("last_seen_at").defaultNow().notNull(),
+});

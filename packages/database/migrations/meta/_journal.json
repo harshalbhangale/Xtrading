@@ -29,6 +29,13 @@
       "when": 1791856215699,
       "tag": "0003_empty_silver_sable",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791937492139,
+      "tag": "0004_white_victor_mancha",
+      "breakpoints": true
     }
   ]
 }

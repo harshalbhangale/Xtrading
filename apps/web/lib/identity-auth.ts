@@ -17,6 +17,19 @@ function privy() {
   });
   return client;
 }
+/** The Privy user ID behind a Bearer token, verified locally; no profile fetch. */
+export async function verifiedUserId(request: Request) {
+  const bearer = request.headers.get("authorization");
+  if (!bearer || !/^Bearer [^\s]+$/.test(bearer) || bearer.length > 8192)
+    return null;
+  try {
+    return (await privy().utils().auth().verifyAccessToken(bearer.slice(7)))
+      .user_id;
+  } catch {
+    return null;
+  }
+}
+
 export async function authenticatedUser(request: Request) {
   const bearer = request.headers.get("authorization");
   if (!bearer || !/^Bearer [^\s]+$/.test(bearer) || bearer.length > 8192)
