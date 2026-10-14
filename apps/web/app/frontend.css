@@ -2042,6 +2042,19 @@ select.wlt-chip {
   font: 600 20px var(--mono);
   font-variant-numeric: tabular-nums;
 }
+.trades-section {
+  display: grid;
+  gap: 14px;
+  padding-top: 8px;
+}
+.trades-section + .trades-section {
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+.trades-title {
+  margin: 0;
+  font-size: 18px;
+}
 .trades-heading {
   margin: 6px 0 0;
   font-size: 15px;

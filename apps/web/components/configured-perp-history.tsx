@@ -3,6 +3,7 @@
 import { formatUsd, fromUnits } from "@call-my-bluff/domain";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useCallback, useEffect, useState } from "react";
+import { SpotHistorySection } from "./spot-history-section";
 
 type Position = {
   marketId: number;
@@ -69,7 +70,7 @@ const label: Record<string, string> = {
   "close-short": "Close short",
 };
 
-/** My trades: Perpl positions, fills and PnL for one of the user's wallets, read from chain. */
+/** My trades: Perpl positions and Kuru spot fills with PnL for one of the user's wallets, read from chain. */
 export default function ConfiguredPerpHistory() {
   const { ready, authenticated, login } = usePrivy();
   const { wallets } = useWallets();
@@ -85,6 +86,7 @@ export default function ConfiguredPerpHistory() {
   const [data, setData] = useState<History | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const wallet =
     owned.find((w) => w.address.toLowerCase() === selected.toLowerCase())
       ?.address ??
@@ -178,205 +180,220 @@ export default function ConfiguredPerpHistory() {
           type="button"
           className="inline-button"
           disabled={loading}
-          onClick={() => void load()}
+          onClick={() => {
+            void load();
+            setRefreshKey((k) => k + 1);
+          }}
         >
           {loading ? "Refreshing…" : "Refresh"}
         </button>
       </div>
 
-      {error && <p className="form-message">{error}</p>}
-      {!data && !error && (
-        <p className="small-note">Reading your trades from chain…</p>
-      )}
+      <section className="trades-section" aria-label="Perpl perps">
+        <h3 className="trades-title">Perpl perps</h3>
+        {error && <p className="form-message">{error}</p>}
+        {!data && !error && (
+          <p className="small-note">Reading your trades from chain…</p>
+        )}
 
-      {data && s && (
-        <>
-          <div className="trades-summary">
-            <div>
-              <span>Net PnL</span>
-              <strong className={tone(BigInt(s.netPnl))}>
-                {signed(BigInt(s.netPnl), d)}
-              </strong>
+        {data && s && (
+          <>
+            <div className="trades-summary">
+              <div>
+                <span>Net PnL</span>
+                <strong className={tone(BigInt(s.netPnl))}>
+                  {signed(BigInt(s.netPnl), d)}
+                </strong>
+              </div>
+              <div>
+                <span>Unrealized</span>
+                <strong className={tone(BigInt(s.unrealizedPnl))}>
+                  {signed(BigInt(s.unrealizedPnl), d)}
+                </strong>
+              </div>
+              <div>
+                <span>Realized</span>
+                <strong className={tone(BigInt(s.realizedPnl))}>
+                  {signed(BigInt(s.realizedPnl), d)}
+                </strong>
+              </div>
+              <div>
+                <span>Fees paid</span>
+                <strong>{formatUsd(BigInt(s.fees), d)}</strong>
+              </div>
+              <div>
+                <span>Perpl balance</span>
+                <strong>
+                  {data.account
+                    ? formatUsd(BigInt(data.account.available), d)
+                    : "No account"}
+                </strong>
+              </div>
+              <div>
+                <span>Filled trades</span>
+                <strong>{s.trades}</strong>
+              </div>
             </div>
-            <div>
-              <span>Unrealized</span>
-              <strong className={tone(BigInt(s.unrealizedPnl))}>
-                {signed(BigInt(s.unrealizedPnl), d)}
-              </strong>
-            </div>
-            <div>
-              <span>Realized</span>
-              <strong className={tone(BigInt(s.realizedPnl))}>
-                {signed(BigInt(s.realizedPnl), d)}
-              </strong>
-            </div>
-            <div>
-              <span>Fees paid</span>
-              <strong>{formatUsd(BigInt(s.fees), d)}</strong>
-            </div>
-            <div>
-              <span>Perpl balance</span>
-              <strong>
-                {data.account
-                  ? formatUsd(BigInt(data.account.available), d)
-                  : "No account"}
-              </strong>
-            </div>
-            <div>
-              <span>Filled trades</span>
-              <strong>{s.trades}</strong>
-            </div>
-          </div>
 
-          <h3 className="trades-heading">
-            Active positions <small>{data.positions.length}</small>
-          </h3>
-          {data.positions.length === 0 ? (
-            <p className="small-note">
-              No open Perpl positions on Monad {data.network}.
-            </p>
-          ) : (
-            <div className="table-scroll">
-              <table className="record-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Market</th>
-                    <th scope="col">Side</th>
-                    <th scope="col">Size</th>
-                    <th scope="col">Entry</th>
-                    <th scope="col">Mark</th>
-                    <th scope="col">Margin</th>
-                    <th scope="col">Unrealized PnL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.positions.map((p) => {
-                    const pnl = BigInt(p.unrealizedPnl);
-                    return (
-                      <tr key={p.marketId}>
-                        <td>{p.symbol}-PERP</td>
-                        <td>
-                          <span className={`side-chip ${p.side}`}>
-                            {p.side}
-                          </span>
-                        </td>
-                        <td>
-                          {fromUnits(BigInt(p.size), p.sizeDecimals)} {p.symbol}
-                        </td>
-                        <td>
-                          {formatUsd(BigInt(p.entryPrice), p.priceDecimals)}
-                        </td>
-                        <td>
-                          {formatUsd(BigInt(p.markPrice), p.priceDecimals)}
-                        </td>
-                        <td>{formatUsd(BigInt(p.margin), d)}</td>
-                        <td className={tone(pnl)}>{signed(pnl, d)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+            <h3 className="trades-heading">
+              Active positions <small>{data.positions.length}</small>
+            </h3>
+            {data.positions.length === 0 ? (
+              <p className="small-note">
+                No open Perpl positions on Monad {data.network}.
+              </p>
+            ) : (
+              <div className="table-scroll">
+                <table className="record-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Market</th>
+                      <th scope="col">Side</th>
+                      <th scope="col">Size</th>
+                      <th scope="col">Entry</th>
+                      <th scope="col">Mark</th>
+                      <th scope="col">Margin</th>
+                      <th scope="col">Unrealized PnL</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.positions.map((p) => {
+                      const pnl = BigInt(p.unrealizedPnl);
+                      return (
+                        <tr key={p.marketId}>
+                          <td>{p.symbol}-PERP</td>
+                          <td>
+                            <span className={`side-chip ${p.side}`}>
+                              {p.side}
+                            </span>
+                          </td>
+                          <td>
+                            {fromUnits(BigInt(p.size), p.sizeDecimals)}{" "}
+                            {p.symbol}
+                          </td>
+                          <td>
+                            {formatUsd(BigInt(p.entryPrice), p.priceDecimals)}
+                          </td>
+                          <td>
+                            {formatUsd(BigInt(p.markPrice), p.priceDecimals)}
+                          </td>
+                          <td>{formatUsd(BigInt(p.margin), d)}</td>
+                          <td className={tone(pnl)}>{signed(pnl, d)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-          <h3 className="trades-heading">
-            History <small>{data.history.length}</small>
-          </h3>
-          {data.history.length === 0 ? (
-            <p className="small-note">
-              No Perpl activity from {short(data.wallet)} on Monad{" "}
-              {data.network} yet. Trade from an X post or the Trade page.
-            </p>
-          ) : (
-            <div className="table-scroll">
-              <table className="record-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Time</th>
-                    <th scope="col">Action</th>
-                    <th scope="col">Market</th>
-                    <th scope="col">Size</th>
-                    <th scope="col">Price</th>
-                    <th scope="col">Fee</th>
-                    <th scope="col">Realized</th>
-                    <th scope="col">Tx</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.history.map((e) => {
-                    const pnl =
-                      e.realizedPnl === null ? null : BigInt(e.realizedPnl);
-                    return (
-                      <tr key={e.transactionHash}>
-                        <td>
-                          {e.time
-                            ? new Date(e.time).toLocaleString(undefined, {
-                                dateStyle: "short",
-                                timeStyle: "short",
-                              })
-                            : "—"}
-                        </td>
-                        <td>
-                          {e.kind === "order"
-                            ? (label[e.action ?? ""] ?? "Order")
-                            : e.kind === "deposit"
-                              ? "Deposit"
-                              : e.kind === "withdraw"
-                                ? "Withdraw"
-                                : "Open account"}
-                          {e.kind === "order" && e.leverage
-                            ? ` · ${e.leverage}x`
-                            : ""}
-                          {e.status !== "filled" && e.status !== "done" && (
-                            <small className="trades-status">
-                              {" "}
-                              {e.status.replace("-", " ")}
-                            </small>
-                          )}
-                        </td>
-                        <td>{e.symbol ? `${e.symbol}-PERP` : "AUSD"}</td>
-                        <td>
-                          {e.kind === "order" && e.sizeDecimals !== null
-                            ? fromUnits(BigInt(e.filledSize), e.sizeDecimals)
-                            : e.amount
-                              ? formatUsd(BigInt(e.amount), d)
+            <h3 className="trades-heading">
+              History <small>{data.history.length}</small>
+            </h3>
+            {data.history.length === 0 ? (
+              <p className="small-note">
+                No Perpl activity from {short(data.wallet)} on Monad{" "}
+                {data.network} yet. Trade from an X post or the Trade page.
+              </p>
+            ) : (
+              <div className="table-scroll">
+                <table className="record-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Time</th>
+                      <th scope="col">Action</th>
+                      <th scope="col">Market</th>
+                      <th scope="col">Size</th>
+                      <th scope="col">Price</th>
+                      <th scope="col">Fee</th>
+                      <th scope="col">Realized</th>
+                      <th scope="col">Tx</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.history.map((e) => {
+                      const pnl =
+                        e.realizedPnl === null ? null : BigInt(e.realizedPnl);
+                      return (
+                        <tr key={e.transactionHash}>
+                          <td>
+                            {e.time
+                              ? new Date(e.time).toLocaleString(undefined, {
+                                  dateStyle: "short",
+                                  timeStyle: "short",
+                                })
                               : "—"}
-                        </td>
-                        <td>
-                          {e.averagePrice && e.priceDecimals !== null
-                            ? formatUsd(BigInt(e.averagePrice), e.priceDecimals)
-                            : "—"}
-                        </td>
-                        <td>
-                          {e.fee !== "0" ? formatUsd(BigInt(e.fee), d) : "—"}
-                        </td>
-                        <td className={pnl === null ? "" : tone(pnl)}>
-                          {pnl === null ? "—" : signed(pnl, d)}
-                        </td>
-                        <td>
-                          <a
-                            className="text-link"
-                            href={`${data.explorer}/tx/${e.transactionHash}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {short(e.transactionHash)} ↗
-                          </a>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <p className="small-note">
-            {data.method} Updated{" "}
-            {new Date(data.observedAt).toLocaleTimeString()} · refreshes every
-            30s.
-          </p>
-        </>
-      )}
+                          </td>
+                          <td>
+                            {e.kind === "order"
+                              ? (label[e.action ?? ""] ?? "Order")
+                              : e.kind === "deposit"
+                                ? "Deposit"
+                                : e.kind === "withdraw"
+                                  ? "Withdraw"
+                                  : "Open account"}
+                            {e.kind === "order" && e.leverage
+                              ? ` · ${e.leverage}x`
+                              : ""}
+                            {e.status !== "filled" && e.status !== "done" && (
+                              <small className="trades-status">
+                                {" "}
+                                {e.status.replace("-", " ")}
+                              </small>
+                            )}
+                          </td>
+                          <td>{e.symbol ? `${e.symbol}-PERP` : "AUSD"}</td>
+                          <td>
+                            {e.kind === "order" && e.sizeDecimals !== null
+                              ? fromUnits(BigInt(e.filledSize), e.sizeDecimals)
+                              : e.amount
+                                ? formatUsd(BigInt(e.amount), d)
+                                : "—"}
+                          </td>
+                          <td>
+                            {e.averagePrice && e.priceDecimals !== null
+                              ? formatUsd(
+                                  BigInt(e.averagePrice),
+                                  e.priceDecimals,
+                                )
+                              : "—"}
+                          </td>
+                          <td>
+                            {e.fee !== "0" ? formatUsd(BigInt(e.fee), d) : "—"}
+                          </td>
+                          <td className={pnl === null ? "" : tone(pnl)}>
+                            {pnl === null ? "—" : signed(pnl, d)}
+                          </td>
+                          <td>
+                            <a
+                              className="text-link"
+                              href={`${data.explorer}/tx/${e.transactionHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {short(e.transactionHash)} ↗
+                            </a>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <p className="small-note">
+              {data.method} Updated{" "}
+              {new Date(data.observedAt).toLocaleTimeString()} · refreshes every
+              30s.
+            </p>
+          </>
+        )}
+      </section>
+      <SpotHistorySection
+        wallet={wallet}
+        chainId={chainId}
+        refreshKey={refreshKey}
+      />
     </div>
   );
 }

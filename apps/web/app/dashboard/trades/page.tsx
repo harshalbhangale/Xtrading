@@ -7,9 +7,9 @@ export default function TradesPage() {
     <>
       <PageHeading
         title="My trades"
-        description="Your Perpl longs and shorts on Monad testnet and mainnet: active positions, history and PnL, read from chain."
+        description="Your Perpl longs and shorts and Kuru spot trades on Monad testnet and mainnet: open positions, history and PnL, read from chain."
       />
-      <Panel title="Perpl positions & history">
+      <Panel title="Positions, history & PnL">
         <PerpHistoryControl />
       </Panel>
     </>
