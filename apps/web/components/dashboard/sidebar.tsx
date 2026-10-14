@@ -14,6 +14,7 @@ const navigation: Record<"user" | "creator", Item[]> = {
     { href: "/dashboard", label: "Terminal", icon: "activity" },
     { href: "/dashboard/profile", label: "Profile", icon: "overview" },
     { href: "/dashboard/portfolio", label: "Portfolio", icon: "portfolio" },
+    { href: "/dashboard/trades", label: "My trades", icon: "trade" },
     { href: "/dashboard/watchlist", label: "Watchlist", icon: "watchlist" },
     { href: "/creators", label: "Creators", icon: "creators" },
   ],

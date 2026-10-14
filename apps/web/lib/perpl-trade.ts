@@ -100,7 +100,7 @@ const execution = (wallet: string, network: PerplNetwork) =>
 type Context = typeof identityContext;
 
 /** The network for a request; mainnet only when the server enables it. */
-function network(chainId: number) {
+export function network(chainId: number) {
   let selected: PerplNetwork;
   try {
     selected = perplNetwork(chainId);
@@ -126,7 +126,10 @@ async function boundWallet(
 }
 
 /** The wallet's own exchange account, or null when it has not opened one. */
-async function exchangeAccount(wallet: `0x${string}`, selected: PerplNetwork) {
+export async function exchangeAccount(
+  wallet: `0x${string}`,
+  selected: PerplNetwork,
+) {
   const client = await perplClient(selected);
   try {
     const account = await client.readContract({
@@ -484,7 +487,7 @@ export async function perpAccount(
 }
 
 /** The account's open position on one market, read from the Exchange contract. */
-async function openPosition(
+export async function openPosition(
   selected: PerplNetwork,
   perpId: number,
   accountId: bigint,

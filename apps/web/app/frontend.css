@@ -2001,3 +2001,76 @@ select.wlt-chip {
     flex-wrap: wrap;
   }
 }
+
+/* ---------- My trades ---------- */
+.trades {
+  display: grid;
+  gap: 18px;
+}
+.trades-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.trades-controls select {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--raised);
+  color: inherit;
+  font: 500 13px var(--mono);
+}
+.trades-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.trades-summary > div {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.trades-summary span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.trades-summary strong {
+  font: 600 20px var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.trades-heading {
+  margin: 6px 0 0;
+  font-size: 15px;
+}
+.trades-heading small {
+  margin-left: 6px;
+  color: var(--muted);
+  font: 500 12px var(--mono);
+}
+.trades-status {
+  color: var(--muted);
+}
+.pnl-up {
+  color: var(--positive);
+}
+.pnl-down {
+  color: var(--negative);
+}
+.side-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font: 600 11px var(--mono);
+  text-transform: uppercase;
+}
+.side-chip.long {
+  color: var(--positive);
+  background: #8ad97c1f;
+}
+.side-chip.short {
+  color: var(--negative);
+  background: #ff8a7a1f;
+}
