@@ -1,3 +1,5 @@
+<div align="center">
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logos/xtrading-white.png">
   <img alt="Xtrading" src="docs/assets/logos/xtrading.png" width="240">
@@ -7,6 +9,8 @@
 
 **Trade the calls you see on X, and know who's worth following.**  
 [xtradingnow.xyz](https://xtradingnow.xyz) · [Chrome extension](https://xtradingnow.xyz/extension) · [Live onchain activity](https://xtradingnow.xyz/dashboard/onchain) · [Product tour](docs/product-tour.md) · [Pitch Video](https://x.com/Xtradingnow/status/2110063504795590952) · [Presentation](https://canva.link/efa8fnb0oxts8vq) · [Agent connector](#plug-in-an-agent)
+
+</div>
 
 ---
 
