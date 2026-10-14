@@ -6,7 +6,8 @@ Xtrading runs a [Model Context Protocol](https://modelcontextprotocol.io) server
 
 | | |
 |---|---|
-| Endpoint | `https://xtradingnow.xyz/api/mcp` |
+| Connector (OAuth) | `https://xtradingnow.xyz/mcp`. Add it as a custom connector; you sign in with X through Privy once and the connector refreshes its own tokens. |
+| Endpoint (bearer token) | `https://xtradingnow.xyz/api/mcp` |
 | Transport | Streamable HTTP, stateless, JSON responses. Only `POST` is accepted; `GET` and `DELETE` return `405`. |
 | Default network | Monad testnet (`10143`). Mainnet (`143`) must be passed explicitly as `chainId`. |
 | Rate limit | 120 requests per minute per IP, then `429`. |
