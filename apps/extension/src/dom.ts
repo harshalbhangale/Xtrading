@@ -31,10 +31,21 @@ export function svg(
   return node;
 }
 
-/** Footer line on every card: the Xtrading wordmark, inverted for the dark brand theme. */
-/** Packaged asset URL; falls back to the relative path where the extension API is absent (tests). */
+const assetUrls = new Map<string, string>();
+
+/** Old content scripts can outlive an extension reload; getURL then throws. */
 export function assetUrl(path: string) {
-  return globalThis.chrome?.runtime?.getURL?.(path) ?? path;
+  try {
+    const url = globalThis.chrome?.runtime?.getURL?.(path);
+    if (url) {
+      assetUrls.set(path, url);
+      return url;
+    }
+    return path;
+  } catch {
+    // Keep previously resolved assets; never request an extension path from X.
+    return assetUrls.get(path) ?? "";
+  }
 }
 
 export function poweredBy() {
