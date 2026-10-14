@@ -63,6 +63,8 @@ Every tool, its inputs and the error codes: [MCP docs](docs/mcp.md). A plain-tok
 
 ## Built with
 
+<div align="center">
+
 | Sponsor                                                                                                           | What it powers in Xtrading                                                                                                                                                                        |
 | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | <img src="docs/assets/logos/kuru.png" width="20" height="20" align="absmiddle"> **[Kuru](https://kuru.io)**       | Spot execution on Monad. Market orders go straight from the wallet to Kuru's order books, and **Kuru Flow** pays creator fees atomically with the buy.                                            |
@@ -71,6 +73,8 @@ Every tool, its inputs and the error codes: [MCP docs](docs/mcp.md). A plain-tok
 | <img src="docs/assets/logos/nansen.png" width="20" height="20" align="absmiddle"> **[Nansen](https://nansen.ai)** | Wallet and token intelligence on creator profiles and in the extension, plus price history for scoring calls.                                                                                     |
 | <img src="docs/assets/logos/perpl.png" width="20" height="20" align="absmiddle"> **[Perpl](https://perpl.xyz)**   | Perpetuals for long and short calls, traded from the user's own wallet and Perpl account.                                                                                                         |
 | <img src="docs/assets/logos/monad.png" width="20" height="20" align="absmiddle"> **[Monad](https://monad.xyz)**   | Fast enough that trading from a post feels like clicking a button.                                                                                                                                |
+
+</div>
 
 How each integration works, with links to the code: [SPONSORS.md](SPONSORS.md).
 
@@ -168,6 +172,7 @@ Configuration, database setup, the indexer, contracts and deployment are covered
 - **Fees tied to results.** Creators should only earn fees after five correct calls that also made money for the people who traded them. That requires matching each user's entry and exit fills to the call.
 - **More markets.** More Kuru pairs, and Perpl perps alongside them as its markets grow.
 - **Deeper wallet signals.** Show more Nansen context on profiles, for example when a creator's wallet sells into their own call.
+- **Funding to scale.** We're looking for a grant or an accelerator. Every call is a post to classify, a price to record at the minute it was posted, and a wallet to check, for every creator people follow. Doing that across all of crypto X takes infrastructure we can't fund ourselves yet, and we'd value guidance from people who have run data pipelines and trading products at that size.
 
 ## Docs
 
