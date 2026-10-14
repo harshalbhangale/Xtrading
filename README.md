@@ -3,7 +3,7 @@
   <img alt="Xtrading" src="docs/assets/logos/xtrading.png" width="240">
 </picture>
 
-
+<br>
 
 **Trade the calls you see on X, and know who's worth following.**  
 [xtradingnow.xyz](https://xtradingnow.xyz) · [Chrome extension](https://xtradingnow.xyz/extension) · [Live onchain activity](https://xtradingnow.xyz/dashboard/onchain) · [Product tour](docs/product-tour.md) · [Pitch Video](https://x.com/Xtradingnow/status/2110063504795590952) · [Presentation](https://canva.link/efa8fnb0oxts8vq) · [Agent connector](#plug-in-an-agent)
