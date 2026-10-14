@@ -11,4 +11,5 @@ export const isWorkspacePath = (path: string) =>
 export const isChromeless = (path: string) =>
   isWorkspacePath(path) ||
   within(path, "/start") ||
-  within(path, "/trade/inline");
+  within(path, "/trade/inline") ||
+  within(path, "/oauth");

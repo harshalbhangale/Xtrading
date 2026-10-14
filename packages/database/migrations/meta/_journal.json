@@ -36,6 +36,13 @@
       "when": 1791937492139,
       "tag": "0004_white_victor_mancha",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791940941646,
+      "tag": "0005_giant_skaar",
+      "breakpoints": true
     }
   ]
 }

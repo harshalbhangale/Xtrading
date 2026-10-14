@@ -2097,3 +2097,63 @@ select.wlt-chip {
   color: var(--muted);
   font-size: 13px;
 }
+
+/* ---------- OAuth consent ---------- */
+.oauth-page {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px 16px;
+}
+.oauth-card {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  max-width: 440px;
+  padding: 28px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: var(--raised);
+}
+.oauth-card h1 {
+  margin: 0;
+  font-size: 24px;
+}
+.oauth-card p {
+  margin: 0;
+  line-height: 1.55;
+}
+.oauth-brand {
+  color: var(--lime);
+  font: 600 13px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.oauth-scopes {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+.oauth-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.oauth-allow {
+  min-width: 140px;
+}
+.connector-steps {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+.copy-text {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}

@@ -2,6 +2,7 @@ import "server-only";
 import { IdentityError } from "@call-my-bluff/database/identity";
 import { normalizeHandle } from "@call-my-bluff/domain";
 import { PrivyClient } from "@privy-io/node";
+import { ACCESS_PREFIX, accessTokenUser } from "./oauth";
 
 let client: PrivyClient | undefined;
 function privy() {
@@ -17,11 +18,18 @@ function privy() {
   });
   return client;
 }
+const mcpPath = (request: Request) =>
+  ["/mcp", "/api/mcp"].includes(new URL(request.url).pathname);
+
 /** The Privy user ID behind a Bearer token, verified locally; no profile fetch. */
 export async function verifiedUserId(request: Request) {
   const bearer = request.headers.get("authorization");
   if (!bearer || !/^Bearer [^\s]+$/.test(bearer) || bearer.length > 8192)
     return null;
+  if (bearer.startsWith(`Bearer ${ACCESS_PREFIX}`))
+    return mcpPath(request)
+      ? accessTokenUser(bearer.slice(7)).catch(() => null)
+      : null;
   try {
     return (await privy().utils().auth().verifyAccessToken(bearer.slice(7)))
       .user_id;
@@ -34,6 +42,14 @@ export async function authenticatedUser(request: Request) {
   const bearer = request.headers.get("authorization");
   if (!bearer || !/^Bearer [^\s]+$/.test(bearer) || bearer.length > 8192)
     throw new IdentityError("authentication_required", 401);
+  // Connector (OAuth) tokens act only on the MCP endpoint, never the rest of the API.
+  if (bearer.startsWith(`Bearer ${ACCESS_PREFIX}`)) {
+    const userId = mcpPath(request)
+      ? await accessTokenUser(bearer.slice(7))
+      : null;
+    if (!userId) throw new IdentityError("invalid_session", 401);
+    return privyUser(userId);
+  }
   let userId: string;
   try {
     userId = (await privy().utils().auth().verifyAccessToken(bearer.slice(7)))

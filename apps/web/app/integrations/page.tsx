@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import { AgentPromptBuilder } from "../../components/agent-prompt-builder";
+import {
+  ConnectorDisconnect,
+  CopyText,
+} from "../../components/connector-controls";
 import { PageHeading, Panel } from "../../components/dashboard/ui";
 import { McpTokenControl } from "../../components/mcp-token-control";
 
@@ -49,13 +53,35 @@ const tools = [
 ] as const;
 
 export default function IntegrationsPage() {
-  const endpoint = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/mcp`;
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const endpoint = `${base}/api/mcp`;
+  const connector = `${base}/mcp`;
   return (
     <>
       <PageHeading
         title="Agent access (MCP)"
         description="A Model Context Protocol server so agents can read the same evidence and prepare trades for you to sign, on Monad testnet or mainnet. Agents never sign or submit."
       />
+      <Panel
+        title="Add to Claude (claude.ai, Desktop and mobile)"
+        description="A custom connector with Xtrading sign-in. No token to copy, and it stays connected."
+      >
+        <ol className="connector-steps">
+          <li>
+            In Claude, open <strong>Settings → Connectors</strong> and click{" "}
+            <strong>Add → Custom connector</strong>.
+          </li>
+          <li>
+            Name it <strong>Xtrading</strong> and paste this URL:{" "}
+            <CopyText value={connector} />
+          </li>
+          <li>
+            Click <strong>Connect</strong>. Sign in to Xtrading and click{" "}
+            <strong>Allow</strong>; you land back in Claude, connected.
+          </li>
+        </ol>
+        <ConnectorDisconnect />
+      </Panel>
       <Panel
         title="Connect"
         description="Streamable HTTP, no session state. Public tools need nothing else."

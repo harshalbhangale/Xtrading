@@ -151,3 +151,42 @@ export const agentConnections = pgTable("agent_connections", {
   firstSeenAt: time("first_seen_at").defaultNow().notNull(),
   lastSeenAt: time("last_seen_at").defaultNow().notNull(),
 });
+
+// OAuth for the MCP connector (claude.ai custom connectors). Codes and tokens are
+// stored only as SHA-256 hashes; an access token is accepted on the MCP endpoint only.
+export const oauthClients = pgTable("oauth_clients", {
+  clientId: text("client_id").primaryKey(),
+  clientName: text("client_name").notNull(),
+  redirectUris: jsonb("redirect_uris").$type<string[]>().notNull(),
+  createdAt: time("created_at").defaultNow().notNull(),
+});
+
+export const oauthCodes = pgTable("oauth_codes", {
+  codeHash: text("code_hash").primaryKey(),
+  clientId: text("client_id")
+    .notNull()
+    .references(() => oauthClients.clientId),
+  privyUserId: text("privy_user_id").notNull(),
+  redirectUri: text("redirect_uri").notNull(),
+  codeChallenge: text("code_challenge").notNull(),
+  scope: text("scope").notNull(),
+  expiresAt: time("expires_at").notNull(),
+  usedAt: time("used_at"),
+});
+
+export const oauthTokens = pgTable(
+  "oauth_tokens",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    kind: text("kind", { enum: ["access", "refresh"] }).notNull(),
+    clientId: text("client_id")
+      .notNull()
+      .references(() => oauthClients.clientId),
+    privyUserId: text("privy_user_id").notNull(),
+    scope: text("scope").notNull(),
+    expiresAt: time("expires_at").notNull(),
+    revokedAt: time("revoked_at"),
+    createdAt: time("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("oauth_tokens_user").on(table.privyUserId)],
+);
