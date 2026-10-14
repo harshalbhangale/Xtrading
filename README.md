@@ -8,7 +8,7 @@
 <br>
 
 **Trade the calls you see on X, and know who's worth following.**  
-[xtradingnow.xyz](https://xtradingnow.xyz) · [Chrome extension](https://xtradingnow.xyz/extension) · [Live onchain activity](https://xtradingnow.xyz/dashboard/onchain) · [Product tour](docs/product-tour.md) · [Pitch Video](https://x.com/Xtradingnow/status/2110063504795590952) · [Presentation](https://canva.link/efa8fnb0oxts8vq) · [Agent connector](#plug-in-an-agent)
+[xtradingnow.xyz](https://xtradingnow.xyz) · [Chrome extension](https://xtradingnow.xyz/extension) · [Live onchain activity](https://xtradingnow.xyz/dashboard/onchain) · [Product tour](docs/product-tour.md) · [Pitch Video](https://x.com/Xtradingnow/status/2110063504795590952) · [Presentation](https://canva.link/efa8fnb0oxts8vq) · [Agent connector](#plug-in-an-agent) · [@Xtradingnow on X](https://x.com/Xtradingnow)
 
 </div>
 
@@ -63,14 +63,14 @@ Every tool, its inputs and the error codes: [MCP docs](docs/mcp.md). A plain-tok
 
 ## Built with
 
-| Sponsor                         | What it powers in Xtrading                                                                                                                                                                        |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **[Kuru](https://kuru.io)**     | Spot execution on Monad. Market orders go straight from the wallet to Kuru's order books, and **Kuru Flow** pays creator fees atomically with the buy.                                            |
-| **[Privy](https://privy.io)**   | Sign in with X, embedded wallets and transaction signing. Sessions are verified server-side and bound to the stable X user ID.                                                                    |
-| **[Envio](https://envio.dev)**  | HyperIndex indexes Kuru swaps, deposits and creator payments. HyperSync powers the live, receipt-checked [onchain activity page](https://xtradingnow.xyz/dashboard/onchain) and creator earnings. |
-| **[Nansen](https://nansen.ai)** | Wallet and token intelligence on creator profiles and in the extension, plus price history for scoring calls.                                                                                     |
-| **[Perpl](https://perpl.xyz)**  | Perpetuals for long and short calls, traded from the user's own wallet and Perpl account.                                                                                                         |
-| **[Monad](https://monad.xyz)**  | Fast enough that trading from a post feels like clicking a button.                                                                                                                                |
+| Sponsor                                                                                                           | What it powers in Xtrading                                                                                                                                                                        |
+| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <img src="docs/assets/logos/kuru.png" width="20" height="20" align="absmiddle"> **[Kuru](https://kuru.io)**       | Spot execution on Monad. Market orders go straight from the wallet to Kuru's order books, and **Kuru Flow** pays creator fees atomically with the buy.                                            |
+| <img src="docs/assets/logos/privy.png" width="20" height="20" align="absmiddle"> **[Privy](https://privy.io)**    | Sign in with X, embedded wallets and transaction signing. Sessions are verified server-side and bound to the stable X user ID.                                                                    |
+| <img src="docs/assets/logos/envio.png" width="20" height="20" align="absmiddle"> **[Envio](https://envio.dev)**   | HyperIndex indexes Kuru swaps, deposits and creator payments. HyperSync powers the live, receipt-checked [onchain activity page](https://xtradingnow.xyz/dashboard/onchain) and creator earnings. |
+| <img src="docs/assets/logos/nansen.png" width="20" height="20" align="absmiddle"> **[Nansen](https://nansen.ai)** | Wallet and token intelligence on creator profiles and in the extension, plus price history for scoring calls.                                                                                     |
+| <img src="docs/assets/logos/perpl.png" width="20" height="20" align="absmiddle"> **[Perpl](https://perpl.xyz)**   | Perpetuals for long and short calls, traded from the user's own wallet and Perpl account.                                                                                                         |
+| <img src="docs/assets/logos/monad.png" width="20" height="20" align="absmiddle"> **[Monad](https://monad.xyz)**   | Fast enough that trading from a post feels like clicking a button.                                                                                                                                |
 
 How each integration works, with links to the code: [SPONSORS.md](SPONSORS.md).
 
