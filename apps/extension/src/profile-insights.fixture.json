@@ -1,0 +1,94 @@
+{
+  "handle": "maxicalls",
+  "evidence": {
+    "handle": "maxicalls",
+    "identity": {
+      "status": "unavailable"
+    },
+    "stake": {
+      "status": "unavailable",
+      "chainId": 10143
+    },
+    "observedAt": "2026-10-14T00:04:40.862Z"
+  },
+  "reputation": {
+    "trackedCalls": 33,
+    "bullish": 18,
+    "bearish": 8,
+    "perpCalls": 16,
+    "evaluated": 0,
+    "score": null,
+    "methodology": "Counts calls extracted from posts seen by extension users (signal-v1). Each is priced at post time and at the end of the timeframe the post states (24h if none), from historical candles stored once; open calls are pending. Hypothetical outcomes stay separate from wallet returns.",
+    "recent": [
+      {
+        "postId": "2092342423079080245",
+        "asset": "LNRA",
+        "direction": null,
+        "instrument": "spot",
+        "classifiedAt": "2026-10-13T09:54:49.219Z"
+      },
+      {
+        "postId": "2093255833375187435",
+        "asset": "SOL",
+        "direction": "bearish",
+        "instrument": "perp",
+        "classifiedAt": "2026-10-13T09:54:41.911Z"
+      },
+      {
+        "postId": "2093031390165995831",
+        "asset": "BTC",
+        "direction": null,
+        "instrument": "perp",
+        "classifiedAt": "2026-10-13T09:54:41.821Z"
+      },
+      {
+        "postId": "2093639440644108523",
+        "asset": "ETH",
+        "direction": "bullish",
+        "instrument": "perp",
+        "classifiedAt": "2026-10-13T09:54:37.876Z"
+      },
+      {
+        "postId": "2094811569083330888",
+        "asset": "ETH",
+        "direction": "bullish",
+        "instrument": "spot",
+        "classifiedAt": "2026-10-13T09:54:36.220Z"
+      }
+    ],
+    "status": "ready",
+    "measured": {
+      "count": 19,
+      "inFavour": 9,
+      "medianBps": -102,
+      "pending": 3,
+      "nextSettlesAt": "2026-10-14T08:55:55.000Z",
+      "unpriced": 4,
+      "unpricedAssets": ["BTCX", "DGAI", "LNRA", "POD"],
+      "items": [
+        {
+          "postId": "2093255833375187435",
+          "asset": "SOL",
+          "direction": "bearish",
+          "horizonSeconds": 86400,
+          "timeframeStated": false,
+          "entryPrice": "106.62",
+          "exitPrice": "103.34",
+          "moveBps": 307,
+          "postedAt": "2026-08-28T08:34:16.000Z"
+        }
+      ]
+    }
+  },
+  "nansen": {
+    "wallet": null,
+    "window": null,
+    "callAt": null,
+    "observedAt": "2026-10-14T00:04:40.866Z",
+    "findings": [],
+    "mode": "live",
+    "verdict": "not-applicable",
+    "chain": "monad",
+    "note": "The post names no asset or token address to check."
+  }
+}
