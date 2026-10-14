@@ -1,4 +1,7 @@
-![Xtrading](docs/assets/logos/xtrading.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logos/xtrading-white.png">
+  <img alt="Xtrading" src="docs/assets/logos/xtrading.png" width="240">
+</picture>
 
 # Xtrading
 
